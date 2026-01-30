@@ -1,0 +1,89 @@
+/* ===========================================================
+   GLOBAL APPLE-INSPIRED PREMIUM STYLING
+   =========================================================== */
+
+/* ----- Font smoothing (viktig Apple-touch) ----- */
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ----- Body background (ljus, luftig, Apple-grå) ----- */
+body {
+  background: #f5f5f7;
+  color: #1d1d1f;
+}
+
+/* ----- Card styling ----- */
+.premium-card {
+  @apply bg-white/80 backdrop-blur border border-gray-200 rounded-2xl shadow-sm;
+}
+
+/* ----- Glassy header ----- */
+.premium-header {
+  @apply bg-white/70 backdrop-blur-md border border-gray-200 rounded-2xl shadow-sm;
+}
+
+/* ----- Section container ----- */
+.premium-container {
+  @apply max-w-6xl mx-auto py-10 px-4 sm:px-6 lg:px-0 space-y-8;
+}
+
+/* ----- Subsection (white card with padding) ----- */
+.premium-section {
+  @apply bg-white/80 backdrop-blur border border-gray-200 rounded-2xl shadow-sm p-6 sm:p-8;
+}
+
+/* ----- Table styling for premium look ----- */
+.premium-table {
+  @apply w-full text-left text-sm overflow-hidden rounded-xl border border-gray-100;
+}
+
+.premium-thead {
+  @apply bg-gray-50 text-xs font-medium text-gray-500;
+}
+
+.premium-row {
+  @apply hover:bg-gray-50 transition;
+}
+
+.premium-cell {
+  @apply px-4 py-3 text-gray-700;
+}
+
+/* ----- Inputs ----- */
+.premium-input {
+  @apply w-full border border-gray-300 rounded-xl px-3 py-2.5
+         bg-white/80 backdrop-blur outline-none
+         focus:border-gray-900 focus:ring-1 focus:ring-gray-900
+         transition;
+}
+
+/* ----- Buttons ----- */
+.premium-btn {
+  @apply inline-flex items-center justify-center gap-2
+         rounded-full px-5 py-2.5 text-sm font-medium
+         transition shadow-sm;
+}
+
+.btn-dark {
+  @apply bg-gray-900 text-white hover:bg-black;
+}
+
+.btn-light {
+  @apply bg-white text-gray-900 border border-gray-300 hover:bg-gray-50;
+}
+
+/* ----- Subtle text helpers ----- */
+.text-dim {
+  @apply text-sm text-gray-500;
+}
+
+.text-label {
+  @apply text-xs font-medium text-gray-400 uppercase tracking-wide;
+}
+
+/* ----- Page header title ----- */
+.page-title {
+  @apply text-2xl sm:text-3xl font-semibold tracking-tight text-gray-900;
+}
