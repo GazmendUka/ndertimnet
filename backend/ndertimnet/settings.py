@@ -2,16 +2,66 @@
 
 from pathlib import Path
 import os
+from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = "django-insecure--t6=(e9ekfr2wtlrv@a2ax#snpw)c!db*w%65^n*%i4xjnpdjy"
-DEBUG = True
 
-ALLOWED_HOSTS = ["*"]
-# ALLOWED_HOSTS = ["localhost", "127.0.0.1", "ndertimnet.com", ".ngrok-free.app"]
+# ======================================================
+# ENV HELPERS
+# ======================================================
+def env_bool(key: str, default: bool = False) -> bool:
+    val = os.environ.get(key)
+    if val is None:
+        return default
+    return val.strip().lower() in ("1", "true", "yes", "y", "on")
 
 
+def env_list(key: str, default=None, sep=","):
+    if default is None:
+        default = []
+    val = os.environ.get(key)
+    if not val:
+        return default
+    return [x.strip() for x in val.split(sep) if x.strip()]
+
+
+# ======================================================
+# CORE SECURITY
+# ======================================================
+# Use env in production. Keep dev fallback for local runs.
+SECRET_KEY = os.environ.get(
+    "SECRET_KEY",
+    "dev-secret-key-change-me"
+)
+
+DEBUG = env_bool("DEBUG", default=True)
+
+# Render sets this sometimes; safe to read.
+ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").lower()  # development|production
+
+
+# ======================================================
+# HOSTS / CSRF
+# ======================================================
+# In production you should NOT use ["*"].
+# Set ALLOWED_HOSTS on Render to your service domain and later your custom domains.
+default_hosts = ["localhost", "127.0.0.1"]
+ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", default=default_hosts)
+
+# If you're behind Render, you'll want these security flags in production.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+
+# CSRF trusted origins for HTTPS domains (especially if you ever use session auth/admin)
+# Example value in Render:
+# CSRF_TRUSTED_ORIGINS=https://your-backend.onrender.com,https://ndertimnet.com,https://www.ndertimnet.com
+CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", default=[])
+
+
+# ======================================================
+# INTERNATIONALIZATION
+# ======================================================
 LANGUAGE_CODE = "sq"
 TIME_ZONE = "Europe/Stockholm"
 USE_I18N = True
@@ -42,11 +92,11 @@ INSTALLED_APPS = [
     "offers",
 
     # Local apps
-    "accounts.apps.AccountsConfig", 
+    "accounts.apps.AccountsConfig",
     "locations",
     "taxonomy",
 
-    # Cron
+    # Cron (note: Render doesn't run system cron by default)
     "django_crontab",
 ]
 
@@ -56,8 +106,10 @@ INSTALLED_APPS = [
 # ======================================================
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    # Static files in production
+    "whitenoise.middleware.WhiteNoiseMiddleware",
 
-    # CORS måste komma här!
+    # CORS must be high
     "corsheaders.middleware.CorsMiddleware",
 
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -98,12 +150,26 @@ WSGI_APPLICATION = "ndertimnet.wsgi.application"
 # ======================================================
 # DATABASE
 # ======================================================
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.sqlite3",
-        "NAME": BASE_DIR / "db.sqlite3",
+# Render best practice: use DATABASE_URL
+# Local dev can continue on sqlite if DATABASE_URL isn't provided.
+DATABASE_URL = os.environ.get("DATABASE_URL", "")
+
+if DATABASE_URL:
+    import dj_database_url
+    DATABASES = {
+        "default": dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=ENVIRONMENT == "production",
+        )
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": BASE_DIR / "db.sqlite3",
+        }
+    }
 
 
 # ======================================================
@@ -123,7 +189,7 @@ AUTH_USER_MODEL = "accounts.User"
 # AUTHENTICATION BACKENDS (EMAIL LOGIN)
 # ======================================================
 AUTHENTICATION_BACKENDS = [
-    "accounts.email_backend.EmailAuthBackend",   # vår email backend
+    "accounts.email_backend.EmailAuthBackend",
     "django.contrib.auth.backends.ModelBackend",
 ]
 
@@ -132,10 +198,13 @@ AUTHENTICATION_BACKENDS = [
 # STATIC & MEDIA
 # ======================================================
 STATIC_URL = "/static/"
-STATIC_ROOT = os.path.join(BASE_DIR, "staticfiles")
+STATIC_ROOT = BASE_DIR / "staticfiles"
+
+# Whitenoise compression + cache
+STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
 MEDIA_URL = "/media/"
-MEDIA_ROOT = os.path.join(BASE_DIR, "media")
+MEDIA_ROOT = BASE_DIR / "media"
 
 
 # ======================================================
@@ -154,12 +223,13 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
 
+    # You can tighten this later; for now keep as is.
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.AllowAny",
     ),
 
     "DEFAULT_RENDERER_CLASSES": (
-    "rest_framework.renderers.JSONRenderer",
+        "rest_framework.renderers.JSONRenderer",
     ),
 }
 
@@ -167,7 +237,20 @@ REST_FRAMEWORK = {
 # ======================================================
 # CORS
 # ======================================================
-CORS_ALLOW_ALL_ORIGINS = True
+# In production, do NOT allow all origins.
+# We'll keep dev permissive but lock prod to your frontend domains.
+if ENVIRONMENT == "production":
+    # Set in Render:
+    # CORS_ALLOWED_ORIGINS=https://YOUR-VERCEL-URL.vercel.app,https://ndertimnet.com,https://www.ndertimnet.com
+    CORS_ALLOWED_ORIGINS = env_list("CORS_ALLOWED_ORIGINS", default=[])
+    CORS_ALLOW_ALL_ORIGINS = False
+else:
+    CORS_ALLOWED_ORIGINS = env_list(
+        "CORS_ALLOWED_ORIGINS",
+        default=["http://localhost:3000"]
+    )
+    CORS_ALLOW_ALL_ORIGINS = True
+
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [
     "authorization",
@@ -180,19 +263,33 @@ CORS_ALLOW_HEADERS = [
 
 
 # ======================================================
-# CRON JOBS
+# SECURITY HEADERS (production)
 # ======================================================
+if ENVIRONMENT == "production":
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_SSL_REDIRECT = True
+
+    # Good baseline; can be tuned later
+    SECURE_HSTS_SECONDS = int(os.environ.get("SECURE_HSTS_SECONDS", "0"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = env_bool("SECURE_HSTS_INCLUDE_SUBDOMAINS", False)
+    SECURE_HSTS_PRELOAD = env_bool("SECURE_HSTS_PRELOAD", False)
+
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_REFERRER_POLICY = "same-origin"
+
+
+# ======================================================
+# CRON JOBS (NOTE)
+# ======================================================
+# django-crontab is not typically used on Render unless you run cron separately.
+# Keep the definitions, but remove local Mac-specific prefixes/suffixes.
 CRONJOBS = [
     ("0 2 * * *", "django.core.management.call_command", ["cleanup_expired_jobs"]),
     ("30 2 * * *", "django.core.management.call_command", ["check_reopen_jobs"]),
 ]
-
-CRONTAB_COMMAND_PREFIX = (
-    '*/usr/bin/env bash -c "cd /Users/uka/ndertimnet/backend && source .venv/bin/activate && "'
-)
-CRONTAB_COMMAND_SUFFIX = (
-    " >> /Users/uka/ndertimnet/backend/logs/cleanup.log 2>&1"
-)
+CRONTAB_COMMAND_PREFIX = os.environ.get("CRONTAB_COMMAND_PREFIX", "")
+CRONTAB_COMMAND_SUFFIX = os.environ.get("CRONTAB_COMMAND_SUFFIX", "")
 
 
 # ======================================================
@@ -205,36 +302,27 @@ LOGGING = {
     "root": {"handlers": ["console"], "level": "INFO"},
 }
 
+
 # ======================================================
 # EMAIL VERIFICATION (Ndertimnet)
 # ======================================================
+EMAIL_VERIFICATION_TOKEN_TTL_HOURS = int(os.environ.get("EMAIL_VERIFICATION_TOKEN_TTL_HOURS", "24"))
 
-# Hur länge verifieringslänken är giltig (i timmar)
-EMAIL_VERIFICATION_TOKEN_TTL_HOURS = 24
-
-# Frontend-länk som användaren klickar på i mailet
-# {token} ersätts dynamiskt
-# DEV
-FRONTEND_VERIFY_EMAIL_URL = "http://localhost:3000/verify-email/{token}"
-
-# PROD (senare)
-# FRONTEND_VERIFY_EMAIL_URL = "https://ndertimnet.com/verify-email?token={token}"
-
+# Use env so prod points to your Vercel/custom domain, dev points to localhost
+FRONTEND_VERIFY_EMAIL_URL = os.environ.get(
+    "FRONTEND_VERIFY_EMAIL_URL",
+    "http://localhost:3000/verify-email/{token}",
+)
 
 
 # ======================================================
-# EMAIL (DEV)
+# EMAIL (DEV default)
 # ======================================================
-
-EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
-DEFAULT_FROM_EMAIL = "Ndertimnet <no-reply@ndertimnet.com>"
-
-# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-# EMAIL_HOST = "smtp.gmail.com"
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = "no-reply@ndertimnet.com"
-# EMAIL_HOST_PASSWORD = "APP_PASSWORD"
-# DEFAULT_FROM_EMAIL = "Ndertimnet <no-reply@ndertimnet.com>"
-
-
+EMAIL_BACKEND = os.environ.get(
+    "EMAIL_BACKEND",
+    "django.core.mail.backends.console.EmailBackend"
+)
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DEFAULT_FROM_EMAIL",
+    "Ndertimnet <no-reply@ndertimnet.com>"
+)
