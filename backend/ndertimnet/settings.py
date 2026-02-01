@@ -35,7 +35,7 @@ SECRET_KEY = os.environ.get(
     "dev-secret-key-change-me"
 )
 
-DEBUG = env_bool("DEBUG", default=True)
+DEBUG = env_bool("DEBUG", default=(ENVIRONMENT != "production"))
 
 # Render sets this sometimes; safe to read.
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").lower()  # development|production
@@ -48,6 +48,13 @@ ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").lower()  # developmen
 # Set ALLOWED_HOSTS on Render to your service domain and later your custom domains.
 default_hosts = ["localhost", "127.0.0.1"]
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", default=default_hosts)
+
+# --- Render safety fallback ---
+RENDER_EXTERNAL_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")
+if RENDER_EXTERNAL_HOSTNAME:
+    if RENDER_EXTERNAL_HOSTNAME not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
+
 
 # If you're behind Render, you'll want these security flags in production.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
