@@ -24,3 +24,4 @@ typing_extensions==4.15.0
 uritemplate==4.2.0
 whitenoise==6.11.0
 dj-database-url==2.2.0
+psycopg[binary]==3.2.10
