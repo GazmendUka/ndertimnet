@@ -25,10 +25,12 @@ def env_list(key: str, default=None, sep=","):
         return default
     return [x.strip() for x in val.split(sep) if x.strip()]
 
-
 # ======================================================
 # CORE SECURITY
 # ======================================================
+# Environment: development | production
+ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").lower()
+
 # Use env in production. Keep dev fallback for local runs.
 SECRET_KEY = os.environ.get(
     "SECRET_KEY",
@@ -37,8 +39,7 @@ SECRET_KEY = os.environ.get(
 
 DEBUG = env_bool("DEBUG", default=(ENVIRONMENT != "production"))
 
-# Render sets this sometimes; safe to read.
-ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").lower()  # development|production
+
 
 
 # ======================================================
