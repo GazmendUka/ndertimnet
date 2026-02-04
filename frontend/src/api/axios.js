@@ -1,10 +1,12 @@
 // src/api/axios.js
 
-
 import axios from "axios";
+const BASE_URL = process.env.REACT_APP_API_BASE_URL;
 
 const refreshApi = axios.create({
-  baseURL: "http://127.0.0.1:8000/api/",
+  //baseURL: "http://127.0.0.1:8000/api/",
+  baseURL: BASE_URL,
+
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
@@ -13,7 +15,8 @@ const refreshApi = axios.create({
 
 
 const api = axios.create({
-  baseURL: "http://127.0.0.1:8000/api/",
+  // baseURL: "http://127.0.0.1:8000/api/",
+  baseURL: BASE_URL,  
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
