@@ -1,94 +1,107 @@
-# backend/locatinos/namagement/commands/seed_locations.py
+# backend/locations/management/commands/seed_locations.py
 
 from django.core.management.base import BaseCommand
 from django.utils.text import slugify
-
 from locations.models import City
 
-CITIES = {
-    "XK": [
-        "Deçani",
-        "Dragashi",
-        "Drenasi",
-        "Ferizaj",
-        "Fushë Kosova",
-        "Gjakova",
-        "Gjilan",
-        "Graçanica",
-        "Hani i Elezit",
-        "Istog",
-        "Junik",
-        "Kaçanik",
-        "Kamenica",
-        "Klina",
-        "Kllokot",
-        "Leposaviq",
-        "Malishev",
-        "Mamushës",
-        "Mitrovica",
-        "Novo Brdo",
-        "Obiliq",
-        "Parteshi",
-        "Peja",
-        "Prishtinë",
-        "Prizren",
-        "Podujevë",
-        "Rahovec",
-        "Ranillug",
-        "Shtime",
-        "Skenderaj",
-        "Shtërpcë",
-        "Thërandë",
-        "Viti",
-        "Vushtrri",
-        "Zubin Potok",
-        "Zvečan",
-
-    ],
-    
-    "AL": [
-        "Berat",
-        "Dibër",
-        "Durrës",
-        "Elbasan",
-        "Fier",
-        "Gjirokastër",
-        "Korçë",
-        "Kukës",
-        "Lezhë",
-        "Shkodër",
-        "Tirana",
-        "Vlorë",
-    ],
-}
 
 class Command(BaseCommand):
-    help = "Seed cities for Kosovo and Albania"
+    help = "Seed cities for Kosova (XK) and Shqipëri (AL)"
+
 
     def handle(self, *args, **options):
-        created = 0
-        updated = 0
 
-        for country, cities in CITIES.items():
-            for name in cities:
-                slug = slugify(f"{name}-{country}")
+        countries = {
+            "XK": {
+                "label": "Kosova",
+                "cities": [
+                    "Deçani",
+                    "Dragashi",
+                    "Drenasi",
+                    "Ferizaj",
+                    "Fushë Kosova",
+                    "Gjakova",
+                    "Gjilan",
+                    "Graçanica",
+                    "Hani i Elezit",
+                    "Istog",
+                    "Junik",
+                    "Kaçanik",
+                    "Kamenica",
+                    "Klina",
+                    "Kllokot",
+                    "Leposaviq",
+                    "Malishev",
+                    "Mamushës",
+                    "Mitrovica",
+                    "Novo Brdo",
+                    "Obiliq",
+                    "Parteshi",
+                    "Peja",
+                    "Prishtinë",
+                    "Prizren",
+                    "Podujevë",
+                    "Rahovec",
+                    "Ranillug",
+                    "Shtime",
+                    "Skenderaj",
+                    "Shtërpcë",
+                    "Thërandë",
+                    "Viti",
+                    "Vushtrri",
+                    "Zubin Potok",
+                    "Zvečan",
+                ],
+            },
+            "AL": {
+                "label": "Shqipëri",
+                "cities": [
+                        "Berat",
+                        "Dibër",
+                        "Durrës",
+                        "Elbasan",
+                        "Fier",
+                        "Gjirokastër",
+                        "Korçë",
+                        "Kukës",
+                        "Lezhë",
+                        "Shkodër",
+                        "Tirana",
+                        "Vlorë",
+                ],
+            },
+        }
 
-                obj, was_created = City.objects.update_or_create(
-                    slug=slug,
+        total_created = 0
+
+        for country_code, data in countries.items():
+            created = 0
+
+            for city_name in data["cities"]:
+                slug = slugify(f"{city_name}-{country_code}")
+
+                _, was_created = City.objects.get_or_create(
+                    name=city_name,
+                    country=country_code,
                     defaults={
-                        "name": name,
-                        "country": country,
+                        "slug": slug,
                         "is_active": True,
                     },
                 )
 
+
                 if was_created:
                     created += 1
-                else:
-                    updated += 1
+                    total_created += 1
+
+            self.stdout.write(
+                self.style.SUCCESS(
+                    f"✅ {created} städer tillagda för {data['label']} ({country_code})"
+                )
+            )
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"✅ Cities seeded | created: {created}, updated: {updated}"
+                f"\n🎉 Klar! Totalt {total_created} nya städer tillagda."
             )
         )
