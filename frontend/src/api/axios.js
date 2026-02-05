@@ -99,3 +99,11 @@ api.interceptors.response.use(
 );
 
 export default api;
+
+export const apiPublic = axios.create({
+  baseURL: BASE_URL,
+  headers: {
+    Accept: "application/json",
+  },
+});
+
