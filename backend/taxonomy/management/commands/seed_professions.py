@@ -2,60 +2,68 @@
 
 from django.core.management.base import BaseCommand
 from django.utils.text import slugify
-
 from taxonomy.models import Profession
 
+
+# NOTE:
+# - Yrken är på albanska (produkt- och UX-beslut)
+# - slug används som stabil identifierare (unique=True i modellen)
+# - update_or_create gör command idempotent (safe i production)
+# - Ändrar du ett namn här uppdateras det i databasen, inga dubbletter
+
 PROFESSIONS = [
-    # El / VVS / Teknik
+    # ⚡ Elektrikë / Hidraulikë / Teknikë
     "Elektricist",
-    "Hidraulik",
     "Instalues i ngrohjes",
     "Instalues i ventilimit",
     "Teknik HVAC",
+    "Instalues kondicioneri",
 
-    # Trä / Snickeri
+    # 🪚 Dru / Alumini
     "Zdrukthëtar",
     "Marangoz",
     "Punues druri",
     "Punues alumini",
+    "Punues PVC",
 
-    # Mur / Gips
+    # 🧱 Mur / Suvatim / Gips
     "Murator",
     "Suvatues",
     "Punues gipsi",
     "Plakist",
 
-    # Golv / Kakel
+    # 🧱 Dysheme / Pllaka
     "Shtrues pllakash",
     "Shtrues dyshemeje",
     "Parketist",
 
-    # Måleri
-    "Piktor",
+    # 🎨 Lyerje / Dekor
+    "Moler",
     "Dekorues",
+    "Punime dekorative",
 
-    # Tak
+    # 🏠 Çati
     "Punime çatie",
     "Mbulesa çatie",
     "Izolim çatie",
 
-    # Isolering / Fasad
+    # 🧊 Izolim / Fasadë
     "Izolim termik",
     "Izolim hidro",
     "Montues fasade",
     "Fasadist",
 
-    # Fönster / Dörrar
-    "Montues dritaresh dhe dyersh",
+    # 🚪 Dyer / Dritare
+    "Montim dritaresh dhe dyersh",
 
-    # Betong / Stål / Mark
+    # 🏗️ Beton / Hekur / Tokë
     "Punime betoni",
     "Punime hekuri",
     "Armaturist",
     "Gërmime",
     "Punime toke",
 
-    # Entreprenad / Renovering
+    # 🏗️ Ndërtim / Renovim
     "Ndërtim i përgjithshëm",
     "Kompani ndërtimi",
     "Ndërmarrje ndërtimi",
@@ -63,16 +71,17 @@ PROFESSIONS = [
     "Renovim total",
     "Rikonstruksion",
 
-    # Projektering / Kontroll
+    # 📐 Projektim / Mbikëqyrje
     "Arkitekt",
     "Inxhinier ndërtimi",
     "Projektues",
     "Mbikëqyrje ndërtimi",
+    "Menaxhim projekti",
 ]
 
 
 class Command(BaseCommand):
-    help = "Seed professions"
+    help = "Seed professions (profesionet) in Albanian for Ndertimnet"
 
     def handle(self, *args, **options):
         created = 0
@@ -96,6 +105,6 @@ class Command(BaseCommand):
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"✅ Professions seeded | created: {created}, updated: {updated}"
+                f"✅ Profesionet u seeduan | krijuar: {created}, përditësuar: {updated}"
             )
         )
