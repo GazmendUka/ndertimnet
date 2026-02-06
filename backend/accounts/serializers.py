@@ -136,21 +136,11 @@ class CompanySerializer(serializers.ModelSerializer):
         return instance
 
 
-# 🏢 RegisterCompanySerializer
+# 🏢 RegisterCompanySerializer (KONTO-REGISTRERING)
 class RegisterCompanySerializer(serializers.ModelSerializer):
     company_name = serializers.CharField(write_only=True)
-    org_number = serializers.CharField(write_only=True)
     phone = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    description = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    logo = serializers.ImageField(required=False, allow_null=True)
     password = serializers.CharField(write_only=True, min_length=6)
-    
-    # 🔹 professions (Specialiteti) – via ID-lista
-    professions = serializers.PrimaryKeyRelatedField(
-        queryset=Profession.objects.filter(is_active=True),
-        many=True,
-        required=False,
-    )
 
     class Meta:
         model = User
@@ -158,11 +148,7 @@ class RegisterCompanySerializer(serializers.ModelSerializer):
             "email",
             "password",
             "company_name",
-            "org_number",
             "phone",
-            "description",
-            "logo",
-            "professions", 
         ]
 
     def validate_email(self, value):
@@ -170,41 +156,28 @@ class RegisterCompanySerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Ky email është tashmë i regjistruar.")
         return value
 
-    def validate_org_number(self, value):
-        if Company.objects.filter(org_number__iexact=value).exists():
-            raise serializers.ValidationError("Ky numër organizate është tashmë i regjistruar.")
-        return value
-
     def create(self, validated_data):
-        professions = validated_data.pop("professions", [])
-
         company_name = validated_data.pop("company_name")
-        org_number = validated_data.pop("org_number")
         phone = validated_data.pop("phone", "")
-        description = validated_data.pop("description", "")
-        logo = validated_data.pop("logo", None)
         password = validated_data.pop("password")
         email = validated_data.pop("email")
 
+        # skapa user
         user = User.objects.create_user(
             email=email,
             password=password,
             role="company",
         )
 
-        company = Company.objects.create(
+        # skapa company (endast konto-data)
+        Company.objects.create(
             user=user,
             company_name=company_name,
-            org_number=org_number,
             phone=phone,
-            description=description,
-            logo=logo,
         )
 
-        if professions:
-            company.professions.set(professions)  # 🔥 RÄTT TYP (Profession-objekt)
-
         return user
+
 
 
 
