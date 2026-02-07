@@ -33,8 +33,13 @@ export default function RegisterCompany() {
     setError("");
 
     try {
-      const res = await api.post("/api/accounts/register/company/", formData);
+      const res = await api.post(
+        "accounts/register/company/",
+        formData,
+        { skipAuth: true }
+      );
       console.log("✅ Kompania u regjistrua me sukses!", res.data);
+
 
       navigate("/register/success", { state: { type: "company" } });
     } catch (err) {
