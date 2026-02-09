@@ -76,8 +76,9 @@ function App() {
           <Route path="/register/company" element={<RegisterCompany />} />
           <Route path="/register/customer" element={<RegisterCustomer />} />
           <Route path="/register/success" element={<RegisterSuccess />} />
-          <Route path="/verify-email/:token" element={<VerifyEmail />} />
           <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+
           
           {/* ======================================
               SHARED ROUTES (CUSTOMER + COMPANY)

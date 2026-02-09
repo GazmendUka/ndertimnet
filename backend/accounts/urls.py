@@ -3,6 +3,7 @@
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 
+
 from .views import (
     UserViewSet,
     CustomerViewSet,
@@ -16,6 +17,7 @@ from .views import (
     VerifyEmailView,
     ResendVerificationEmailView,
 )
+
 
 
 router = DefaultRouter()
@@ -38,7 +40,8 @@ urlpatterns = [
     path("customer/consent/", CustomerConsentView.as_view(), name="customer-consent"),
 
     # ✉️ Email verification
-    path("verify-email/<uuid:token>/", VerifyEmailView.as_view(), name="verify-email"),
+    path("verify-email/", VerifyEmailView.as_view(), name="verify-email"),
+    path("resend-verification-email/", ResendVerificationEmailView.as_view()),
     path("resend-verification/", ResendVerificationEmailView.as_view(), name="resend-verification"),
 ]
 

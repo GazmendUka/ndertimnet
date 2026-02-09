@@ -1,13 +1,14 @@
 # backend/accounts/views.py
 
 from datetime import timedelta
-from django.utils import timezone
 from django.contrib.auth import get_user_model
-from .models import EmailVerificationToken
-from .models import Customer, Company
-from .serializers import VerifyEmailSerializer, ResendVerificationSerializer
-from .emails import send_verification_email
 
+from .models import Customer, Company
+from .emails import send_verification_email
+from .utils.email_verification import (
+    verify_email_token,
+    generate_email_verification_token,
+)
 
 from rest_framework import viewsets, status, generics
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
@@ -77,7 +78,6 @@ class LoginView(APIView):
     authentication_classes = []  # 🔥 GARANTERAT ingen JWT här
 
     def post(self, request):
-        print("🔥 LOGINVIEW.POST KÖRS 🔥", request.data)
         email = request.data.get("email")
         password = request.data.get("password")
 
@@ -94,6 +94,12 @@ class LoginView(APIView):
 
         if not user.is_active:
             return error("Ky përdorues është i çaktivizuar.", 403)
+        
+        if not user.is_email_verified:
+            return error(
+                "Ju lutem verifikoni email-in tuaj përpara se të vazhdoni.",
+                403
+            )
 
         remember_me = request.data.get("remember_me", False)
         refresh = RefreshToken.for_user(user)
@@ -110,7 +116,92 @@ class LoginView(APIView):
         )
   
 
+class VerifyEmailView(APIView):
+    permission_classes = [AllowAny]
 
+    def post(self, request):
+        token = request.data.get("token")
+
+        if not token:
+            return Response(
+                {"detail": "Token mungon"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        user_id = verify_email_token(token)
+
+        if not user_id:
+            return Response(
+                {"detail": "Linku është i pavlefshëm ose ka skaduar"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            user = User.objects.get(id=user_id)
+        except User.DoesNotExist:
+            return Response(
+                {"detail": "Përdoruesi nuk u gjet"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if user.is_email_verified:
+            return Response(
+                {"detail": "Email-i është verifikuar tashmë"},
+                status=status.HTTP_200_OK,
+            )
+
+        user.is_email_verified = True
+        user.save(update_fields=["is_email_verified"])
+
+        return Response(
+            {"detail": "Email-i u verifikua me sukses"},
+            status=status.HTTP_200_OK,
+        )
+
+class ResendVerificationEmailView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+
+        if not email:
+            return Response(
+                {"detail": "Email mungon"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            user = User.objects.get(email__iexact=email)
+        except User.DoesNotExist:
+            # ⚠️ Viktigt: returnera OK ändå (anti user-enumeration)
+            return Response(
+                {
+                    "detail": (
+                        "Nëse email-i ekziston dhe nuk është verifikuar, "
+                        "një email i ri është dërguar."
+                    )
+                },
+                status=status.HTTP_200_OK,
+            )
+
+        if user.is_email_verified:
+            return Response(
+                {"detail": "Email-i është verifikuar tashmë"},
+                status=status.HTTP_200_OK,
+            )
+
+        token = generate_email_verification_token(user)
+        send_verification_email(user, token)
+
+        return Response(
+            {
+                "detail": (
+                    "Nëse email-i ekziston dhe nuk është verifikuar, "
+                    "një email i ri është dërguar."
+                )
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 # ======================================================
@@ -129,7 +220,7 @@ def current_user(request):
         "role": user.role,
         "first_name": user.first_name,
         "last_name": user.last_name,
-        "email_verified": user.email_verified,
+        "email_verified": user.is_email_verified,
     }
 
     if hasattr(user, "company_profile"):
@@ -150,20 +241,6 @@ def current_user(request):
     return success(data=response)
 
 
-
-# ======================================================
-# 🧩 TOKEN HELPERS
-# ======================================================
-
-def generate_tokens_for_user(user):
-    refresh = RefreshToken.for_user(user)
-    return {
-        "refresh": str(refresh),
-        "access": str(refresh.access_token),
-    }
-
-
-
 # ======================================================
 # 🏢 REGISTER COMPANY
 # ======================================================
@@ -172,27 +249,27 @@ class RegisterCompanyView(generics.CreateAPIView):
     serializer_class = RegisterCompanySerializer
     permission_classes = [AllowAny]
 
-    def create(self, request, *args, **kwargs):
-        print("🔥 REGISTER COMPANY DATA:", request.data)  
-   
+    def create(self, request, *args, **kwargs):   
         serializer = self.get_serializer(
             data=request.data,
             context={"request": request}   # 🔥 VIKTIGAST
         )
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        tokens = generate_tokens_for_user(user)
+
+        # ✅ EMAIL VERIFICATION
+        token = generate_email_verification_token(user)
+        send_verification_email(user, token)
 
         return success(
-            message="Kompania u regjistrua me sukses.",
+            message="Kompania u regjistrua me sukses. Ju lutem verifikoni email-in tuaj.",
             data={
                 "user": {
                     "id": user.id,
                     "email": user.email,
                     "role": user.role,
                     "company": getattr(user.company_profile, "id", None),
-                },
-                **tokens
+                }
             }
         )
 
@@ -210,20 +287,23 @@ class RegisterCustomerView(generics.CreateAPIView):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        tokens = generate_tokens_for_user(user)
+
+        # ✅ EMAIL VERIFICATION
+        token = generate_email_verification_token(user)
+        send_verification_email(user, token)
 
         return success(
-            message="Klienti u regjistrua me sukses.",
+            message="Klienti u regjistrua me sukses. Ju lutem verifikoni email-in tuaj.",
             data={
                 "user": {
                     "id": user.id,
                     "email": user.email,
                     "role": user.role,
                     "customer": getattr(user.customer_profile, "id", None),
-                },
-                **tokens
+                }
             }
         )
+
 
 
 
@@ -313,7 +393,7 @@ class CustomerConsentView(APIView):
 
     def post(self, request):
         if not hasattr(request.user, "customer_profile"):
-            return error("Endast kunder kan utföra detta steg.", 403)
+            return error("Vetëm klientët mund ta kryejnë këtë veprim.", 403)
 
         customer = request.user.customer_profile
 
@@ -326,67 +406,6 @@ class CustomerConsentView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        return success("Samtycke registrerat")
+        return success("Pëlqimi u regjistrua me sukses")
 
 
-# ======================================================
-# 🏢 EMAIL VERIFICATION
-# ======================================================
-
-
-# accounts/views.py
-
-class VerifyEmailView(APIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request, token):
-        try:
-            token_obj = EmailVerificationToken.objects.select_related("user").get(
-                token=token,
-                is_used=False,
-            )
-        except EmailVerificationToken.DoesNotExist:
-            return error("Ogiltig eller använd verifieringslänk.", 400)
-
-        if token_obj.is_expired():
-            return error("Verifieringslänken har gått ut.", 400)
-
-        user = token_obj.user
-
-        if not user.email_verified:
-            user.email_verified = True
-            user.email_verified_at = timezone.now()
-            user.save(update_fields=["email_verified", "email_verified_at"])
-
-        token_obj.mark_used()
-
-        return success("E-postadressen har verifierats.")
-
-
-class ResendVerificationEmailView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        user = request.user
-
-        if user.email_verified:
-            return success("E-postadressen är redan verifierad.")
-
-        # Invalidera gamla tokens
-        EmailVerificationToken.objects.filter(
-            user=user,
-            is_used=False
-        ).update(is_used=True)
-
-        # Skapa ny token
-        token = EmailVerificationToken.objects.create(
-            user=user,
-            expires_at=timezone.now() + timedelta(hours=24),
-        )
-
-        # ⚠️ Mail skickas i FAS 3
-        send_verification_email(user, token)
-
-        return success(
-            "Ett nytt verifieringsmail har skickats om e-postadressen är giltig."
-        )
