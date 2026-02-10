@@ -2,6 +2,7 @@
 
 from datetime import timedelta
 from django.contrib.auth import get_user_model
+from django.utils import timezone
 
 from .models import Customer, Company
 from .emails import send_verification_email
@@ -95,11 +96,6 @@ class LoginView(APIView):
         if not user.is_active:
             return error("Ky përdorues është i çaktivizuar.", 403)
         
-        if not user.email_verified:
-            return error(
-                "Ju lutem verifikoni email-in tuaj përpara se të vazhdoni.",
-                403
-            )
 
         remember_me = request.data.get("remember_me", False)
         refresh = RefreshToken.for_user(user)
@@ -151,7 +147,9 @@ class VerifyEmailView(APIView):
             )
 
         user.email_verified = True
-        user.save(update_fields=["email_verified"])
+        user.email_verified_at = timezone.now()
+        user.save(update_fields=["email_verified", "email_verified_at"])
+
 
         return Response(
             {"detail": "Email-i u verifikua me sukses"},
