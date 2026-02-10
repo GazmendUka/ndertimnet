@@ -95,7 +95,7 @@ class LoginView(APIView):
         if not user.is_active:
             return error("Ky përdorues është i çaktivizuar.", 403)
         
-        if not user.is_email_verified:
+        if not user.email_verified:
             return error(
                 "Ju lutem verifikoni email-in tuaj përpara se të vazhdoni.",
                 403
@@ -144,19 +144,20 @@ class VerifyEmailView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        if user.is_email_verified:
+        if user.email_verified:
             return Response(
                 {"detail": "Email-i është verifikuar tashmë"},
                 status=status.HTTP_200_OK,
             )
 
-        user.is_email_verified = True
-        user.save(update_fields=["is_email_verified"])
+        user.email_verified = True
+        user.save(update_fields=["email_verified"])
 
         return Response(
             {"detail": "Email-i u verifikua me sukses"},
             status=status.HTTP_200_OK,
         )
+
 
 class ResendVerificationEmailView(APIView):
     permission_classes = [AllowAny]
@@ -184,7 +185,7 @@ class ResendVerificationEmailView(APIView):
                 status=status.HTTP_200_OK,
             )
 
-        if user.is_email_verified:
+        if user.email_verified:
             return Response(
                 {"detail": "Email-i është verifikuar tashmë"},
                 status=status.HTTP_200_OK,
@@ -220,7 +221,7 @@ def current_user(request):
         "role": user.role,
         "first_name": user.first_name,
         "last_name": user.last_name,
-        "email_verified": user.is_email_verified,
+        "email_verified": user.email_verified,
     }
 
     if hasattr(user, "company_profile"):
