@@ -12,17 +12,14 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
 
   // ============================================================
-  // 🔧 Load tokens + user on startup + Fetch logged-in user
+  // 🔧 Init auth: load tokens + fetch current user
   // ============================================================
-
   useEffect(() => {
     const initAuth = async () => {
-    const token =
-      localStorage.getItem("access") || sessionStorage.getItem("access");
-
-    const refreshToken =
-      localStorage.getItem("refresh") || sessionStorage.getItem("refresh");
-
+      const token =
+        localStorage.getItem("access") || sessionStorage.getItem("access");
+      const refreshToken =
+        localStorage.getItem("refresh") || sessionStorage.getItem("refresh");
 
       // 1️⃣ Ingen token → ej inloggad
       if (!token || !refreshToken) {
@@ -34,7 +31,7 @@ export const AuthProvider = ({ children }) => {
       setAccess(token);
       setRefresh(refreshToken);
 
-      // 3️⃣ Hämta user MED token
+      // 3️⃣ Hämta user
       try {
         await fetchCurrentUser(token);
       } catch {
@@ -47,6 +44,9 @@ export const AuthProvider = ({ children }) => {
     initAuth();
   }, []);
 
+  // ============================================================
+  // 👤 Fetch logged-in user
+  // ============================================================
   const fetchCurrentUser = async (forcedAccessToken = null) => {
     try {
       const res = await api.get(
@@ -62,17 +62,18 @@ export const AuthProvider = ({ children }) => {
 
       const usr = res.data.data;
       setUser(usr);
+
       const storage =
         localStorage.getItem("access") ? localStorage : sessionStorage;
       storage.setItem("user", JSON.stringify(usr));
+
       return usr;
     } catch (err) {
       console.error("fetchCurrentUser failed", err);
-      logout(); // 🔥 ENDA stället auth-logout sker
+      logout(); // 🔥 enda stället där auth-logut sker
       throw err;
     }
   };
-
 
   // ============================================================
   // 🔑 LOGIN
@@ -89,7 +90,6 @@ export const AuthProvider = ({ children }) => {
         { skipAuth: true }
       );
 
-
       const data = res.data.data;
 
       // 🔐 Spara tokens
@@ -100,9 +100,8 @@ export const AuthProvider = ({ children }) => {
       setAccess(data.access);
       setRefresh(data.refresh);
 
-      // 👤 Hämta user MED token (ingen race condition)
+      // 👤 Hämta user med token
       const usr = await fetchCurrentUser(data.access);
-
       return usr;
     } catch (err) {
       throw new Error(err.response?.data?.message || "Gabim gjatë hyrjes");
@@ -126,10 +125,42 @@ export const AuthProvider = ({ children }) => {
   };
 
   // ============================================================
-  // 📧 Email verification helpers  ✅ RÄTT PLATS
+  // 📧 EMAIL / PROFILE STATUS
   // ============================================================
+  const isAuthenticated = !!user;
   const isEmailVerified = !!user?.email_verified;
+  const isProfileComplete = !!user?.profile_completed;
 
+  // ============================================================
+  // 🧭 ONBOARDING STEP LOGIC (NYTT)
+  // ============================================================
+  let onboardingStep = 0;
+
+  // 1️⃣ Inloggad men ej verifierad email
+  if (isAuthenticated && !isEmailVerified) {
+    onboardingStep = 1;
+  }
+
+  // 2️⃣ Email verifierad men profil ej klar
+  if (isAuthenticated && isEmailVerified && !isProfileComplete) {
+    onboardingStep = 2;
+  }
+
+  // 3️⃣ Allt klart → full access
+  if (isAuthenticated && isEmailVerified && isProfileComplete) {
+    onboardingStep = 3;
+  }
+
+  // ============================================================
+  // 🔐 PERMISSIONS (kan användas överallt)
+  // ============================================================
+  const canVerifyEmail = onboardingStep === 1;
+  const canEditProfile = onboardingStep >= 2;
+  const hasFullAccess = onboardingStep === 3;
+
+  // ============================================================
+  // 🔄 Refresh helper
+  // ============================================================
   const refreshMe = async () => {
     await fetchCurrentUser();
   };
@@ -137,19 +168,30 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider
       value={{
+        // core
         user,
         access,
         refresh,
-        login,
-        logout,
         loading,
 
-        // 👤 user helpers
+        // auth actions
+        login,
+        logout,
         fetchCurrentUser,
         refreshMe,
-        isEmailVerified,
 
-        // 🎭 roles
+        // status
+        isAuthenticated,
+        isEmailVerified,
+        isProfileComplete,
+        onboardingStep,
+
+        // permissions
+        canVerifyEmail,
+        canEditProfile,
+        hasFullAccess,
+
+        // roles
         isCompany: user?.role === "company",
         isCustomer: user?.role === "customer",
         isAdmin: user?.role === "admin",
