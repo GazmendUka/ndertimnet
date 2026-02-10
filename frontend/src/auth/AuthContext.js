@@ -69,8 +69,27 @@ export const AuthProvider = ({ children }) => {
 
       return usr;
     } catch (err) {
-      console.error("fetchCurrentUser failed", err);
-      logout(); // 🔥 enda stället där auth-logut sker
+      const status = err.response?.status;
+      const code = err.response?.data?.code;
+
+      console.warn("fetchCurrentUser failed", status, code);
+
+      // ✅ SOFT-FAIL: email ej verifierad
+      if (status === 403 && code === "EMAIL_NOT_VERIFIED") {
+        setUser((prev) => ({
+          role: prev?.role || "company", // eller customer om default
+          email_verified: false,
+          profile_completed: false,
+        }));
+        return null;
+      }
+
+
+      // ❌ Hård logout endast vid riktiga auth-fel
+      if (status === 401) {
+        logout();
+      }
+
       throw err;
     }
   };
