@@ -8,6 +8,7 @@ import Sidebar from "./Sidebar";
 import MobileNav from "./MobileNav";
 import { Outlet } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
+import OnboardingBanner from "../onboarding/OnboardingBanner";
 
 export default function Layout() {
   const { user } = useAuth();
@@ -23,6 +24,9 @@ export default function Layout() {
       {/* MAIN */}
       <div className="flex-1 flex flex-col">
 
+        {/* 🔔 ONBOARDING BANNER */}
+        <OnboardingBanner />
+
         {/* TOPBAR */}
         <header
           className="
@@ -32,7 +36,9 @@ export default function Layout() {
           "
         >
           <h1 className="text-lg font-semibold text-gray-800 tracking-tight">
-            {user?.role === "company" ? "Panel i Kompanisë" : "Panel i Klientit"}
+            {user?.role === "company"
+              ? "Panel i Kompanisë"
+              : "Panel i Klientit"}
           </h1>
 
           <div className="flex items-center gap-4">
@@ -40,7 +46,9 @@ export default function Layout() {
               <p className="font-medium text-gray-800">
                 {user?.first_name} {user?.last_name}
               </p>
-              <p className="text-xs text-gray-400 capitalize">{user?.role}</p>
+              <p className="text-xs text-gray-400 capitalize">
+                {user?.role}
+              </p>
             </div>
 
             <div
@@ -56,7 +64,7 @@ export default function Layout() {
         </header>
 
         {/* PAGE CONTENT */}
-        <main className="px-6 md:px-10 py-8">
+        <main className="px-6 md:px-10 py-8 flex-1">
           <Outlet />
         </main>
       </div>
@@ -68,3 +76,4 @@ export default function Layout() {
     </div>
   );
 }
+

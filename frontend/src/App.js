@@ -11,9 +11,6 @@ import PrivateRoute from "./components/PrivateRoute";
 /* LAYOUT */
 import Layout from "./components/layout/Layout";
 
-/* CORE AND SUPPORT PAGES */
-import LandingPage from "./pages/landing_page";
-
 /* AUTH PAGES */
 import Login from "./auth/Login";
 import RegisterChoice from "./auth/RegisterChoice";
@@ -23,6 +20,7 @@ import RegisterSuccess from "./auth/RegisterSuccess";
 import VerifyEmail from "./auth/VerifyEmail";
 import AuthRedirect from "./auth/AuthRedirect";
 import PublicOnlyRoute from "./auth/PublicOnlyRoute";
+import OnboardingGuard from "./routes/OnboardingGuard";
 
 /* CUSTOMER PAGES */
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
@@ -84,37 +82,41 @@ function App() {
               SHARED ROUTES (CUSTOMER + COMPANY)
               BOTH CAN SEE JOBREQUEST LIST
           ====================================== */}
-          <Route element={<PrivateRoute />}>
-            <Route element={<Layout />}>
-              <Route path="/jobrequests" element={<JobRequestList />} />
-              <Route path="/jobrequests/:id" element={<RoleBasedJobRequestDetail />} />
+          <Route element={<OnboardingGuard />}>
+            <Route element={<PrivateRoute />}>
+              <Route element={<Layout />}>
+                <Route path="/jobrequests" element={<JobRequestList />} />
+                <Route path="/jobrequests/:id" element={<RoleBasedJobRequestDetail />} />
+              </Route>
             </Route>
           </Route>
-
           {/* ======================================
               CUSTOMER ROUTES
           ====================================== */}
-          <Route element={<PrivateRoute roles={["customer"]} />}>
-            <Route element={<Layout />}>
-              <Route path="/dashboard/customer" element={<CustomerDashboard />} />
-              <Route path="/profile/customer" element={<CustomerProfile />} />
+          <Route element={<OnboardingGuard />}>
+            <Route element={<PrivateRoute roles={["customer"]} />}>
+              <Route element={<Layout />}>
+                <Route path="/dashboard/customer" element={<CustomerDashboard />} />
+                <Route path="/profile/customer" element={<CustomerProfile />} />
 
-              <Route path="/jobrequests/create" element={<JobRequestCreate />} />
-              <Route path="/customer/offers/:id" element={<CustomerOfferDetailsPage />} />
+                <Route path="/jobrequests/create" element={<JobRequestCreate />} />
+                <Route path="/customer/offers/:id" element={<CustomerOfferDetailsPage />} />
+              </Route>
             </Route>
           </Route>
-
           {/* ======================================
               COMPANY ROUTES
           ====================================== */}
-          <Route element={<PrivateRoute roles={["company"]} />}>
-            <Route element={<Layout />}>
-              <Route path="/dashboard/company" element={<CompanyDashboard />} />
-              <Route path="/profile/company" element={<CompanyProfile />} />
-              <Route path="/company/jobrequests/:jobId/offer/edit" element={<OfferEdit />} />
-              <Route path="/leads/mine" element={<MyLeads />} />
-              <Route path="/leads/:id" element={<LeadDetailsPage />} />
-              <Route path="/offers/:id" element={<OfferDetails />} />
+          <Route element={<OnboardingGuard />}>
+            <Route element={<PrivateRoute roles={["company"]} />}>
+              <Route element={<Layout />}>
+                <Route path="/dashboard/company" element={<CompanyDashboard />} />
+                <Route path="/profile/company" element={<CompanyProfile />} />
+                <Route path="/company/jobrequests/:jobId/offer/edit" element={<OfferEdit />} />
+                <Route path="/leads/mine" element={<MyLeads />} />
+                <Route path="/leads/:id" element={<LeadDetailsPage />} />
+                <Route path="/offers/:id" element={<OfferDetails />} />
+              </Route>
             </Route>
           </Route>
 
