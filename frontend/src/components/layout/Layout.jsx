@@ -1,17 +1,14 @@
-// ============================================================
 // src/components/layout/Layout.jsx
-// Final cleaned + stable version (v6 nested routes)
-// ============================================================
 
 import React from "react";
 import Sidebar from "./Sidebar";
 import MobileNav from "./MobileNav";
 import { Outlet } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
-import OnboardingBanner from "../onboarding/OnboardingBanner";
+import EmailVerificationBanner from "../email/EmailVerificationBanner";
 
 export default function Layout() {
-  const { user } = useAuth();
+  const { user, isCompany } = useAuth();
 
   return (
     <div className="flex min-h-screen bg-gray-50">
@@ -21,11 +18,8 @@ export default function Layout() {
         <Sidebar />
       </div>
 
-      {/* MAIN */}
+      {/* MAIN AREA */}
       <div className="flex-1 flex flex-col">
-
-        {/* 🔔 ONBOARDING BANNER */}
-        <OnboardingBanner />
 
         {/* TOPBAR */}
         <header
@@ -63,6 +57,11 @@ export default function Layout() {
           </div>
         </header>
 
+        {/* PAGE CONTENT WRAPPER */}
+        <div className="px-6 md:px-10 pt-6">
+          {isCompany && <EmailVerificationBanner />}
+        </div>
+
         {/* PAGE CONTENT */}
         <main className="px-6 md:px-10 py-8 flex-1">
           <Outlet />
@@ -76,4 +75,3 @@ export default function Layout() {
     </div>
   );
 }
-
