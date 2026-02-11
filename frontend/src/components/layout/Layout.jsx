@@ -59,7 +59,7 @@ export default function Layout() {
 
         {/* PAGE CONTENT WRAPPER */}
         <div className="px-6 md:px-10 pt-6">
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-6xl mx-auto">
             {isCompany && <EmailVerificationBanner />}
           </div>
         </div>
