@@ -4,7 +4,6 @@ import React, { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
-import EmailVerificationBanner from "../../components/email/EmailVerificationBanner";
 
 import {
   Clock,
@@ -143,7 +142,6 @@ export default function MyLeads() {
   // ============================================================
   return (
     <div className="premium-container mt-4">
-      {!user.email_verified && <EmailVerificationBanner />}
 
       {/* HEADER */}
       <div className="flex justify-between items-center mb-6">

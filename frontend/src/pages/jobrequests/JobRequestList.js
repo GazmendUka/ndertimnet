@@ -5,7 +5,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
-import EmailVerificationBanner from "../../components/email/EmailVerificationBanner";
 
 import { ArrowLeft, MapPin, Euro, Tag, Briefcase, Lock } from "lucide-react";
 import StatusBadge from "../../components/ui/StatusBadge";
@@ -116,7 +115,6 @@ export default function JobRequestList() {
   // ============================================================
   return (
     <div className="premium-container">
-      {!user.email_verified && isCompany && <EmailVerificationBanner />}
 
       {!companyLoading && isCompany && !isProfileComplete && (
         <ProfileIncompleteBanner profileStep={profileStep} />

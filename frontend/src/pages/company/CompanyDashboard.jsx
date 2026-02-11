@@ -8,7 +8,6 @@ import { Link } from "react-router-dom";
 
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
-import EmailVerificationBanner from "../../components/email/EmailVerificationBanner";
 import { Clock4, CheckCircle2, XCircle } from "lucide-react";
 import StatusBadge from "../../components/ui/StatusBadge";
 
@@ -149,7 +148,6 @@ export default function CompanyDashboard() {
   // ============================================================
   return (
     <div className="premium-container">
-      {!user.email_verified && <EmailVerificationBanner />}
 
       {!companyLoading && !isProfileComplete && (
         <ProfileIncompleteBanner profileStep={profileStep} />
