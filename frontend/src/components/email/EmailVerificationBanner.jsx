@@ -10,10 +10,11 @@ import { useAuth } from "../../auth/AuthContext";
 export default function EmailVerificationBanner() {
   const {
     onboardingStep,
-    isEmailVerified,
     refreshMe,
     isCompany,
+    user,
   } = useAuth();
+
 
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -25,9 +26,16 @@ export default function EmailVerificationBanner() {
   // ============================================================
   if (onboardingStep === 1) {
     const resend = async () => {
+      if (!user?.email) {
+        toast.error("Email nuk u gjet.");
+        return;
+      }
       try {
         setSending(true);
-        await api.post("/accounts/resend-verification/");
+        await api.post("/accounts/resend-verification/", {
+          email: user?.email,
+        });
+
         toast.success(
           "Email-i i verifikimit u dërgua. Kontrolloni inbox-in ose spam-in."
         );
@@ -35,6 +43,7 @@ export default function EmailVerificationBanner() {
         const msg =
           err?.response?.data?.detail ||
           "Nuk ishte e mundur të dërgohej email-i i verifikimit për momentin.";
+
         toast.error(msg);
       } finally {
         setSending(false);

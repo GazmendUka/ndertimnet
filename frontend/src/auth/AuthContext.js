@@ -77,12 +77,12 @@ export const AuthProvider = ({ children }) => {
       // ✅ SOFT-FAIL: email ej verifierad
       if (status === 403 && code === "EMAIL_NOT_VERIFIED") {
         setUser((prev) => ({
-          role: prev?.role || "company", // eller customer om default
+          ...prev,
           email_verified: false,
-          profile_completed: false,
         }));
         return null;
       }
+
 
 
       // ❌ Hård logout endast vid riktiga auth-fel
@@ -111,7 +111,6 @@ export const AuthProvider = ({ children }) => {
 
       const data = res.data.data;
 
-      // 🔐 Spara tokens
       const storage = rememberMe ? localStorage : sessionStorage;
       storage.setItem("access", data.access);
       storage.setItem("refresh", data.refresh);
@@ -119,9 +118,16 @@ export const AuthProvider = ({ children }) => {
       setAccess(data.access);
       setRefresh(data.refresh);
 
-      // 👤 Hämta user med token
-      const usr = await fetchCurrentUser(data.access);
-      return usr;
+      // 🔥 Sätt user direkt från login
+      setUser(data.user);
+
+      // Försök uppdatera via /me
+      try {
+        await fetchCurrentUser(data.access);
+      } catch {}
+
+      return data.user;
+
     } catch (err) {
       throw new Error(err.response?.data?.message || "Gabim gjatë hyrjes");
     }
