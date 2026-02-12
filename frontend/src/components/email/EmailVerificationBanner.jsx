@@ -30,8 +30,10 @@ export default function EmailVerificationBanner() {
         toast.error("Email nuk u gjet.");
         return;
       }
+
       try {
         setSending(true);
+
         await api.post("/accounts/resend-verification/", {
           email: user?.email,
         });
@@ -40,8 +42,11 @@ export default function EmailVerificationBanner() {
           "Email-i i verifikimit u dërgua. Kontrolloni inbox-in ose spam-in."
         );
       } catch (err) {
+        console.log("RESEND ERROR FULL:", err.response?.data);
+
         const msg =
           err?.response?.data?.detail ||
+          err?.response?.data?.message ||
           "Nuk ishte e mundur të dërgohej email-i i verifikimit për momentin.";
 
         toast.error(msg);
