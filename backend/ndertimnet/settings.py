@@ -341,3 +341,11 @@ DEFAULT_FROM_EMAIL = os.environ.get(
     "DEFAULT_FROM_EMAIL",
     "no-reply@ndertimnet.com"
 )
+
+print("==== EMAIL CONFIG DEBUG ====")
+print("EMAIL_BACKEND:", EMAIL_BACKEND)
+print("EMAIL_HOST:", EMAIL_HOST)
+print("EMAIL_PORT:", EMAIL_PORT)
+print("EMAIL_HOST_USER:", EMAIL_HOST_USER)
+print("EMAIL_USE_TLS:", EMAIL_USE_TLS)
+print("=============================")
