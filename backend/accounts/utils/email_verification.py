@@ -24,5 +24,11 @@ def verify_email_token(token, max_age=60 * 60 * 24):  # 24 timmar
             max_age=max_age,
         )
         return data.get("user_id")
+
+    except signing.SignatureExpired:
+        print("TOKEN EXPIRED")
+        return None
+
     except signing.BadSignature:
+        print("BAD SIGNATURE")
         return None
