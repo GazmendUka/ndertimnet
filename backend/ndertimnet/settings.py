@@ -326,26 +326,7 @@ FRONTEND_VERIFY_EMAIL_URL = os.environ.get(
 # ======================================================
 # EMAIL (DEV default)
 # ======================================================
-EMAIL_BACKEND = os.environ.get(
-    "EMAIL_BACKEND",
-    "django.core.mail.backends.console.EmailBackend"
-)
-
-EMAIL_HOST = os.environ.get("EMAIL_HOST")
-EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 587))
-EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD")
-EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True"
-
 DEFAULT_FROM_EMAIL = os.environ.get(
     "DEFAULT_FROM_EMAIL",
     "no-reply@ndertimnet.com"
 )
-
-print("==== EMAIL CONFIG DEBUG ====")
-print("EMAIL_BACKEND:", EMAIL_BACKEND)
-print("EMAIL_HOST:", EMAIL_HOST)
-print("EMAIL_PORT:", EMAIL_PORT)
-print("EMAIL_HOST_USER:", EMAIL_HOST_USER)
-print("EMAIL_USE_TLS:", EMAIL_USE_TLS)
-print("=============================")

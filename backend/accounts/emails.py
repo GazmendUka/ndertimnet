@@ -1,37 +1,40 @@
-from django.core.mail import EmailMultiAlternatives
-from django.template.loader import render_to_string
+#backend/accounts/emails.py
+
+import os
+from sendgrid import SendGridAPIClient
+from sendgrid.helpers.mail import Mail
 from django.conf import settings
 
 
 def send_verification_email(user, token):
     verify_url = settings.FRONTEND_VERIFY_EMAIL_URL.format(token=token)
 
-    subject = "Verifikoni email-in tuaj – Ndertimnet"
-
-    # TEXT fallback (VIKTIGT)
-    text_content = (
-        "Përshëndetje,\n\n"
-        "Ju lutem verifikoni email-in tuaj duke klikuar linkun më poshtë:\n\n"
-        f"{verify_url}\n\n"
-        "Nëse nuk e keni krijuar këtë llogari, mund ta injoroni këtë email.\n\n"
-        "— Ndertimnet"
-    )
-
-    # HTML content
-    html_content = render_to_string(
-        "emails/verify_email.html",
-        {
-            "user": user,
-            "verify_url": verify_url,
-        },
-    )
-
-    email = EmailMultiAlternatives(
-        subject=subject,
-        body=text_content,
+    message = Mail(
         from_email=settings.DEFAULT_FROM_EMAIL,
-        to=[user.email],
+        to_emails=user.email,
+        subject="Verifikoni email-in tuaj – Ndertimnet",
+        html_content=f"""
+            <p>Përshëndetje {user.first_name},</p>
+            <p>Klikoni butonin më poshtë për të verifikuar email-in tuaj:</p>
+            <p>
+                <a href="{verify_url}" 
+                   style="padding:10px 16px;background:#2563eb;color:white;text-decoration:none;border-radius:6px;">
+                   Verifiko Email-in
+                </a>
+            </p>
+            <p>Nëse nuk e keni kërkuar këtë email, mund ta injoroni.</p>
+        """
     )
 
-    email.attach_alternative(html_content, "text/html")
-    email.send(fail_silently=False)
+    try:
+        api_key = os.environ.get("SENDGRID_API_KEY")
+
+        if not api_key:
+            raise Exception("SENDGRID_API_KEY is not configured")
+
+        sg = SendGridAPIClient(api_key)
+        response = sg.send(message)
+        return response.status_code
+    except Exception as e:
+        print("SENDGRID ERROR:", str(e))
+        raise
