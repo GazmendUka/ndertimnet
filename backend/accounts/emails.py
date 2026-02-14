@@ -22,15 +22,16 @@ def send_verification_email(user, token):
                 <td style="font-size:16px;color:#111827;line-height:1.6;">
                   
                   <p style="margin:0 0 16px 0;">
-                    Hej {user.first_name or ""},
+                    Përshëndetje {user.first_name or ""},
                   </p>
 
                   <p style="margin:0 0 16px 0;">
-                    Tack för att du använder vår tjänst, <strong>Ndërtimnet.com</strong>.
+                    Faleminderit që po përdorni shërbimin tonë, 
+                    <strong>Ndërtimnet.com</strong>.
                   </p>
 
                   <p style="margin:0 0 24px 0;">
-                    Bekräfta din emailadress genom att klicka på knappen nedan.
+                    Ju lutem konfirmoni adresën tuaj të email-it duke klikuar butonin më poshtë.
                   </p>
 
                   <p style="text-align:center;margin:30px 0;">
@@ -38,12 +39,18 @@ def send_verification_email(user, token):
                        style="background:#111827;color:#ffffff;text-decoration:none;
                               padding:12px 22px;border-radius:8px;font-weight:600;
                               display:inline-block;">
-                       Verifiera email
+                       Verifiko email-in
                     </a>
                   </p>
 
                   <p style="margin-top:32px;font-size:14px;color:#6b7280;">
-                    om du inte skapade kontot kan du ignorera detta meddelande.
+                    Nëse nuk e keni krijuar këtë llogari, mund ta injoroni këtë mesazh.
+                  </p>
+
+                  <hr style="margin:40px 0 20px 0;border:none;border-top:1px solid #e5e7eb;" />
+
+                  <p style="font-size:13px;color:#9ca3af;text-align:center;">
+                    © 2026 Ndërtimnet. Të gjitha të drejtat e rezervuara.
                   </p>
 
                 </td>
@@ -60,7 +67,7 @@ def send_verification_email(user, token):
     message = Mail(
         from_email=settings.DEFAULT_FROM_EMAIL,
         to_emails=user.email,
-        subject="Verifiera din email – Ndërtimnet",
+        subject="Verifikoni email-in tuaj – Ndërtimnet",
         html_content=html_content,
     )
 
