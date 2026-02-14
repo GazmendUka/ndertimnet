@@ -1,8 +1,8 @@
-// src/pages/auth/RegisterSuccess.jsx
+// frontent/src/auth/RegisterSucess.js
 
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "../../auth/AuthContext";
+import { useAuth } from "./AuthContext";
 import { CheckCircle } from "lucide-react";
 
 export default function RegisterSuccess() {
