@@ -4,6 +4,8 @@ import React, { useEffect, useState, useRef } from "react";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
 import { Pencil } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
 
 const PROFILE_STEPS = {
   0: 20,
@@ -19,7 +21,8 @@ const STEP_HINTS = {
 };
 
 export default function CompanyProfile() {
-  const { access } = useAuth();
+  const { access, logout } = useAuth();
+  const navigate = useNavigate();
   const [logoFile, setLogoFile] = useState(null);
   const logoInputRef = useRef(null);
   const [company, setCompany] = useState(null); 
@@ -31,6 +34,49 @@ export default function CompanyProfile() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState(""); 
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletePassword, setDeletePassword] = useState("");
+  const [deleteError, setDeleteError] = useState("");
+  const [deleting, setDeleting] = useState(false);
+
+
+
+
+    // --------------------------------------------------
+    // DELETE COMPANY ACCOUNT
+    // --------------------------------------------------
+
+  const handleDeleteAccount = async () => {
+    if (!deletePassword) {
+      setDeleteError("Ju lutem shkruani fjalëkalimin.");
+      return;
+    }
+
+    setDeleting(true);
+    setDeleteError("");
+
+    try {
+      await api.post("accounts/delete/", {
+        password: deletePassword,
+      });
+
+      // 🔐 Rensa auth state korrekt
+      logout();
+
+      // 🔁 Redirect
+      navigate("/");
+    } catch (err) {
+      setDeleteError(
+        err.response?.data?.message ||
+        "Fjalëkalimi është i pasaktë ose ndodhi një gabim."
+      );
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+
 
   // --------------------------------------------------
   // Load company profile + professions
@@ -312,6 +358,15 @@ export default function CompanyProfile() {
             )}
           </div>
 
+          <div className="pt-8 border-t">
+            <button
+              onClick={() => setShowDeleteModal(true)}
+              className="text-red-600 hover:underline text-sm"
+            >
+              Fshi llogarinë
+            </button>
+          </div>
+
           {/* Instruction */}
           {isEditing && (
             <p className="text-xs text-gray-500">
@@ -567,5 +622,56 @@ export default function CompanyProfile() {
           {error && <p className="text-red-600">{error}</p>}
       </div>
     </div>
+
+    {showDeleteModal && (
+      <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+        <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-lg">
+          <h2 className="text-lg font-semibold text-red-600">
+            Konfirmo fshirjen e llogarisë
+          </h2>
+
+          <p className="text-sm text-gray-600 mt-2">
+            Ky veprim do të çaktivizojë llogarinë tuaj.
+            Ju lutem shkruani fjalëkalimin për ta konfirmuar.
+          </p>
+
+          <input
+            type="password"
+            placeholder="Fjalëkalimi"
+            value={deletePassword}
+            onChange={(e) => setDeletePassword(e.target.value)}
+            className="mt-4 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-red-500"
+          />
+
+          {deleteError && (
+            <p className="text-red-600 text-sm mt-2">{deleteError}</p>
+          )}
+
+          <div className="flex justify-end gap-3 mt-6">
+            <button
+              onClick={() => {
+                setShowDeleteModal(false);
+                setDeletePassword("");
+                setDeleteError("");
+              }}
+              className="px-4 py-2 bg-gray-200 rounded-lg"
+            >
+              Anulo
+            </button>
+
+            <button
+              onClick={handleDeleteAccount}
+              disabled={deleting || !deletePassword}
+              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+            >
+              {deleting ? "Duke fshirë..." : "Fshi llogarinë"}
+            </button>
+          </div>
+        </div>
+      </div>
+    )}
+
   );
 }
+
+

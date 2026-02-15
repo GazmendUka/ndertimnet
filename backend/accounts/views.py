@@ -55,16 +55,30 @@ def error(message, code=400):
 # ======================================================
 
 class UserViewSet(viewsets.ModelViewSet):
-    queryset = User.objects.all()
     serializer_class = UserSerializer
     pagination_class = None
 
+    def get_queryset(self):
+        user = self.request.user
+
+        if user.is_staff or user.role == "admin":
+            return User.objects.all()
+
+        return User.objects.filter(is_active=True)
+
+
 
 class CustomerViewSet(viewsets.ModelViewSet):
-    queryset = Customer.objects.all()
     serializer_class = CustomerSerializer
     pagination_class = None
 
+    def get_queryset(self):
+        user = self.request.user
+
+        if user.is_staff or user.role == "admin":
+            return Customer.objects.all()
+
+        return Customer.objects.filter(user__is_active=True)
 
 # ======================================================
 # 🔑 LOGIN
@@ -408,3 +422,30 @@ class CustomerConsentView(APIView):
         return success("Pëlqimi u regjistrua me sukses")
 
 
+# ======================================================
+# 🇦🇱 SOFT DELETE USER
+# ======================================================
+
+class DeleteAccountView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        password = request.data.get("password")
+
+        if not password:
+            return error("Ju lutem konfirmoni fjalëkalimin.", 400)
+
+        if not user.check_password(password):
+            return error("Fjalëkalimi është i pasaktë.", 400)
+
+        if hasattr(user, "company_profile"):
+            company = user.company_profile
+            company.is_active = False
+            company.archived_at = timezone.now()
+            company.save(update_fields=["is_active", "archived_at"])
+
+        user.is_active = False
+        user.save(update_fields=["is_active"])
+
+        return success("Llogaria u çaktivizua me sukses.")

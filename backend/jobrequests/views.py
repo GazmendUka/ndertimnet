@@ -5,7 +5,7 @@ from django.utils import timezone
 from rest_framework import viewsets, permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, PermissionDenied
 from rest_framework.permissions import IsAuthenticated
 
 from main.pagination import AlbanianPagination
@@ -14,7 +14,7 @@ from accounts.permissions import IsEmailVerified, IsCompanyProfileComplete
 from .models import JobRequest, JobRequestAudit, JobRequestDraft
 from .serializers import (
     JobRequestSerializer,
-    JobRequestListSerializer, 
+    JobRequestListSerializer,
     JobRequestAuditSerializer,
     JobRequestDraftSerializer,
 )
@@ -26,6 +26,34 @@ from .serializers import (
 from leads.models import LeadMatch, ArchivedJob
 
 from offers.models import Offer
+
+
+# ------------------------------------------------------------
+# 🔐 GLOBALT SKYDD (gäller alla ViewSets i denna fil)
+# ------------------------------------------------------------
+
+class ActiveAccountGuardMixin:
+    """
+    Global guard för att säkra soft-delete.
+    - Blockera om user.is_active=False
+    - Blockera om user.role=="company" och company_profile.is_active=False
+
+    Detta skyddar även om en gammal JWT fortfarande är giltig.
+    """
+
+    def initial(self, request, *args, **kwargs):
+        user = getattr(request, "user", None)
+
+        if user and user.is_authenticated:
+            if not getattr(user, "is_active", True):
+                raise PermissionDenied("Kjo llogari është e çaktivizuar.")
+
+            if getattr(user, "role", None) == "company":
+                company = getattr(user, "company_profile", None)
+                if not company or not getattr(company, "is_active", True):
+                    raise PermissionDenied("Kjo kompani është e çaktivizuar.")
+
+        return super().initial(request, *args, **kwargs)
 
 
 # ------------------------------------------------------------
@@ -75,7 +103,7 @@ class IsCompanyProfileCompleteIfCompany(permissions.BasePermission):
 # 🆕 JobRequestDraft ViewSet – Multi-step form
 # ------------------------------------------------------------
 
-class JobRequestDraftViewSet(viewsets.ModelViewSet):
+class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
     """
     Hanterar utkast för 4-stegs JobRequest-formuläret:
 
@@ -205,7 +233,7 @@ class IsCustomerOrReadOnly(permissions.BasePermission):
 # 🏗️  JobRequest ViewSet (huvud-API:t)
 # ------------------------------------------------------------
 
-class JobRequestViewSet(viewsets.ModelViewSet):
+class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
     """
     Huvud-API för jobb-förfrågningar.
 
@@ -260,10 +288,10 @@ class JobRequestViewSet(viewsets.ModelViewSet):
                 )
             return JobRequest.objects.none()
 
-        # Company → only active jobs
+        # Company → only active jobs (och kräver aktiv company)
         if getattr(user, "role", None) == "company":
             company_profile = getattr(user, "company_profile", None)
-            if company_profile:
+            if company_profile and company_profile.is_active:
                 return JobRequest.objects.filter(is_active=True).order_by("-created_at")
             return JobRequest.objects.none()
 
@@ -544,10 +572,10 @@ class JobRequestViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
-        # Company: endast om lead är upplåst via Offer
+        # Company: endast om lead är upplåst via Offer + kräver aktiv company
         elif role == "company":
             company = getattr(user, "company_profile", None)
-            if not company:
+            if not company or not company.is_active:
                 return Response(
                     {"detail": "Not allowed"},
                     status=status.HTTP_403_FORBIDDEN,
@@ -569,5 +597,3 @@ class JobRequestViewSet(viewsets.ModelViewSet):
         logs = job.audit_logs.all().order_by("-created_at")
         serializer = JobRequestAuditSerializer(logs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
-    
-
