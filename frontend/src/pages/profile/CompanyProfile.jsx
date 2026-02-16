@@ -279,7 +279,7 @@ export default function CompanyProfile() {
   // --------------------------------------------------
   return (
     <>
-      <div className="bg-white p-8 rounded-2xl shadow-sm space-y-6">
+      <div className="premium-container">
       {/* Header */}
       <div className="space-y-4">
         {profileStep === 4 && (
