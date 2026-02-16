@@ -347,7 +347,7 @@ class RegisterCustomerView(generics.CreateAPIView):
 @permission_classes([IsAuthenticated])
 def customer_profile(request):
     user = request.user
-    if not user.email_verified:
+    if request.method in ["PUT", "PATCH"] and not user.email_verified:
         return error(
             "Verifikoni email-in para se të plotësoni profilin.",
             403

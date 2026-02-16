@@ -21,7 +21,7 @@ const STEP_HINTS = {
 };
 
 export default function CompanyProfile() {
-  const { access, logout } = useAuth();
+  const { access, logout, user } = useAuth();
   const navigate = useNavigate();
   const [logoFile, setLogoFile] = useState(null);
   const logoInputRef = useRef(null);
@@ -39,13 +39,11 @@ export default function CompanyProfile() {
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [deleting, setDeleting] = useState(false);
+  const isLocked = !user?.email_verified;
 
-
-
-
-    // --------------------------------------------------
-    // DELETE COMPANY ACCOUNT
-    // --------------------------------------------------
+  // --------------------------------------------------
+  // DELETE COMPANY ACCOUNT
+  // --------------------------------------------------
 
   const handleDeleteAccount = async () => {
     if (!deletePassword) {
@@ -108,14 +106,33 @@ export default function CompanyProfile() {
         setProfessions(professionsRes.data.results);
         setCities(citiesRes.data.results || citiesRes.data);
       } catch (err) {
-        setError("Profili i kompanisë nuk mund të ngarkohet.");
+        const status = err.response?.status;
+
+        if (status === 403 && !user?.email_verified) {
+          // 🔒 Email ej verifierad → visa tom profil utan error
+          setCompany({
+            company_name: "",
+            phone: "",
+            website: "",
+            address: "",
+            description: "",
+            logo: null,
+            professions_detail: [],
+            cities_detail: [],
+            profile_step: 0,
+          });
+          setForm(null);
+
+        } else {
+          setError("Profili i kompanisë nuk mund të ngarkohet.");
+        }
       } finally {
         setLoading(false);
       }
     };
 
     loadData();
-  }, [access]);
+  }, [access, user]);
 
   // --------------------------------------------------
   // Handlers
@@ -245,9 +262,10 @@ export default function CompanyProfile() {
     return <div className="p-6">Duke ngarkuar…</div>;
   }
 
-  if (!company) {
+  if (!company && !isLocked) {
     return <div className="p-6 text-red-600">Profili nuk u gjet.</div>;
   }
+
 
 
   // 🔐 Safe defaults (nu är company garanterat definierad)
@@ -572,23 +590,23 @@ export default function CompanyProfile() {
           <div className="flex justify-start pt-6">
             <button
               onClick={startEdit}
-              disabled={saving}
-              className="
+              disabled={saving || isLocked}
+              className={`
                 inline-flex items-center gap-2
                 px-5 py-2.5
                 rounded-full
                 text-sm font-medium
-                text-gray-800
-                bg-gray-100
-                hover:bg-gray-200
-                active:bg-gray-300
                 transition
-                disabled:opacity-50
-                disabled:cursor-not-allowed
-              "
+                ${
+                  saving || isLocked
+                    ? "text-gray-400 bg-gray-100 cursor-not-allowed"
+                    : "text-gray-800 bg-gray-100 hover:bg-gray-200 active:bg-gray-300"
+                }
+              `}
             >
               Redakto
             </button>
+
           </div>
         )}
         <div>
