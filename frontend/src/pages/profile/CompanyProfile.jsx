@@ -1,50 +1,41 @@
 // src/pages/profile/CompanyProfile.jsx
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useMemo } from "react";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
 import { Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
-
-const PROFILE_STEPS = {
-  0: 20,
-  1: 40,
-  2: 60,
-  3: 80,
-  4: 100,
-};
-const STEP_HINTS = {
-  0: "Shto përshkrimin dhe specialitetet",
-  1: "Shto qytetin",
-  2: "Shto logon",
-};
-
 export default function CompanyProfile() {
   const { access, logout, user } = useAuth();
   const navigate = useNavigate();
+
   const [logoFile, setLogoFile] = useState(null);
   const logoInputRef = useRef(null);
-  const [company, setCompany] = useState(null); 
-  const [form, setForm] = useState(null);     
+
+  const [company, setCompany] = useState(null);
+  const [form, setForm] = useState(null);
+
   const [professions, setProfessions] = useState([]);
   const [cities, setCities] = useState([]);
+
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+
   const [error, setError] = useState("");
-  const [message, setMessage] = useState(""); 
+  const [message, setMessage] = useState("");
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [deleting, setDeleting] = useState(false);
+
   const isLocked = !user?.email_verified;
 
   // --------------------------------------------------
   // DELETE COMPANY ACCOUNT
   // --------------------------------------------------
-
   const handleDeleteAccount = async () => {
     if (!deletePassword) {
       setDeleteError("Ju lutem shkruani fjalëkalimin.");
@@ -55,42 +46,38 @@ export default function CompanyProfile() {
     setDeleteError("");
 
     try {
-      await api.post("accounts/delete/", {
-        password: deletePassword,
-      });
-
-      // 🔐 Rensa auth state korrekt
+      await api.post("/accounts/delete/", { password: deletePassword });
       logout();
-
-      // 🔁 Redirect
       navigate("/");
     } catch (err) {
       setDeleteError(
         err.response?.data?.message ||
-        "Fjalëkalimi është i pasaktë ose ndodhi një gabim."
+          "Fjalëkalimi është i pasaktë ose ndodhi një gabim."
       );
     } finally {
       setDeleting(false);
     }
   };
 
-
-
   // --------------------------------------------------
-  // Load company profile + professions
+  // Load company profile + professions + cities
   // --------------------------------------------------
   useEffect(() => {
     if (!access) return;
 
+    let alive = true;
+
     const loadData = async () => {
       try {
         const [companyRes, professionsRes, citiesRes] = await Promise.all([
-          api.get("accounts/profile/company/"),
-          api.get("taxonomy/professions/"),
-          api.get("locations/cities/"),
+          api.get("/accounts/profile/company/"),
+          api.get("/taxonomy/professions/"),
+          api.get("/locations/cities/"),
         ]);
 
-        const companyData = companyRes.data.data;
+        if (!alive) return;
+
+        const companyData = companyRes.data?.data || companyRes.data;
 
         setCompany(companyData);
         setForm({
@@ -103,13 +90,15 @@ export default function CompanyProfile() {
           cities: (companyData.cities_detail || []).map((c) => c.id),
         });
 
-        setProfessions(professionsRes.data.results);
-        setCities(citiesRes.data.results || citiesRes.data);
+        setProfessions(professionsRes.data?.results || professionsRes.data || []);
+        setCities(citiesRes.data?.results || citiesRes.data || []);
       } catch (err) {
+        if (!alive) return;
+
         const status = err.response?.status;
 
+        // 🔒 Email ej verifierad: backend kan svara 403 -> vi visar sidan men låser editing
         if (status === 403 && !user?.email_verified) {
-          // 🔒 Email ej verifierad → visa tom profil utan error
           setCompany({
             company_name: "",
             phone: "",
@@ -120,38 +109,52 @@ export default function CompanyProfile() {
             professions_detail: [],
             cities_detail: [],
             profile_step: 0,
+            org_number: null,
           });
           setForm(null);
 
+          // vi vill INTE visa feltext i detta läge
+          setError("");
         } else {
           setError("Profili i kompanisë nuk mund të ngarkohet.");
         }
       } finally {
-        setLoading(false);
+        if (alive) setLoading(false);
       }
     };
 
     loadData();
-  }, [access, user]);
+
+    return () => {
+      alive = false;
+    };
+  }, [access, user?.email_verified]);
+
+  // --------------------------------------------------
+  // Derived
+  // --------------------------------------------------
+  const profileStep = useMemo(() => {
+    const step = company?.profile_step;
+    return Number.isInteger(step) ? step : 0;
+  }, [company]);
+
+  const professionList = company?.professions_detail || [];
+  const cityList = company?.cities_detail || [];
 
   // --------------------------------------------------
   // Handlers
   // --------------------------------------------------
   const handleChange = (e) => {
-    setForm((prev) => prev ? { ...prev, [e.target.name]: e.target.value } : prev);
+    setForm((prev) => (prev ? { ...prev, [e.target.name]: e.target.value } : prev));
   };
 
   const toggleProfession = (id) => {
     setForm((prev) => {
       if (!prev) return prev;
-
       const list = prev.professions || [];
-
       return {
         ...prev,
-        professions: list.includes(id)
-          ? list.filter((p) => p !== id)
-          : [...list, id],
+        professions: list.includes(id) ? list.filter((p) => p !== id) : [...list, id],
       };
     });
   };
@@ -159,19 +162,17 @@ export default function CompanyProfile() {
   const toggleCity = (id) => {
     setForm((prev) => {
       if (!prev) return prev;
-
       const list = prev.cities || [];
-
       return {
         ...prev,
-        cities: list.includes(id)
-          ? list.filter((c) => c !== id)
-          : [...list, id],
+        cities: list.includes(id) ? list.filter((c) => c !== id) : [...list, id],
       };
     });
   };
 
   const startEdit = () => {
+    if (!company) return;
+
     setForm({
       company_name: company.company_name || "",
       phone: company.phone || "",
@@ -190,11 +191,14 @@ export default function CompanyProfile() {
   const cancelEdit = () => {
     setIsEditing(false);
     setForm(null);
+    setLogoFile(null);
     setMessage("");
     setError("");
   };
 
   const saveChanges = async () => {
+    if (!form) return;
+
     setSaving(true);
     setError("");
     setMessage("");
@@ -211,7 +215,7 @@ export default function CompanyProfile() {
       }
 
       let payload;
-      let headers = {};
+      let config = {};
 
       if (logoFile) {
         payload = new FormData();
@@ -226,20 +230,18 @@ export default function CompanyProfile() {
 
         payload.append("logo", logoFile);
 
-        headers["Content-Type"] = "multipart/form-data";
+        config = { headers: { "Content-Type": "multipart/form-data" } };
       } else {
         payload = normalizedForm;
       }
 
-      const res = await api.patch(
-        "accounts/profile/company/",
-        payload,
-        { headers }
-      );
+      const res = await api.patch("/accounts/profile/company/", payload, config);
+      const updated = res.data?.data || res.data;
 
-      setCompany(res.data.data);
+      setCompany(updated);
       setIsEditing(false);
       setLogoFile(null);
+      setForm(null);
       setMessage("Profili është përditësua me sukses.");
     } catch (err) {
       setError("Gabim gjatë ruajtjes së profilit.");
@@ -250,29 +252,34 @@ export default function CompanyProfile() {
 
   const handleLogoChange = (e) => {
     const file = e.target.files?.[0];
-    if (file) {
-      setLogoFile(file);
-    }
+    if (file) setLogoFile(file);
   };
 
   // --------------------------------------------------
-  // Loading
+  // Guards
   // --------------------------------------------------
-  if (loading) {
-    return <div className="p-6">Duke ngarkuar…</div>;
-  }
+  if (loading) return <div className="p-6">Duke ngarkuar…</div>;
 
+  // om email är verifierad men company inte finns -> riktig error
   if (!company && !isLocked) {
     return <div className="p-6 text-red-600">Profili nuk u gjet.</div>;
   }
 
-
-
-  // 🔐 Safe defaults (nu är company garanterat definierad)
-  const professionList = company.professions_detail || [];
-  const profileStep = Number.isInteger(company.profile_step)
-    ? company.profile_step
-    : 0;
+  // fallback om company ändå är null (ska ej hända, men safe)
+  const safeCompany =
+    company ||
+    ({
+      company_name: "",
+      phone: "",
+      website: "",
+      address: "",
+      description: "",
+      logo: null,
+      professions_detail: [],
+      cities_detail: [],
+      profile_step: 0,
+      org_number: null,
+    });
 
   // --------------------------------------------------
   // UI
@@ -280,77 +287,100 @@ export default function CompanyProfile() {
   return (
     <>
       <div className="premium-container">
-      {/* Header */}
-      <div className="space-y-4">
-        {profileStep === 4 && (
-          <span className="text-sm text-green-700 bg-green-50 px-3 py-1 rounded-full">
-            Profili është i plotë
-          </span>
-        )}
+        <div className="premium-section space-y-8">
+          {/* HEADER */}
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-label mb-1">Profili</p>
+              <h1 className="page-title">Profili i Kompanisë</h1>
 
-        {/* Title + actions */}
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-2xl font-bold">Profili i Kompanisë</h2>
-
-            {profileStep === 0 && (
-              <p className="mt-1 text-sm text-yellow-700">
-                Verifikoni email-in dhe plotësoni emrin e kompanisë për të vazhduar.
-              </p>
-            )}
-          </div>
-
-          {/* Logo + edit */}
-          <div className="space-y-2">
-            <div
-              className={`
-                relative w-20 h-20 rounded-full overflow-hidden border
-                flex items-center justify-center
-                ${isEditing ? "cursor-pointer group" : ""}
-              `}
-              onClick={() => isEditing && logoInputRef.current?.click()}
-              title={isEditing ? "Kliko për ta ndryshuar logon" : undefined}
-            >
-              {/* Image / fallback */}
-              {company.logo ? (
-                <img
-                  src={company.logo}
-                  alt={company.company_name}
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <div className="w-full h-full bg-gray-200 flex items-center justify-center text-xl font-bold text-gray-600">
-                  {company.company_name?.[0]?.toUpperCase()}
+              {profileStep === 4 && (
+                <div className="mt-2 inline-flex text-xs font-semibold px-3 py-1 rounded-full bg-green-50 text-green-800 border border-green-200">
+                  Profili është i plotë
                 </div>
               )}
 
-              {/* Overlay + centered pencil (EDIT MODE) */}
-              {isEditing && (
-                <div
-                  className="
-                    absolute inset-0
-                    bg-black/40 backdrop-blur-[1px]
-                    flex items-center justify-center
-                    opacity-100
-                  "
-                >
-                  <Pencil className="text-white" size={28} />
-                </div>
-              )}
-
-              {/* Hidden file input */}
-              {isEditing && (
-                <input
-                  ref={logoInputRef}
-                  type="file"
-                  accept="image/*"
-                  className="hidden"
-                  onChange={handleLogoChange}
-                />
+              {isLocked && (
+                <p className="mt-2 text-sm text-amber-700">
+                  Email-i nuk është i verifikuar. Profili është i kyçur derisa ta verifikoni.
+                </p>
               )}
             </div>
 
-            <div className="pt-8 border-t">
+            {!isEditing && (
+              <button
+                onClick={startEdit}
+                disabled={saving || isLocked}
+                className={`inline-flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition ${
+                  saving || isLocked
+                    ? "text-gray-400 bg-gray-100 cursor-not-allowed"
+                    : "text-gray-800 bg-gray-100 hover:bg-gray-200 active:bg-gray-300"
+                }`}
+              >
+                Redakto
+              </button>
+            )}
+          </div>
+
+          {/* CARD */}
+          <div className="premium-card p-6 space-y-8">
+            {/* Logo row */}
+            <div className="flex items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div
+                  className={`relative w-20 h-20 rounded-full overflow-hidden border flex items-center justify-center ${
+                    isEditing ? "cursor-pointer" : ""
+                  }`}
+                  onClick={() => isEditing && logoInputRef.current?.click()}
+                  title={isEditing ? "Kliko për ta ndryshuar logon" : undefined}
+                >
+                  {safeCompany.logo ? (
+                    <img
+                      src={safeCompany.logo}
+                      alt={safeCompany.company_name || "logo"}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-200 flex items-center justify-center text-xl font-bold text-gray-600">
+                      {(safeCompany.company_name?.[0] || "C").toUpperCase()}
+                    </div>
+                  )}
+
+                  {isEditing && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <Pencil className="text-white" size={24} />
+                    </div>
+                  )}
+
+                  {isEditing && (
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleLogoChange}
+                    />
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-gray-900">
+                    {safeCompany.company_name || "—"}
+                  </p>
+                  {isEditing && (
+                    <p className="text-xs text-gray-500">
+                      Kliko logon për ta ndryshuar
+                      {logoFile?.name ? (
+                        <>
+                          {" "}
+                          • Zgjedhur: <span className="font-medium">{logoFile.name}</span>
+                        </>
+                      ) : null}
+                    </p>
+                  )}
+                </div>
+              </div>
+
               <button
                 onClick={() => setShowDeleteModal(true)}
                 className="text-red-600 hover:underline text-sm"
@@ -359,262 +389,210 @@ export default function CompanyProfile() {
               </button>
             </div>
 
-            {/* Instruction */}
-            {isEditing && (
-              <p className="text-xs text-gray-500">
-                Kliko logon për ta ndryshuar
-              </p>
-            )}
+            {/* Fields */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+              <label className="block">
+                <span className="text-xs text-gray-500">Emri i kompanisë</span>
+                {isEditing ? (
+                  <input
+                    name="company_name"
+                    value={form?.company_name || ""}
+                    onChange={handleChange}
+                    className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-800"
+                  />
+                ) : (
+                  <p className="mt-1 text-sm">{safeCompany.company_name || "—"}</p>
+                )}
+              </label>
 
-            {/* Selected file feedback */}
-            {isEditing && logoFile?.name && (
-              <p className="text-xs text-gray-600">
-                Zgjedhur: <span className="font-medium">{logoFile.name}</span>
-              </p>
-            )}
-          </div>
+              <label className="block">
+                <span className="text-xs text-gray-500">Numri i telefonit</span>
+                {isEditing ? (
+                  <input
+                    name="phone"
+                    value={form?.phone || ""}
+                    onChange={handleChange}
+                    className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-800"
+                  />
+                ) : (
+                  <p className="mt-1 text-sm">{safeCompany.phone || "—"}</p>
+                )}
+              </label>
 
-        </div>
-      </div>
-        {/* Company info */}
-        <div className="space-y-6 border-b pb-6">
-          <label className="block">
-            <span className="text-sm text-gray-600">Emri i kompanisë</span>
-            {isEditing ? (
-              <input
-                name="company_name"
-                value={form.company_name}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-800"
-              />
-            ) : (
-              <p className="font-medium">{company.company_name}</p>
-            )}
-          </label>
+              <label className="block">
+                <span className="text-xs text-gray-500">Faqja e internetit</span>
+                {isEditing ? (
+                  <input
+                    name="website"
+                    type="url"
+                    placeholder="https://example.com"
+                    value={form?.website || ""}
+                    onChange={handleChange}
+                    className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-800"
+                  />
+                ) : safeCompany.website ? (
+                  <p className="mt-1 text-sm">
+                    <a
+                      href={safeCompany.website}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline text-inherit"
+                    >
+                      {safeCompany.website}
+                    </a>
+                  </p>
+                ) : (
+                  <p className="mt-1 text-sm">—</p>
+                )}
+              </label>
 
-          {profileStep === 1 && !isEditing && (
-            <p className="text-sm text-yellow-700 mt-1">
-              Shtoni numrin e telefonit dhe faqen e internetit.
-            </p>
-          )}
+              <label className="block">
+                <span className="text-xs text-gray-500">Adresa</span>
+                {isEditing ? (
+                  <input
+                    name="address"
+                    placeholder="Rruga, numri, qyteti"
+                    value={form?.address || ""}
+                    onChange={handleChange}
+                    className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-800"
+                  />
+                ) : (
+                  <p className="mt-1 text-sm">{safeCompany.address || "—"}</p>
+                )}
+              </label>
+            </div>
 
-          <label className="block">
-            <span className="text-sm text-gray-600">Numri i telefonit</span>
-            {isEditing ? (
-              <input
-                name="phone"
-                value={form.phone || ""}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-800"
-              />
-            ) : (
-              <p>{company.phone || "—"}</p>
-            )}
-          </label>
-
-          <label className="block space-y-1">
-              <span className="text-sm text-gray-600">Faqja e internetit</span>
-
+            <label className="block">
+              <span className="text-xs text-gray-500">Përshkrimi</span>
               {isEditing ? (
-                <input
-                  name="website"
-                  type="url"
-                  placeholder="https://example.com"
-                  value={form.website || ""}
+                <textarea
+                  name="description"
+                  rows="4"
+                  value={form?.description || ""}
                   onChange={handleChange}
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-800"
+                  className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-800"
                 />
-              ) : company.website ? (
-                <p>
-                  <a
-                    href={company.website}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline text-inherit"
-                  >
-                    {company.website}
-                  </a>
-                </p>
               ) : (
-                <p>—</p>
+                <p className="mt-1 text-sm">{safeCompany.description || "—"}</p>
               )}
             </label>
-          
-          <label className="block">
-            <span className="text-sm text-gray-600">Adresa</span>
 
-            {isEditing ? (
-              <input
-                name="address"
-                placeholder="Rruga, numri, qyteti"
-                value={form.address || ""}
-                onChange={handleChange}
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-800"
-              />
-            ) : (
-              <p>{company.address || "—"}</p>
-            )}
-          </label>
+            {/* Professions */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">Specialitetet</h3>
 
-          <label className="block">
-            <span className="text-sm text-gray-600">Përshkrimi</span>
-            {isEditing ? (
-              <textarea
-                name="description"
-                value={form.description || ""}
-                onChange={handleChange}
-                rows="4"
-                className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-800"
-              />
-            ) : (
-              <p>{company.description || "—"}</p>
-            )}
-          </label>
-        </div>
-        
-        {profileStep === 2 && !isEditing && (
-          <p className="text-sm text-yellow-700 mb-2">
-            Përshkrimi, specialitetet dhe qytetet janë të detyrueshme.
-          </p>
-        )}
-
-        {/* Professions */}
-        <div>
-          <h3 className="font-semibold mb-2">Specialitetet</h3>
-
-          {isEditing ? (
-            <div className="grid grid-cols-2 gap-2">
-              {professions.map((p) => (
-                <label key={p.id} className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={form?.professions?.includes(p.id) || false}
-                    onChange={() => toggleProfession(p.id)}
-                  />
-                  {p.name}
-                </label>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-2">            
-              {professionList.length ? (
-                professionList.map((p) => (
-                  <span
-                    key={p.id}
-                    className="px-3 py-1 bg-gray-200 rounded-full text-sm"
-                  >
-                    {p.name}
-                  </span>
-                ))
+              {isEditing ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {professions.map((p) => (
+                    <label key={p.id} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={form?.professions?.includes(p.id) || false}
+                        onChange={() => toggleProfession(p.id)}
+                      />
+                      {p.name}
+                    </label>
+                  ))}
+                </div>
               ) : (
-                <span className="text-gray-500">—</span>
+                <div className="flex flex-wrap gap-2">
+                  {professionList.length ? (
+                    professionList.map((p) => (
+                      <span
+                        key={p.id}
+                        className="px-3 py-1 bg-gray-100 border border-gray-200 rounded-full text-sm"
+                      >
+                        {p.name}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-sm text-gray-500">—</span>
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </div>
 
-        {/* Serviceområde */}
-        <div>
-          <h3 className="font-semibold mb-2">Qytete ku veprojnë</h3>
+            {/* Cities */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">Qytete ku veprojnë</h3>
 
-          {isEditing ? (
-            <div className="grid grid-cols-2 gap-2">
-              {cities.map((c) => (
-                <label key={c.id} className="flex items-center gap-2">
-                  <input
-                    type="checkbox"
-                    checked={form?.cities?.includes(c.id) || false}
-                    onChange={() => toggleCity(c.id)}
-                  />
-                  {c.name}
-                </label>
-              ))}
-            </div>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {company.cities_detail?.length ? (
-                company.cities_detail.map((c) => (
-                  <span
-                    key={c.id}
-                    className="px-3 py-1 bg-gray-200 rounded-full text-sm"
-                  >
-                    {c.name}
-                  </span>
-                ))
+              {isEditing ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {cities.map((c) => (
+                    <label key={c.id} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={form?.cities?.includes(c.id) || false}
+                        onChange={() => toggleCity(c.id)}
+                      />
+                      {c.name}
+                    </label>
+                  ))}
+                </div>
               ) : (
-                <span className="text-gray-500">—</span>
+                <div className="flex flex-wrap gap-2">
+                  {cityList.length ? (
+                    cityList.map((c) => (
+                      <span
+                        key={c.id}
+                        className="px-3 py-1 bg-gray-100 border border-gray-200 rounded-full text-sm"
+                      >
+                        {c.name}
+                      </span>
+                    ))
+                  ) : (
+                    <span className="text-sm text-gray-500">—</span>
+                  )}
+                </div>
               )}
             </div>
-          )}
-        </div>
-        
-        <div className="border-t pt-4 space-y-2">
-          <h3 className="font-semibold">Të dhëna juridike</h3>
 
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-gray-600">Numri i biznesit</span>
+            {/* Legal */}
+            <div className="border-t pt-4 space-y-2">
+              <h3 className="text-sm font-semibold text-gray-900">Të dhëna juridike</h3>
 
-            {company.org_number ? (
-              <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm">
-                {company.org_number}
-              </span>
-            ) : (
-              <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm">
-                Jo i plotë
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Numri i biznesit</span>
+
+                {safeCompany.org_number ? (
+                  <span className="px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm border border-green-200">
+                    {safeCompany.org_number}
+                  </span>
+                ) : (
+                  <span className="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm border border-yellow-200">
+                    Jo i plotë
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Actions */}
+            {isEditing && (
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={saveChanges}
+                  disabled={saving}
+                  className="px-5 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-black disabled:opacity-50"
+                >
+                  {saving ? "Duke ruajtur…" : "Ruaj"}
+                </button>
+
+                <button
+                  onClick={cancelEdit}
+                  className="px-5 py-2 rounded-lg bg-gray-200 text-sm font-medium hover:bg-gray-300"
+                >
+                  Anulo
+                </button>
+              </div>
             )}
-          </div>
-        </div>
 
-        {/* Actions */}
-        {isEditing && (
-          <div className="flex gap-3 pt-4">
-            <button
-              onClick={saveChanges}
-              disabled={saving}
-              className="px-5 py-2 rounded bg-blue-600 text-white disabled:opacity-50"
-            >
-              {saving ? "Duke ruajtur…" : "Ruaj"}
-            </button>
-            <button
-              onClick={cancelEdit}
-              className="px-5 py-2 rounded bg-gray-300"
-            >
-              Anulo
-            </button>
+            {message && <p className="text-green-600 text-sm">{message}</p>}
+            {error && <p className="text-red-600 text-sm">{error}</p>}
           </div>
-        )}
-
-        {/* Bottom left – Edit button */}
-        {!isEditing && (
-          <div className="flex justify-start pt-6">
-            <button
-              onClick={startEdit}
-              disabled={saving || isLocked}
-              className={`
-                inline-flex items-center gap-2
-                px-5 py-2.5
-                rounded-full
-                text-sm font-medium
-                transition
-                ${
-                  saving || isLocked
-                    ? "text-gray-400 bg-gray-100 cursor-not-allowed"
-                    : "text-gray-800 bg-gray-100 hover:bg-gray-200 active:bg-gray-300"
-                }
-              `}
-            >
-              Redakto
-            </button>
-
-          </div>
-        )}
-        <div>
-            {message && <p className="text-green-600">{message}</p>}
-            {error && <p className="text-red-600">{error}</p>}
         </div>
       </div>
 
+      {/* DELETE MODAL */}
       {showDeleteModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
           <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-lg">
@@ -623,8 +601,7 @@ export default function CompanyProfile() {
             </h2>
 
             <p className="text-sm text-gray-600 mt-2">
-              Ky veprim do të çaktivizojë llogarinë tuaj.
-              Ju lutem shkruani fjalëkalimin për ta konfirmuar.
+              Ky veprim do të çaktivizojë llogarinë tuaj. Ju lutem shkruani fjalëkalimin për ta konfirmuar.
             </p>
 
             <input
@@ -635,9 +612,7 @@ export default function CompanyProfile() {
               className="mt-4 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-red-500"
             />
 
-            {deleteError && (
-              <p className="text-red-600 text-sm mt-2">{deleteError}</p>
-            )}
+            {deleteError && <p className="text-red-600 text-sm mt-2">{deleteError}</p>}
 
             <div className="flex justify-end gap-3 mt-6">
               <button
@@ -665,5 +640,3 @@ export default function CompanyProfile() {
     </>
   );
 }
-
-
