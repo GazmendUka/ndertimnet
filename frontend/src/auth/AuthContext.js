@@ -74,17 +74,6 @@ export const AuthProvider = ({ children }) => {
 
       console.warn("fetchCurrentUser failed", status, code);
 
-      // ✅ SOFT-FAIL: email ej verifierad
-      if (status === 403 && code === "EMAIL_NOT_VERIFIED") {
-        setUser((prev) => ({
-          ...prev,
-          email_verified: false,
-        }));
-        return null;
-      }
-
-
-
       // ❌ Hård logout endast vid riktiga auth-fel
       if (status === 401) {
         logout();
@@ -161,20 +150,16 @@ export const AuthProvider = ({ children }) => {
   // ============================================================
   let onboardingStep = 0;
 
-  // 1️⃣ Inloggad men ej verifierad email
-  if (isAuthenticated && !isEmailVerified) {
+  if (!isAuthenticated) {
+    onboardingStep = 0;
+  } else if (!isEmailVerified) {
     onboardingStep = 1;
-  }
-
-  // 2️⃣ Email verifierad men profil ej klar
-  if (isAuthenticated && isEmailVerified && !isProfileComplete) {
+  } else if (!isProfileComplete) {
     onboardingStep = 2;
-  }
-
-  // 3️⃣ Allt klart → full access
-  if (isAuthenticated && isEmailVerified && isProfileComplete) {
+  } else {
     onboardingStep = 3;
   }
+
 
   // ============================================================
   // 🔐 PERMISSIONS (kan användas överallt)

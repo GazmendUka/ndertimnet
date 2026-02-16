@@ -15,11 +15,19 @@ export default function EmailVerificationBanner() {
     user,
   } = useAuth();
 
+  const percentMap = {
+    0: 20,
+    1: 40,
+    2: 60,
+    3: 80,
+    4: 100,
+  };
 
+  const percent = percentMap[user?.profile_step] || 0;
   const [sending, setSending] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
 
-  if (onboardingStep === 0 || onboardingStep === 3) return null;
+  if (onboardingStep !== 1 && onboardingStep !== 2) return null;
 
   // ============================================================
   // STEP 1 – EMAIL VERIFICATION
@@ -126,14 +134,19 @@ export default function EmailVerificationBanner() {
             </div>
 
             <div className="mt-1 text-sm text-blue-800">
-              Plotësoni profilin tuaj për të përfituar qasje të plotë në
-              platformë.
+              Plotësoni profilin tuaj për të përfituar qasje të plotë në platformë.
             </div>
 
-            <div className="mt-3 h-2 w-full bg-blue-200 rounded">
-              <div className="h-2 w-[40%] bg-blue-600 rounded"></div>
+            <div className="mt-3 h-2 w-full bg-blue-200 rounded overflow-hidden">
+              <div
+                className="h-2 bg-blue-600 rounded transition-all duration-300"
+                style={{ width: `${percent}%` }}
+              />
             </div>
-            <p className="mt-1 text-xs text-blue-700">40 % i përfunduar</p>
+
+            <p className="mt-1 text-xs text-blue-700">
+              {percent}% i përfunduar
+            </p>
 
             <div className="mt-4">
               <Link
@@ -148,6 +161,5 @@ export default function EmailVerificationBanner() {
       </div>
     );
   }
-
   return null;
 }

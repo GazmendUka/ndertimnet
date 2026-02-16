@@ -229,6 +229,21 @@ class ResendVerificationEmailView(APIView):
 def current_user(request):
     user = request.user
 
+    profile_step = 0
+    profile_completed = False
+
+    # Company
+    if hasattr(user, "company_profile"):
+        company = user.company_profile
+        profile_step = getattr(company, "profile_step", 0)
+        profile_completed = profile_step == 4
+
+    # Customer
+    if hasattr(user, "customer_profile"):
+        customer = user.customer_profile
+        profile_step = getattr(customer, "profile_step", 0)
+        profile_completed = profile_step == 4
+
     response = {
         "id": user.id,
         "email": user.email,
@@ -236,24 +251,25 @@ def current_user(request):
         "first_name": user.first_name,
         "last_name": user.last_name,
         "email_verified": user.email_verified,
+        "profile_step": profile_step,
+        "profile_completed": profile_completed,
     }
 
     if hasattr(user, "company_profile"):
-        company = user.company_profile
         response["company"] = CompanySerializer(
-            company,
+            user.company_profile,
             context={"request": request}
         ).data
 
     if hasattr(user, "customer_profile"):
-        customer = user.customer_profile
         response["customer"] = {
-            "id": customer.id,
-            "phone": customer.phone,
-            "address": customer.address,
+            "id": user.customer_profile.id,
+            "phone": user.customer_profile.phone,
+            "address": user.customer_profile.address,
         }
 
     return success(data=response)
+
 
 
 # ======================================================
@@ -331,7 +347,12 @@ class RegisterCustomerView(generics.CreateAPIView):
 @permission_classes([IsAuthenticated])
 def customer_profile(request):
     user = request.user
-
+    if not user.email_verified:
+        return error(
+            "Verifikoni email-in para se të plotësoni profilin.",
+            403
+        )
+    
     if not hasattr(user, "customer_profile"):
         return error("Ky llogari nuk është klient.", 403)
 
@@ -369,7 +390,11 @@ def customer_profile(request):
 @permission_classes([IsAuthenticated])
 def company_profile(request):
     user = request.user
-
+    if not user.email_verified:
+        return error(
+            "Verifikoni email-in para se të plotësoni profilin.",
+            403
+        )
     if not hasattr(user, "company_profile"):
         return error("Ky llogari nuk është kompani.", 403)
 

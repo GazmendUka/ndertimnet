@@ -269,33 +269,6 @@ export default function CompanyProfile() {
         </span>
       )}
 
-      {/* Profile completeness – centered */}
-      {profileStep < 4 && (
-        <div className="border border-yellow-300 bg-yellow-50 rounded-lg p-4 space-y-2 max-w-xl mx-auto">
-          <div className="flex items-center justify-between">
-            <span className="font-medium text-yellow-800">
-              Profili nuk është i plotë
-            </span>
-            <span className="text-sm text-yellow-700">
-              {PROFILE_STEPS[profileStep]}%
-            </span>
-          </div>
-
-          <div className="w-full bg-yellow-200 rounded-full h-2 overflow-hidden">
-            <div
-              className="bg-yellow-500 h-2 transition-all"
-              style={{
-                width: `${PROFILE_STEPS[profileStep]}%`,
-              }}
-            />
-          </div>
-
-          <p className="text-sm text-yellow-700">
-            Plotësoni profilin për të mundësuar marrjen e leads dhe komunikimin me klientët.
-          </p>
-        </div>
-      )}
-
       {/* Title + actions */}
       <div className="flex items-center justify-between">
         <div>
