@@ -55,6 +55,7 @@ def error(message, code=400):
 # ======================================================
 
 class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.all() 
     serializer_class = UserSerializer
     pagination_class = None
 
@@ -69,6 +70,7 @@ class UserViewSet(viewsets.ModelViewSet):
 
 
 class CustomerViewSet(viewsets.ModelViewSet):
+    queryset = Customer.objects.all() 
     serializer_class = CustomerSerializer
     pagination_class = None
 
