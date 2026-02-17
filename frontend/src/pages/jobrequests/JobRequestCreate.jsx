@@ -56,7 +56,7 @@ export default function JobRequestCreate() {
   // idle | saving | saved | error
 
   // Toast: unfinished draft
-  const [toast, setToast] = useState({ show: false, existingDraft: null });
+  const [draftToast, setDraftToast] = useState({ show: false, existingDraft: null });
 
   // ------------------------------------------------------------
   // Slide+Fade animation (Step 2)
@@ -169,7 +169,7 @@ export default function JobRequestCreate() {
             (a, b) => new Date(b.updated_at) - new Date(a.updated_at)
           );
 
-          setToast({ show: true, existingDraft: openDrafts[0] });
+          setDraftToast({ show: true, existingDraft: openDrafts[0] });
           setLoading(false);
         } else {
           const created = await jobRequestDraftService.createDraft();
@@ -190,12 +190,14 @@ export default function JobRequestCreate() {
   // Toast actions
   // ------------------------------------------------------------
   const handleContinueExisting = () => {
-    if (toast.existingDraft) hydrateFromDraft(toast.existingDraft);
-    setToast({ show: false, existingDraft: null });
+    if (draftToast.existingDraft)
+      hydrateFromDraft(draftToast.existingDraft);
+
+    setDraftToast({ show: false, existingDraft: null });
   };
 
   const handleStartNew = async () => {
-    setToast({ show: false, existingDraft: null });
+    setDraftToast({ show: false, existingDraft: null });
     setLoading(true);
     setError("");
 
@@ -787,7 +789,7 @@ const Step5 = (
   // ------------------------------------------------------------
   // Loading UI
   // ------------------------------------------------------------
-  if (loading && !draft && !toast.show) {
+  if (loading && !draft && !draftToast.show) {
     return (
       <div className="premium-container">
         <div className="premium-card p-6 flex items-center gap-3">
@@ -802,7 +804,7 @@ const Step5 = (
   }
 
   // When toast is shown but draft not yet chosen
-  const showOnlyToast = toast.show && !draft;
+  const showOnlyToast = draftToast.show && !draft;
 
   return (
     <div className="premium-container">
@@ -823,9 +825,6 @@ const Step5 = (
       <p className="text-dim mb-6">
         Plotësoni detajet në disa hapa për të krijuar një projekt të ri.
       </p>
-
-      {/* Email verification banner */}
-      {!isEmailVerified && <EmailVerificationBanner />}
 
       {error && (
         <div className="premium-card p-3 mb-4 bg-red-50 text-red-700">
@@ -861,12 +860,12 @@ const Step5 = (
       )}
 
       {/* Toast – existing draft */}
-      {toast.show && toast.existingDraft && (
+      {draftToast.show && draftToast.existingDraft && (
         <div className="fixed bottom-4 right-4 max-w-sm z-50">
           <div className="premium-card p-4 shadow-lg border border-gray-200 bg-white relative">
             <button
               className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
-              onClick={() => setToast({ show: false, existingDraft: null })}
+              onClick={() => setDraftToast({ show: false, existingDraft: null })}
               aria-label="Close"
             >
               <X size={16} />

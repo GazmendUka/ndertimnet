@@ -13,7 +13,7 @@ import StatCard from "../../components/ui/StatCard";
 import StatusBadge from "../../components/ui/StatusBadge";
 
 export default function CustomerDashboard() {
-  const { user, access, isCustomer, isEmailVerified } = useAuth();
+  const { user, access, isCustomer } = useAuth();
 
 
   const [stats, setStats] = useState({ total: "—", active: "—", closed: "—" });
@@ -76,9 +76,6 @@ export default function CustomerDashboard() {
     <div className="min-h-screen">
       <div className="premium-container">
         <Header user={user} />
-
-        {/* 📧 Email verification banner */}
-        {!isEmailVerified && <EmailVerificationBanner />}
 
         {/* Stats */}
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">

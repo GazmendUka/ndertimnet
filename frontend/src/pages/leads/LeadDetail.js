@@ -20,7 +20,7 @@ import {
 export default function LeadDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { access, user } = useAuth();
+  const { access, user, isEmailVerified } = useAuth();
 
   const [lead, setLead] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -159,7 +159,6 @@ export default function LeadDetail() {
   ============================================================ */
   return (
     <div className="premium-container">
-      {!user?.email_verified && <EmailVerificationBanner />}
 
       {/* BACK BUTTONS */}
       <div className="flex justify-between items-center mb-6">
@@ -214,7 +213,7 @@ export default function LeadDetail() {
           <div className="premium-card p-4 mb-6">
             <h3 className="font-semibold mb-2">📩 Ndiq ofertën</h3>
 
-            {!user.email_verified && (
+            {!isEmailVerified && (
               <p className="text-sm text-amber-700 mb-2">
                 🔒 Ju lutem verifikoni email-in për të komunikuar me klientin.
               </p>
@@ -222,9 +221,9 @@ export default function LeadDetail() {
 
             <textarea
               rows={3}
-              disabled={!user.email_verified}
+              disabled={!isEmailVerified}
               className={`w-full border rounded-lg p-3 mb-3 ${
-                !user.email_verified ? "bg-gray-100 cursor-not-allowed" : ""
+                !isEmailVerified ? "bg-gray-100 cursor-not-allowed" : ""
               }`}
               placeholder={
                 user.email_verified
@@ -237,12 +236,12 @@ export default function LeadDetail() {
 
             <button
               onClick={handleSendFollowUp}
-              disabled={!user.email_verified || !followUpMessage.trim()}
+              disabled={!isEmailVerified || !followUpMessage.trim()}
               className={`premium-btn btn-dark ${
-                !user.email_verified ? "opacity-50 cursor-not-allowed" : ""
+                !isEmailVerified ? "opacity-50 cursor-not-allowed" : ""
               }`}
               title={
-                !user.email_verified
+                !isEmailVerified
                   ? "Ju lutem verifikoni email-in për të komunikuar me klientin"
                   : ""
               }

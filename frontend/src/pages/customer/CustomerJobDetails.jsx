@@ -15,7 +15,7 @@ import StatusBadge from "../../components/ui/StatusBadge";
 export default function CustomerJobDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
-const { user, isCustomer, access, isEmailVerified } = useAuth();
+  const { user, isCustomer, access, isEmailVerified } = useAuth();
 
   const [job, setJob] = useState(null);
   const [offers, setOffers] = useState([]);
@@ -208,9 +208,6 @@ const { user, isCustomer, access, isEmailVerified } = useAuth();
           🏠 Dashboard
         </button>
       </div>
-
-      {/* 📧 Email verification banner */}
-      {!isEmailVerified && <EmailVerificationBanner />}
 
       {/* JOB HEADER */}
       <section className="premium-section mb-5">
