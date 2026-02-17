@@ -174,30 +174,11 @@ class VerifyEmailView(APIView):
 
 
 class ResendVerificationEmailView(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
     def post(self, request):
-        email = request.data.get("email")
-
-        if not email:
-            return Response(
-                {"detail": "Email mungon"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        try:
-            user = User.objects.get(email__iexact=email)
-        except User.DoesNotExist:
-            # ⚠️ Viktigt: returnera OK ändå (anti user-enumeration)
-            return Response(
-                {
-                    "detail": (
-                        "Nëse email-i ekziston dhe nuk është verifikuar, "
-                        "një email i ri është dërguar."
-                    )
-                },
-                status=status.HTTP_200_OK,
-            )
+        user = request.user
 
         if user.email_verified:
             return Response(
@@ -211,12 +192,13 @@ class ResendVerificationEmailView(APIView):
         return Response(
             {
                 "detail": (
-                    "Nëse email-i ekziston dhe nuk është verifikuar, "
-                    "një email i ri është dërguar."
+                    "Email-i i verifikimit u dërgua. "
+                    "Ju lutem kontrolloni inbox-in tuaj."
                 )
             },
             status=status.HTTP_200_OK,
         )
+
 
 
 # ======================================================

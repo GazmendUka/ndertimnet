@@ -42,8 +42,8 @@ urlpatterns = [
 
     # ✉️ Email verification
     path("verify-email/", VerifyEmailView.as_view(), name="verify-email"),
-    path("resend-verification-email/", ResendVerificationEmailView.as_view()),
     path("resend-verification/", ResendVerificationEmailView.as_view(), name="resend-verification"),
+    
     path("delete/", DeleteAccountView.as_view(), name="delete-account"),
 ]
 

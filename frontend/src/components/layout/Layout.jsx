@@ -5,7 +5,7 @@ import Sidebar from "./Sidebar";
 import MobileNav from "./MobileNav";
 import { Outlet } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
-import EmailVerificationBanner from "../email/EmailVerificationBanner";
+import CompanyOnboardingBanner from "../company/CompanyOnboardingBanner";
 
 export default function Layout() {
   const { user, isCompany } = useAuth();
@@ -60,7 +60,16 @@ export default function Layout() {
         {/* PAGE CONTENT */}
         <main className="flex-1 px-6 md:px-10 pt-6 pb-10">
           <div className="max-w-6xl mx-auto space-y-8">
-            {isCompany && <EmailVerificationBanner />}
+
+            {/* ✅ NEW ONBOARDING BANNER (Company only) */}
+            {isCompany && (
+              <CompanyOnboardingBanner
+                company={user?.company || null}
+                resendVerificationEndpoint="/api/accounts/resend-verification/" 
+                profileRoute="/company/profile"
+              />
+            )}
+
             <Outlet />
           </div>
         </main>
