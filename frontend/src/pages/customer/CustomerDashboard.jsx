@@ -1,6 +1,5 @@
 // src/pages/customer/CustomerDashboard.jsx
 
-import EmailVerificationBanner from "../../components/email/EmailVerificationBanner";
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../../api/axios";

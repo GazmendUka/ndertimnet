@@ -4,7 +4,6 @@ import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
-import EmailVerificationBanner from "../../components/email/EmailVerificationBanner";
 
 
 

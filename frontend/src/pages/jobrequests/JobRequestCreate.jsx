@@ -8,7 +8,6 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Loader2, FileEdit, X, RefreshCw } from "lucide-react";
 import jobRequestDraftService from "../../services/jobRequestDraftService";
 import customerConsentService from "../../services/customerConsentService";
-import EmailVerificationBanner from "../../components/email/EmailVerificationBanner";
 import { useAuth } from "../../auth/AuthContext";
 import { isEmailNotVerifiedError } from "../../utils/emailVerification";
 import { toast } from "react-hot-toast";

@@ -5,7 +5,6 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
 
-import EmailVerificationBanner from "../../components/email/EmailVerificationBanner";
 import { isEmailNotVerifiedError } from "../../utils/emailVerification";
 import { toast } from "react-hot-toast";
 
