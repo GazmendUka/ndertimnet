@@ -149,10 +149,6 @@ export default function CompanyDashboard() {
   return (
     <div className="premium-container">
 
-      {!companyLoading && !isProfileComplete && (
-        <ProfileIncompleteBanner profileStep={profileStep} />
-      )}
-
       <Header user={user} stats={stats} newLeads={newLeads.length} />
 
       {newLeads.length > 0 && <NewLeadNotification count={newLeads.length} />}
@@ -164,42 +160,6 @@ export default function CompanyDashboard() {
       <section className="mt-10">
         <OfferInsights offers={leads} />
       </section>
-    </div>
-  );
-}
-
-/* ---------------------------------------------------
-   SOFT BANNER – PROFILE INCOMPLETE
---------------------------------------------------- */
-function ProfileIncompleteBanner({ profileStep }) {
-  const percent = { 0: 20, 1: 40, 2: 60, 3: 80, 4: 100 }[profileStep] || 0;
-
-  return (
-    <div className="mb-6 border border-yellow-300 bg-yellow-50 rounded-lg p-4 space-y-2">
-      <div className="flex justify-between">
-        <span className="font-medium text-yellow-800">
-          Profili nuk është i plotë
-        </span>
-        <span className="text-sm text-yellow-700">{percent}%</span>
-      </div>
-
-      <div className="w-full bg-yellow-200 rounded-full h-2">
-        <div
-          className="bg-yellow-500 h-2 transition-all"
-          style={{ width: `${percent}%` }}
-        />
-      </div>
-
-      <p className="text-sm text-yellow-700">
-        Plotësoni profilin për të parë ofertat.
-      </p>
-
-      <Link
-        to="/profile/company"
-        className="inline-block px-4 py-2 rounded-lg bg-yellow-700 text-white text-sm hover:bg-yellow-800"
-      >
-        Plotëso profilin
-      </Link>
     </div>
   );
 }
