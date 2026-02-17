@@ -57,17 +57,12 @@ export default function Layout() {
           </div>
         </header>
 
-        {/* PAGE CONTENT WRAPPER */}
-        <div className="px-6 md:px-10 py-8 flex-1">
-          <div className="max-w-6xl mx-auto">
-            {isCompany && <EmailVerificationBanner />}
-          </div>
-        </div>
-
-
         {/* PAGE CONTENT */}
-        <main className="px-6 md:px-10 py-8 flex-1">
-          <Outlet />
+        <main className="flex-1 px-6 md:px-10 pt-6 pb-10">
+          <div className="max-w-6xl mx-auto space-y-8">
+            {isCompany && <EmailVerificationBanner />}
+            <Outlet />
+          </div>
         </main>
       </div>
 
