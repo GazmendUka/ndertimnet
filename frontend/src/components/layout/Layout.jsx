@@ -66,7 +66,7 @@ export default function Layout() {
               <CompanyOnboardingBanner
                 company={user?.company || null}
                 resendVerificationEndpoint="/api/accounts/resend-verification/" 
-                profileRoute="/company/profile"
+                profileRoute = "/profile/company"
               />
             )}
 
