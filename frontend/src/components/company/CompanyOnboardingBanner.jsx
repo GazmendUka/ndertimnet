@@ -222,9 +222,7 @@ export default function CompanyOnboardingBanner({
             <div className="text-red-700">{resendMessage.text}</div>
           )}
         </div>
-
       </div>
-
     </div>
   );
 }
