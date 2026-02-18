@@ -189,7 +189,31 @@ export default function CompanyOnboardingBanner({
 
       {/* Actions */}
       <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        {/* message */}
+        
+        {/* LEFT SIDE – CTA BUTTON */}
+        <div>
+          <button
+            type="button"
+            onClick={handleCTA}
+            disabled={ui.ctaAction === "resend" ? resendLoading : false}
+            className={[
+              "inline-flex items-center justify-center gap-2 rounded-xl",
+              "bg-amber-600 px-4 py-2 text-sm font-semibold text-white",
+              "hover:bg-amber-700 disabled:opacity-60 disabled:cursor-not-allowed",
+              "transition",
+            ].join(" ")}
+          >
+            <CtaIcon
+              className={[
+                "h-4 w-4",
+                resendLoading ? "animate-spin" : "",
+              ].join(" ")}
+            />
+            {ui.ctaLabel}
+          </button>
+        </div>
+
+        {/* RIGHT SIDE – MESSAGE */}
         <div className="text-sm">
           {resendMessage?.type === "success" && (
             <div className="text-amber-900/80">{resendMessage.text}</div>
@@ -199,26 +223,8 @@ export default function CompanyOnboardingBanner({
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={handleCTA}
-          disabled={ui.ctaAction === "resend" ? resendLoading : false}
-          className={[
-            "inline-flex items-center justify-center gap-2 rounded-xl",
-            "bg-amber-600 px-4 py-2 text-sm font-semibold text-white",
-            "hover:bg-amber-700 disabled:opacity-60 disabled:cursor-not-allowed",
-            "transition",
-          ].join(" ")}
-        >
-          <CtaIcon
-            className={[
-              "h-4 w-4",
-              resendLoading ? "animate-spin" : "",
-            ].join(" ")}
-          />
-          {ui.ctaLabel}
-        </button>
       </div>
+
     </div>
   );
 }
