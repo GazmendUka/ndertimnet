@@ -25,7 +25,7 @@ export default function CompanyOnboardingBanner({
   profileCompletion = null, // optional override
   totalSteps = 2,
   profileTarget = 100,
-  profileRoute = "/company/profile",
+  profileRoute = "/profile/company",
   resendVerificationEndpoint = null, // e.g. "/accounts/resend-verification/"
   className = "",
 }) {
