@@ -3,9 +3,13 @@
 from rest_framework.exceptions import PermissionDenied
 
 
+# ======================================================
+# PROFILE STEP (ONBOARDING LOGIC)
+# ======================================================
+
 def get_company_profile_step(company) -> int:
     """
-    Returnerar profilens steg (0–4) baserat på CompanyProfile-specen
+    Returnerar profilens onboarding-steg (0–4)
     """
 
     if not company:
@@ -13,7 +17,6 @@ def get_company_profile_step(company) -> int:
 
     user = getattr(company, "user", None)
 
-    # STEP 0 – konto finns
     step = 0
 
     # STEP 1 – Grundinfo
@@ -50,6 +53,60 @@ def get_company_profile_step(company) -> int:
     return 4
 
 
+# ======================================================
+# PROFILE COMPLETION (UX LOGIC)
+# ======================================================
+
+def get_company_profile_completion(company) -> int:
+    """
+    Returnerar profilens fullständighet i procent (0–100)
+    baserat på poängmodell.
+    """
+
+    if not company:
+        return 0
+
+    user = getattr(company, "user", None)
+
+    total_points = 7
+    points = 0
+
+    # 1️⃣ Email verifierad
+    if user and user.email_verified:
+        points += 1
+
+    # 2️⃣ Organisationsnummer
+    if company.org_number:
+        points += 1
+
+    # 3️⃣ Företagsnamn
+    if company.company_name:
+        points += 1
+
+    # 4️⃣ Adress
+    if company.address:
+        points += 1
+
+    # 5️⃣ Telefon
+    if company.phone:
+        points += 1
+
+    # 6️⃣ Stad
+    if company.city or company.cities.exists():
+        points += 1
+
+    # 7️⃣ Yrken
+    if company.professions.exists():
+        points += 1
+
+    percentage = int((points / total_points) * 100)
+
+    return percentage
+
+
+# ======================================================
+# PERMISSION CHECK
+# ======================================================
 
 def require_company_step(company, min_step: int):
     """

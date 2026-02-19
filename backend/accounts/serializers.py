@@ -12,9 +12,10 @@ from taxonomy.models import Profession
 from taxonomy.serializers import ProfessionSerializer
 from locations.models import City
 from locations.serializers import CitySerializer
-from accounts.services.profile_completeness import get_company_profile_step
-
-
+from accounts.services.profile_completeness import (
+    get_company_profile_step,
+    get_company_profile_completion,
+)
 
 User = get_user_model()
 
@@ -52,6 +53,7 @@ class CustomerSerializer(serializers.ModelSerializer):
 # 🏢 CompanySerializer
 class CompanySerializer(serializers.ModelSerializer):
     profile_step = serializers.SerializerMethodField()
+    profile_completion = serializers.SerializerMethodField()
     logo = serializers.ImageField(required=False, allow_null=True)
 
     # 🔹 WRITE: tar emot lista av ID
@@ -104,6 +106,7 @@ class CompanySerializer(serializers.ModelSerializer):
             "professions",          # WRITE
             "professions_detail",   # READ
             "profile_step",
+            "profile_completion",
             "is_active",
             "created_at",
             "updated_at",
@@ -111,6 +114,9 @@ class CompanySerializer(serializers.ModelSerializer):
 
     def get_profile_step(self, obj):
         return get_company_profile_step(obj)
+    
+    def get_profile_completion(self, obj):
+        return get_company_profile_completion(obj)
     
     def update(self, instance, validated_data):
         professions = validated_data.pop("professions", None)

@@ -69,7 +69,7 @@ class User(AbstractBaseUser, PermissionsMixin):
 
 
 # ======================================================
-# CUSTOMER  🔥 DU HADE TAGIT BORT DENNA
+# CUSTOMER  
 # ======================================================
 
 class Customer(models.Model):
