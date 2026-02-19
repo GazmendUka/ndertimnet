@@ -1,6 +1,6 @@
 // src/pages/profile/CompanyProfile.jsx
 
-import React, { useEffect, useState, useRef, useMemo } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
 import { Pencil } from "lucide-react";
@@ -80,7 +80,6 @@ export default function CompanyProfile() {
         const companyData = companyRes.data?.data || companyRes.data;
 
         setCompany(companyData);
-
         setForm({
           company_name: companyData.company_name || "",
           phone: companyData.phone || "",
@@ -98,6 +97,7 @@ export default function CompanyProfile() {
 
         const status = err.response?.status;
 
+        // 🔒 Email ej verifierad: backend kan svara 403 -> vi visar sidan men låser editing
         if (status === 403 && !user?.email_verified) {
           setCompany({
             company_name: "",
@@ -126,7 +126,7 @@ export default function CompanyProfile() {
   }, [access, user?.email_verified]);
 
   // --------------------------------------------------
-  // DERIVED
+  // SAFE DEFAULTS
   // --------------------------------------------------
   const safeCompany =
     company || {
@@ -181,7 +181,7 @@ export default function CompanyProfile() {
   };
 
   const startEdit = () => {
-    if (!company) return;
+    if (!company || isLocked) return;
 
     setForm({
       company_name: safeCompany.company_name || "",
@@ -231,24 +231,17 @@ export default function CompanyProfile() {
         payload = new FormData();
 
         Object.entries(normalizedForm).forEach(([key, value]) => {
-          if (Array.isArray(value)) {
-            value.forEach((v) => payload.append(key, v));
-          } else {
-            payload.append(key, value);
-          }
+          if (Array.isArray(value)) value.forEach((v) => payload.append(key, v));
+          else payload.append(key, value ?? "");
         });
 
         payload.append("logo", logoFile);
         config = { headers: { "Content-Type": "multipart/form-data" } };
       }
 
-      const res = await api.patch(
-        "/accounts/profile/company/",
-        payload,
-        config
-      );
-
+      const res = await api.patch("/accounts/profile/company/", payload, config);
       const updated = res.data?.data || res.data;
+
       setCompany(updated);
       setIsEditing(false);
       setForm(null);
@@ -266,6 +259,9 @@ export default function CompanyProfile() {
     if (file) setLogoFile(file);
   };
 
+  // --------------------------------------------------
+  // GUARDS
+  // --------------------------------------------------
   if (loading) return <div className="p-6">Duke ngarkuar…</div>;
 
   // --------------------------------------------------
@@ -277,78 +273,162 @@ export default function CompanyProfile() {
         <div className="premium-section space-y-8">
 
           {/* HEADER */}
-          <div className="flex items-start justify-between gap-6">
-            <div className="space-y-2">
-              <p className="text-label">Profili i kompanisë</p>
+          <div className="space-y-3">
+            <p className="text-label">Profili i kompanisë</p>
 
-              <div className="flex items-center gap-3 flex-wrap">
-                <h1 className="page-title">
-                  {safeCompany.company_name || "—"}
-                </h1>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="page-title">
+                {safeCompany.company_name || "—"}
+              </h1>
 
-                {user?.email_verified ? (
-                  <span className="px-3 py-1 text-xs font-semibold rounded-full bg-green-50 text-green-700 border border-green-200">
-                    Email i verifikuar
-                  </span>
-                ) : (
-                  <span className="px-3 py-1 text-xs font-semibold rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                    Email i paverifikuar
-                  </span>
-                )}
-              </div>
+              {user?.email_verified ? (
+                <span className="px-3 py-1 text-xs font-semibold rounded-full bg-green-50 text-green-700 border border-green-200">
+                  Email i verifikuar
+                </span>
+              ) : (
+                <span className="px-3 py-1 text-xs font-semibold rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                  Email i paverifikuar
+                </span>
+              )}
             </div>
 
-            {!isEditing && (
-              <button
-                onClick={startEdit}
-                disabled={saving || isLocked}
-                className={`inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition ${
-                  saving || isLocked
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "bg-gray-900 text-white hover:bg-black shadow-sm"
-                }`}
-              >
-                <Pencil size={16} />
-                Redakto
-              </button>
+            {isLocked && (
+              <p className="text-sm text-amber-700">
+                Email-i nuk është i verifikuar. Profili është i kyçur derisa ta verifikoni.
+              </p>
             )}
           </div>
 
-          {/* BASIC INFO CARD */}
+          {/* CARD: LOGO + DELETE */}
+          <div className="premium-card p-6 space-y-6">
+            <div className="flex items-center justify-between gap-6">
+              <div className="flex items-center gap-4">
+                <div
+                  className={`relative w-20 h-20 rounded-full overflow-hidden border flex items-center justify-center ${
+                    isEditing ? "cursor-pointer" : ""
+                  }`}
+                  onClick={() => isEditing && logoInputRef.current?.click()}
+                  title={isEditing ? "Kliko për ta ndryshuar logon" : undefined}
+                >
+                  {safeCompany.logo ? (
+                    <img
+                      src={safeCompany.logo}
+                      alt={safeCompany.company_name || "logo"}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-200 flex items-center justify-center text-xl font-bold text-gray-600">
+                      {(safeCompany.company_name?.[0] || "C").toUpperCase()}
+                    </div>
+                  )}
+
+                  {isEditing && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                      <Pencil className="text-white" size={24} />
+                    </div>
+                  )}
+
+                  {isEditing && (
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleLogoChange}
+                    />
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <p className="text-sm font-semibold text-gray-900">
+                    {safeCompany.company_name || "—"}
+                  </p>
+
+                  {isEditing ? (
+                    <p className="text-xs text-gray-500">
+                      Kliko logon për ta ndryshuar
+                      {logoFile?.name ? (
+                        <>
+                          {" "}
+                          • Zgjedhur: <span className="font-medium">{logoFile.name}</span>
+                        </>
+                      ) : null}
+                    </p>
+                  ) : (
+                    <p className="text-xs text-gray-500">
+                      Logo & identiteti i kompanisë
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="text-red-600 hover:underline text-sm"
+              >
+                Fshi llogarinë
+              </button>
+            </div>
+          </div>
+
+          {/* CARD: BASIC INFO */}
           <div className="premium-card p-6 space-y-6">
             <h2 className="text-sm font-semibold text-gray-900">
               Informacion bazë
             </h2>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              {["company_name", "phone", "website", "address"].map((field) => (
-                <label key={field} className="block">
-                  <span className="text-xs text-gray-500 capitalize">
-                    {field.replace("_", " ")}
-                  </span>
+              <Field
+                label="Emri i kompanisë"
+                name="company_name"
+                isEditing={isEditing}
+                value={isEditing ? form?.company_name : safeCompany.company_name}
+                onChange={handleChange}
+              />
+              <Field
+                label="Numri i telefonit"
+                name="phone"
+                isEditing={isEditing}
+                value={isEditing ? form?.phone : safeCompany.phone}
+                onChange={handleChange}
+              />
+              <Field
+                label="Faqja e internetit"
+                name="website"
+                isEditing={isEditing}
+                value={isEditing ? form?.website : safeCompany.website}
+                onChange={handleChange}
+                placeholder="https://example.com"
+              />
+              <Field
+                label="Adresa"
+                name="address"
+                isEditing={isEditing}
+                value={isEditing ? form?.address : safeCompany.address}
+                onChange={handleChange}
+                placeholder="Rruga, numri, qyteti"
+              />
+            </div>
 
-                  {isEditing ? (
-                    <input
-                      name={field}
-                      value={form?.[field] || ""}
-                      onChange={handleChange}
-                      className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2"
-                    />
-                  ) : (
-                    <p className="mt-1 text-sm">
-                      {safeCompany[field] || "—"}
-                    </p>
-                  )}
-                </label>
-              ))}
+            <div>
+              <span className="text-xs text-gray-500">Përshkrimi</span>
+              {isEditing ? (
+                <textarea
+                  name="description"
+                  rows="4"
+                  value={form?.description || ""}
+                  onChange={handleChange}
+                  className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-800"
+                />
+              ) : (
+                <p className="mt-1 text-sm">{safeCompany.description || "—"}</p>
+              )}
             </div>
           </div>
 
-          {/* PROFESSIONS */}
+          {/* CARD: PROFESSIONS */}
           <div className="premium-card p-6 space-y-4">
-            <h2 className="text-sm font-semibold text-gray-900">
-              Specialitetet
-            </h2>
+            <h2 className="text-sm font-semibold text-gray-900">Specialitetet</h2>
 
             {isEditing ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -369,7 +449,7 @@ export default function CompanyProfile() {
                   professionList.map((p) => (
                     <span
                       key={p.id}
-                      className="px-3 py-1 bg-gray-100 border rounded-full text-sm"
+                      className="px-3 py-1 bg-gray-100 border border-gray-200 rounded-full text-sm"
                     >
                       {p.name}
                     </span>
@@ -381,11 +461,9 @@ export default function CompanyProfile() {
             )}
           </div>
 
-          {/* CITIES */}
+          {/* CARD: CITIES */}
           <div className="premium-card p-6 space-y-4">
-            <h2 className="text-sm font-semibold text-gray-900">
-              Zona e shërbimit
-            </h2>
+            <h2 className="text-sm font-semibold text-gray-900">Zona e shërbimit</h2>
 
             {isEditing ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -406,7 +484,7 @@ export default function CompanyProfile() {
                   cityList.map((c) => (
                     <span
                       key={c.id}
-                      className="px-3 py-1 bg-gray-100 border rounded-full text-sm"
+                      className="px-3 py-1 bg-gray-100 border border-gray-200 rounded-full text-sm"
                     >
                       {c.name}
                     </span>
@@ -418,21 +496,40 @@ export default function CompanyProfile() {
             )}
           </div>
 
+          {/* ACTIONS (EDIT MODE) */}
           {isEditing && (
-            <div className="flex gap-3">
+            <div className="flex gap-3 pt-1">
               <button
                 onClick={saveChanges}
                 disabled={saving}
-                className="px-5 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium"
+                className="px-5 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-black disabled:opacity-50"
               >
                 {saving ? "Duke ruajtur…" : "Ruaj"}
               </button>
 
               <button
                 onClick={cancelEdit}
-                className="px-5 py-2 rounded-lg bg-gray-200 text-sm font-medium"
+                className="px-5 py-2 rounded-lg bg-gray-200 text-sm font-medium hover:bg-gray-300"
               >
                 Anulo
+              </button>
+            </div>
+          )}
+
+          {/* EDIT BUTTON (BOTTOM LEFT, NOT EDITING) */}
+          {!isEditing && (
+            <div className="flex justify-start pt-2">
+              <button
+                onClick={startEdit}
+                disabled={saving || isLocked}
+                className={`inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition ${
+                  saving || isLocked
+                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
+                    : "bg-gray-900 text-white hover:bg-black shadow-sm"
+                }`}
+              >
+                <Pencil size={16} />
+                Redakto
               </button>
             </div>
           )}
@@ -441,6 +538,80 @@ export default function CompanyProfile() {
           {error && <p className="text-red-600 text-sm">{error}</p>}
         </div>
       </div>
+
+      {/* DELETE MODAL */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-lg">
+            <h2 className="text-lg font-semibold text-red-600">
+              Konfirmo fshirjen e llogarisë
+            </h2>
+
+            <p className="text-sm text-gray-600 mt-2">
+              Ky veprim do të çaktivizojë llogarinë tuaj. Ju lutem shkruani fjalëkalimin për ta konfirmuar.
+            </p>
+
+            <input
+              type="password"
+              placeholder="Fjalëkalimi"
+              value={deletePassword}
+              onChange={(e) => setDeletePassword(e.target.value)}
+              className="mt-4 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-red-500"
+            />
+
+            {deleteError && (
+              <p className="text-red-600 text-sm mt-2">{deleteError}</p>
+            )}
+
+            <div className="flex justify-end gap-3 mt-6">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setDeletePassword("");
+                  setDeleteError("");
+                }}
+                className="px-4 py-2 bg-gray-200 rounded-lg"
+              >
+                Anulo
+              </button>
+
+              <button
+                onClick={handleDeleteAccount}
+                disabled={deleting || !deletePassword}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+              >
+                {deleting ? "Duke fshirë..." : "Fshi llogarinë"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
+  );
+}
+
+function Field({
+  label,
+  name,
+  value,
+  onChange,
+  isEditing,
+  placeholder = "",
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs text-gray-500">{label}</span>
+      {isEditing ? (
+        <input
+          name={name}
+          value={value || ""}
+          onChange={onChange}
+          placeholder={placeholder}
+          className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-800"
+        />
+      ) : (
+        <p className="mt-1 text-sm">{value || "—"}</p>
+      )}
+    </label>
   );
 }
