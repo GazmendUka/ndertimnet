@@ -300,7 +300,7 @@ export default function CompanyProfile() {
           </div>
 
           {/* CARD: LOGO + DELETE */}
-          <div className="premium-card p-6 space-y-6">
+          <div className="premium-card p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition">
             <div className="flex items-center justify-between gap-6">
               <div className="flex items-center gap-4">
                 <div
@@ -361,18 +361,11 @@ export default function CompanyProfile() {
                   )}
                 </div>
               </div>
-
-              <button
-                onClick={() => setShowDeleteModal(true)}
-                className="text-red-600 hover:underline text-sm"
-              >
-                Fshi llogarinë
-              </button>
             </div>
           </div>
 
           {/* CARD: BASIC INFO */}
-          <div className="premium-card p-6 space-y-6">
+          <div className="premium-card p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition">
             <h2 className="text-sm font-semibold text-gray-900">
               Informacion bazë
             </h2>
@@ -427,7 +420,7 @@ export default function CompanyProfile() {
           </div>
 
           {/* CARD: PROFESSIONS */}
-          <div className="premium-card p-6 space-y-4">
+          <div className="premium-card p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition">
             <h2 className="text-sm font-semibold text-gray-900">Specialitetet</h2>
 
             {isEditing ? (
@@ -462,7 +455,7 @@ export default function CompanyProfile() {
           </div>
 
           {/* CARD: CITIES */}
-          <div className="premium-card p-6 space-y-4">
+          <div className="premium-card p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition">
             <h2 className="text-sm font-semibold text-gray-900">Zona e shërbimit</h2>
 
             {isEditing ? (
@@ -516,21 +509,34 @@ export default function CompanyProfile() {
             </div>
           )}
 
-          {/* EDIT BUTTON (BOTTOM LEFT, NOT EDITING) */}
+          {/* BOTTOM ACTION ROW */}
           {!isEditing && (
-            <div className="flex justify-start pt-2">
+            <div className="flex items-center justify-between pt-6 border-t border-gray-200">
+
+              {/* Left: Edit */}
               <button
                 onClick={startEdit}
                 disabled={saving || isLocked}
-                className={`inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition ${
+                className={`inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold ${
                   saving || isLocked
                     ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "bg-gray-900 text-white hover:bg-black shadow-sm"
+                    : "bg-gray-900 text-white hover:shadow-lg hover:-translate-y-[1px] active:translate-y-0 transition-all duration-200"
                 }`}
+
               >
                 <Pencil size={16} />
                 Redakto
               </button>
+
+              {/* Right: Delete */}
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition border border-gray-300 text-gray-700 hover:border-red-300 hover:text-red-600"
+              >
+                Fshi llogarinë
+              </button>
+
+
             </div>
           )}
 
