@@ -36,7 +36,7 @@ export default function VerifyEmail() {
             await refreshMe();
             navigate("/", { replace: true });
           }
-        }, 3000);
+        }, 5000);
       })
       .catch((err) => {
         setStatus("error");
