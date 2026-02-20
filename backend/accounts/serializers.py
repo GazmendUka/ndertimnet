@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .models import EmailVerificationToken
 from .models import Customer, Company
+from accounts.services.reactivation import reactivate_company_account
 
 import re
 
@@ -158,9 +159,21 @@ class RegisterCompanySerializer(serializers.ModelSerializer):
         ]
 
     def validate_email(self, value):
-        if User.objects.filter(email__iexact=value).exists():
+        user = User.objects.filter(email__iexact=value).first()
+
+        if not user:
+            return value
+
+        if user.is_active:
             raise serializers.ValidationError("Ky email është tashmë i regjistruar.")
+
+        # User exists but inactive
+        if user.role != "company":
+            raise serializers.ValidationError("Ky email është përdorur me një rol tjetër.")
+
         return value
+
+
 
     def create(self, validated_data):
         company_name = validated_data.pop("company_name")
@@ -168,14 +181,18 @@ class RegisterCompanySerializer(serializers.ModelSerializer):
         password = validated_data.pop("password")
         email = validated_data.pop("email")
 
-        # skapa user
+        # 🔄 Try reactivation first
+        reactivated_user = reactivate_company_account(email, password)
+        if reactivated_user:
+            return reactivated_user
+
+        # 🆕 Otherwise create new
         user = User.objects.create_user(
             email=email,
             password=password,
             role="company",
         )
 
-        # skapa company (endast konto-data)
         Company.objects.create(
             user=user,
             company_name=company_name,
@@ -183,6 +200,7 @@ class RegisterCompanySerializer(serializers.ModelSerializer):
         )
 
         return user
+
 
 
 
