@@ -1,6 +1,8 @@
-import React from "react";
-import { useNavigate } from "react-router-dom";
+// frontend/src/auth/RegisterChoice.js
+
 import { Building2, UserRound } from "lucide-react";
+import React from "react";
+import { useNavigate, Link } from "react-router-dom";
 
 export default function RegisterChoice() {
   const navigate = useNavigate();
@@ -47,12 +49,12 @@ export default function RegisterChoice() {
 
         <p className="text-sm text-gray-500 mt-8">
           Ke tashmë një llogari?{" "}
-          <span
-            onClick={() => navigate("/")}
-            className="text-blue-600 hover:underline cursor-pointer"
+          <Link
+            to="/login"
+            className="text-blue-600 hover:underline"
           >
             Hyr këtu
-          </span>
+          </Link>
         </p>
       </div>
     </div>
