@@ -86,6 +86,7 @@ export default function CompanyProfile() {
           website: companyData.website || "",
           address: companyData.address || "",
           description: companyData.description || "",
+          org_number: companyData.org_number || "",
           professions: (companyData.professions_detail || []).map((p) => p.id),
           cities: (companyData.cities_detail || []).map((c) => c.id),
         });
@@ -189,6 +190,7 @@ export default function CompanyProfile() {
       website: safeCompany.website || "",
       address: safeCompany.address || "",
       description: safeCompany.description || "",
+      org_number: safeCompany.org_number || "",
       professions: professionList.map((p) => p.id),
       cities: cityList.map((c) => c.id),
     });
@@ -376,6 +378,13 @@ export default function CompanyProfile() {
                 name="company_name"
                 isEditing={isEditing}
                 value={isEditing ? form?.company_name : safeCompany.company_name}
+                onChange={handleChange}
+              />
+              <Field
+                label="Numri i biznesit (ORG)"
+                name="org_number"
+                isEditing={isEditing}
+                value={isEditing ? form?.org_number : safeCompany.org_number}
                 onChange={handleChange}
               />
               <Field
