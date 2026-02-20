@@ -157,6 +157,9 @@ class RegisterCompanySerializer(serializers.ModelSerializer):
             "company_name",
             "phone",
         ]
+        extra_kwargs = {
+            "email": {"validators": []},  # 🔥 disable automatic unique validator
+        }
 
     def validate_email(self, value):
         user = User.objects.filter(email__iexact=value).first()
