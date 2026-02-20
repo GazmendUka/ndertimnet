@@ -162,29 +162,36 @@ class VerifyEmailView(APIView):
                 status=status.HTTP_200_OK,
             )
 
-        # 🔐 Mark email verified
-        user.email_verified = True
-        user.email_verified_at = timezone.now()
+        was_reactivated = False
 
         # 🔐 If account was soft-deleted → reactivate it
         if not user.is_active:
+            was_reactivated = True
             user.is_active = True
 
-            # Reactivate company if exists
             if hasattr(user, "company_profile"):
                 company = user.company_profile
                 company.is_active = True
                 company.archived_at = None
                 company.save(update_fields=["is_active", "archived_at"])
 
+        # 🔐 Mark email verified
+        user.email_verified = True
+        user.email_verified_at = timezone.now()
+
         user.save(update_fields=["email_verified", "email_verified_at", "is_active"])
 
-
+        if was_reactivated:
+            return Response(
+                {"detail": "Llogaria juaj u riaktivizua me sukses. Mirë se u kthyet në Ndërtimnet!"},
+                status=status.HTTP_200_OK,
+            )
 
         return Response(
             {"detail": "Email-i u verifikua me sukses"},
             status=status.HTTP_200_OK,
         )
+
 
 
 class ResendVerificationEmailView(APIView):

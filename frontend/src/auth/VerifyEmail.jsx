@@ -30,9 +30,13 @@ export default function VerifyEmail() {
         setMessage(res.data?.detail || "Email-i u verifikua me sukses.");
 
         setTimeout(async () => {
-          await refreshMe();
-          navigate("/", { replace: true });
-        }, 2000);
+          if (res.data?.detail?.includes("riaktivizua")) {
+            navigate("/login", { replace: true });
+          } else {
+            await refreshMe();
+            navigate("/", { replace: true });
+          }
+        }, 3000);
       })
       .catch((err) => {
         setStatus("error");
@@ -127,9 +131,14 @@ export default function VerifyEmail() {
         {status === "success" && (
           <>
             <h2 className="text-xl font-semibold text-green-600 mb-2">
-              ✔️ Email i verifikuar
+              ✔️ {message.includes("riaktivizua") 
+                    ? "Llogaria u riaktivizua"
+                    : "Email i verifikuar"}
             </h2>
             <p className="text-gray-700">{message}</p>
+            <p className="text-sm text-gray-500 mt-4">
+              Do të ridrejtoheni automatikisht...
+            </p>
           </>
         )}
 
