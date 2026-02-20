@@ -162,9 +162,23 @@ class VerifyEmailView(APIView):
                 status=status.HTTP_200_OK,
             )
 
+        # 🔐 Mark email verified
         user.email_verified = True
         user.email_verified_at = timezone.now()
-        user.save(update_fields=["email_verified", "email_verified_at"])
+
+        # 🔐 If account was soft-deleted → reactivate it
+        if not user.is_active:
+            user.is_active = True
+
+            # Reactivate company if exists
+            if hasattr(user, "company_profile"):
+                company = user.company_profile
+                company.is_active = True
+                company.archived_at = None
+                company.save(update_fields=["is_active", "archived_at"])
+
+        user.save(update_fields=["email_verified", "email_verified_at", "is_active"])
+
 
 
         return Response(
@@ -448,13 +462,18 @@ class DeleteAccountView(APIView):
         if not user.check_password(password):
             return error("Fjalëkalimi është i pasaktë.", 400)
 
+        # 🔹 Soft delete company
         if hasattr(user, "company_profile"):
             company = user.company_profile
             company.is_active = False
             company.archived_at = timezone.now()
             company.save(update_fields=["is_active", "archived_at"])
 
+        # 🔐 Soft delete user + remove email verification
         user.is_active = False
-        user.save(update_fields=["is_active"])
+        user.email_verified = False
+        user.email_verified_at = None
+        user.save(update_fields=["is_active", "email_verified", "email_verified_at"])
 
         return success("Llogaria u çaktivizua me sukses.")
+

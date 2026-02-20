@@ -5,7 +5,6 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .models import EmailVerificationToken
 from .models import Customer, Company
-from accounts.services.reactivation import reactivate_company_account
 
 import re
 
@@ -184,10 +183,17 @@ class RegisterCompanySerializer(serializers.ModelSerializer):
         password = validated_data.pop("password")
         email = validated_data.pop("email")
 
-        # 🔄 Try reactivation first
-        reactivated_user = reactivate_company_account(email, password)
-        if reactivated_user:
-            return reactivated_user
+        existing_user = User.objects.filter(email__iexact=email, role="company").first()
+
+        # 🔐 Soft-deleted user exists → start reactivation flow
+        if existing_user and not existing_user.is_active:
+            from accounts.services.reactivation import initiate_company_reactivation
+
+            initiate_company_reactivation(email, self.context.get("request"))
+
+            raise serializers.ValidationError({
+                "email": "Ky email është i çaktivizuar. Kontrollo email-in për riaktivizim."
+            })
 
         # 🆕 Otherwise create new
         user = User.objects.create_user(
@@ -203,6 +209,7 @@ class RegisterCompanySerializer(serializers.ModelSerializer):
         )
 
         return user
+
 
 
 

@@ -1,37 +1,31 @@
-#backend/accounts/services/reactivation.py 
+# backend/accounts/services/reactivation.py
 
 from django.contrib.auth import get_user_model
-from accounts.models import Company
+from accounts.emails import send_verification_email
+from accounts.utils.email_verification import generate_email_verification_token
 
 User = get_user_model()
 
 
-def reactivate_company_account(email: str, password: str):
+def initiate_company_reactivation(email: str, request=None) -> bool:
     """
-    Reactivate a soft-deleted company account.
-    Returns user if reactivated, otherwise None.
+    If a soft-deleted company account exists,
+    create a reactivation token and send email.
+    Returns True if reactivation flow started.
     """
 
     try:
         user = User.objects.get(email__iexact=email, role="company")
     except User.DoesNotExist:
-        return None
+        return False
 
     if user.is_active:
-        return None
+        return False
 
-    # 🔄 Reactivate user
-    user.is_active = True
-    user.set_password(password)
-    user.save()  # 🔥 no update_fields
+    # 🔐 Generate new verification token
+    token = generate_email_verification_token(user)
 
-    # 🔄 Reactivate company
-    try:
-        company = Company.objects.get(user=user)
-        company.is_active = True
-        company.archived_at = None
-        company.save()
-    except Company.DoesNotExist:
-        pass
+    # 🔐 Send reactivation email
+    send_verification_email(user, token)
 
-    return user
+    return True
