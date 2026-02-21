@@ -156,15 +156,9 @@ class VerifyEmailView(APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        if user.email_verified:
-            return Response(
-                {"detail": "Email-i është verifikuar tashmë"},
-                status=status.HTTP_200_OK,
-            )
-
+        # 🔐 Reactivation logic
         was_reactivated = False
 
-        # 🔐 If account was soft-deleted → reactivate it
         if not user.is_active:
             was_reactivated = True
             user.is_active = True
@@ -183,7 +177,9 @@ class VerifyEmailView(APIView):
 
         if was_reactivated:
             return Response(
-                {"detail": "Llogaria juaj u riaktivizua me sukses. Mirë se u kthyet në Ndërtimnet!"},
+                {
+                    "detail": "Llogaria juaj u riaktivizua me sukses. Mirë se u kthyet në Ndërtimnet!"
+                },
                 status=status.HTTP_200_OK,
             )
 
