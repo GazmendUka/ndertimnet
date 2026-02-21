@@ -133,15 +133,10 @@ class VerifyEmailView(APIView):
 
     def post(self, request):
         token = request.data.get("token")
-
         if not token:
-            return Response(
-                {"detail": "Token mungon"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"detail": "Token mungon"}, status=status.HTTP_400_BAD_REQUEST)
 
         user_id = verify_email_token(token)
-
         if not user_id:
             return Response(
                 {"detail": "Linku është i pavlefshëm ose ka skaduar"},
@@ -151,40 +146,43 @@ class VerifyEmailView(APIView):
         try:
             user = User.objects.get(id=user_id)
         except User.DoesNotExist:
-            return Response(
-                {"detail": "Përdoruesi nuk u gjet"},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            return Response({"detail": "Përdoruesi nuk u gjet"}, status=status.HTTP_404_NOT_FOUND)
 
-        # 🔐 Reactivation logic
-        was_reactivated = False
+        # ✅ Bestäm reactivation mer robust:
+        # - user var inaktiv, eller
+        # - company var inaktiv / arkiverad
+        reactivated = (not user.is_active)
+        if hasattr(user, "company_profile"):
+            company = user.company_profile
+            if (not company.is_active) or (company.archived_at is not None):
+                reactivated = True
+        else:
+            company = None
 
-        if not user.is_active:
-            was_reactivated = True
+        # 🔄 Reactivate if needed
+        if reactivated:
             user.is_active = True
-
-            if hasattr(user, "company_profile"):
-                company = user.company_profile
+            if company:
                 company.is_active = True
                 company.archived_at = None
                 company.save(update_fields=["is_active", "archived_at"])
 
-        # 🔐 Mark email verified
+        # ✅ Mark email verified (always)
         user.email_verified = True
         user.email_verified_at = timezone.now()
-
         user.save(update_fields=["email_verified", "email_verified_at", "is_active"])
 
-        if was_reactivated:
+        if reactivated:
             return Response(
                 {
-                    "detail": "Llogaria juaj u riaktivizua me sukses. Mirë se u kthyet në Ndërtimnet!"
+                    "detail": "Llogaria juaj u riaktivizua me sukses. Mirë se u kthyet në Ndërtimnet!",
+                    "reactivated": True,
                 },
                 status=status.HTTP_200_OK,
             )
 
         return Response(
-            {"detail": "Email-i u verifikua me sukses"},
+            {"detail": "Email-i u verifikua me sukses", "reactivated": False},
             status=status.HTTP_200_OK,
         )
 
