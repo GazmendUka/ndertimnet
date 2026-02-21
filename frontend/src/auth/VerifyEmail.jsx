@@ -29,14 +29,14 @@ export default function VerifyEmail() {
         setStatus("success");
         setMessage(res.data?.detail || "Email-i u verifikua me sukses.");
 
-        //setTimeout(async () => {
-        //  if (res.data?.detail?.includes("riaktivizua")) {
-        //    navigate("/login", { replace: true });
-        //  } else {
-        //    await refreshMe();
-        //    navigate("/", { replace: true });
-        //  }
-        //}, 5000);
+        setTimeout(async () => {
+          if (res.data?.detail?.includes("riaktivizua")) {
+            navigate("/login", { replace: true });
+          } else {
+            await refreshMe();
+            navigate("/", { replace: true });
+          }
+        }, 5000);
       })
       .catch((err) => {
         setStatus("error");
