@@ -91,6 +91,7 @@ INSTALLED_APPS = [
     "rest_framework",
     "django_filters",
     "corsheaders",
+    "rest_framework_simplejwt.token_blacklist",
 
     # Project apps
     "leads",
@@ -191,6 +192,23 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 AUTH_USER_MODEL = "accounts.User"
+
+
+
+# ======================================================
+# JWT CONFIG (Enterprise Mode)
+# ======================================================
+SIMPLE_JWT = {
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=15),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
+
+    "ROTATE_REFRESH_TOKENS": True,
+    "BLACKLIST_AFTER_ROTATION": True,
+
+    "UPDATE_LAST_LOGIN": True,
+
+    "AUTH_HEADER_TYPES": ("Bearer",),
+}
 
 
 # ======================================================
