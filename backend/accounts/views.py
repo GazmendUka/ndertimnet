@@ -18,6 +18,7 @@ from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
+from rest_framework_simplejwt.exceptions import TokenError
 
 User = get_user_model()
 
@@ -452,10 +453,12 @@ class CustomerConsentView(APIView):
 
 class DeleteAccountView(APIView):
     permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
     def post(self, request):
         user = request.user
         password = request.data.get("password")
+        refresh_token = request.data.get("refresh")
 
         if not password:
             return error("Ju lutem konfirmoni fjalëkalimin.", 400)
@@ -463,18 +466,25 @@ class DeleteAccountView(APIView):
         if not user.check_password(password):
             return error("Fjalëkalimi është i pasaktë.", 400)
 
-        # 🔹 Soft delete company
+        # 🔐 Blacklist refresh token (log out immediately)
+        if refresh_token:
+            try:
+                token = RefreshToken(refresh_token)
+                token.blacklist()
+            except TokenError:
+                pass
+
+        # 🔹 Soft deactivate company if exists
         if hasattr(user, "company_profile"):
             company = user.company_profile
             company.is_active = False
             company.archived_at = timezone.now()
             company.save(update_fields=["is_active", "archived_at"])
 
-        # 🔐 Soft delete user + remove email verification
+        # 🔐 Soft deactivate user
         user.is_active = False
         user.email_verified = False
         user.email_verified_at = None
         user.save(update_fields=["is_active", "email_verified", "email_verified_at"])
 
         return success("Llogaria u çaktivizua me sukses.")
-
