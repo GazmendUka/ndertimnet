@@ -305,7 +305,7 @@ class RegisterCompanyView(generics.CreateAPIView):
 
 
 # ======================================================
-# 👤 REGISTER CUSTOMER
+# 👤 REGISTER CUSTOMER (SMART REACTIVATION)
 # ======================================================
 
 class RegisterCustomerView(generics.CreateAPIView):
@@ -313,24 +313,45 @@ class RegisterCustomerView(generics.CreateAPIView):
     permission_classes = [AllowAny]
 
     def create(self, request, *args, **kwargs):
+        email = request.data.get("email")
+
+        if not email:
+            return error("Email mungon.", 400)
+
+        # --------------------------------------------------
+        # 🔎 Check if user already exists
+        # --------------------------------------------------
+        existing_user = User.objects.filter(email__iexact=email).first()
+
+        if existing_user:
+            # If user exists but is inactive → reactivation flow
+            if not existing_user.is_active:
+                token = generate_email_verification_token(existing_user)
+                send_verification_email(existing_user, token)
+
+            # Always return generic success message
+            return success(
+                message=(
+                    "Nëse kjo email nuk është regjistruar ose është çaktivizuar, "
+                    "do të merrni një email për verifikim ose riaktivizim."
+                )
+            )
+
+        # --------------------------------------------------
+        # 🆕 Create new user
+        # --------------------------------------------------
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
 
-        # ✅ EMAIL VERIFICATION
         token = generate_email_verification_token(user)
         send_verification_email(user, token)
 
         return success(
-            message="Klienti u regjistrua me sukses. Ju lutem verifikoni email-in tuaj.",
-            data={
-                "user": {
-                    "id": user.id,
-                    "email": user.email,
-                    "role": user.role,
-                    "customer": getattr(user.customer_profile, "id", None),
-                }
-            }
+            message=(
+                "Nëse kjo email nuk është regjistruar ose është çaktivizuar, "
+                "do të merrni një email për verifikim ose riaktivizim."
+            )
         )
 
 
