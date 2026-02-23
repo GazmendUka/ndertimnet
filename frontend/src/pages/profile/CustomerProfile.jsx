@@ -1,11 +1,13 @@
 // src/pages/profile/CustomerProfile.jsx
 
+import { useNavigate } from "react-router-dom";
 import React, { useState, useEffect } from "react";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
 
 export default function CustomerProfile() {
-  const { access } = useAuth();
+  const { access, logout, refresh } = useAuth();
+  const navigate = useNavigate();
 
   const [form, setForm] = useState({
     first_name: "",
@@ -19,6 +21,36 @@ export default function CustomerProfile() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  const [showDeactivate, setShowDeactivate] = useState(false);
+  const [password, setPassword] = useState("");
+
+  const handleDeactivate = async () => {
+    setError("");
+
+    if (!password.trim()) {
+      setError("Ju lutem shkruani fjalëkalimin.");
+      return;
+    }
+
+    try {
+      await api.post("/accounts/delete/", {
+        password,
+        refresh,
+      });
+
+      setPassword("");
+      setShowDeactivate(false);
+
+      logout();
+      navigate("/", { replace: true });
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+        "Nuk ishte e mundur të çaktivizohej llogaria."
+      );
+    }
+  };
 
   // --------------------------------------------------
   // Load customer profile
@@ -144,6 +176,81 @@ export default function CustomerProfile() {
           Ruaj ndryshimet
         </button>
       </form>
+      {/* ========================================= */}
+      {/* 🔴 Danger Zone */}
+      {/* ========================================= */}
+
+      <div className="mt-12 border-t pt-8">
+        <h3 className="text-lg font-semibold text-red-600 mb-2">
+          Çaktivizo llogarinë
+        </h3>
+
+        <p className="text-sm text-gray-600 mb-4">
+          Kjo do të çaktivizojë llogarinë tuaj.
+          Mund ta riaktivizoni përmes email-it.
+        </p>
+
+        <button
+          onClick={() => {
+            setPassword("");
+            setShowDeactivate(true);
+          }}
+          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+        >
+          Çaktivizo llogarinë
+        </button>
+      </div>
+      
+
+
+
+
+
+
+
+      {showDeactivate && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl w-full max-w-md">
+            <h3 className="text-lg font-semibold mb-4">
+              Konfirmo fjalëkalimin
+            </h3>
+
+            <input
+              type="password"
+              placeholder="Fjalëkalimi"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full border rounded-lg px-3 py-2 mb-4"
+            />
+
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => setShowDeactivate(false)}
+                className="px-3 py-2 bg-gray-200 rounded-lg"
+              >
+                Anulo
+              </button>
+
+              <button
+                onClick={handleDeactivate}
+                disabled={!password.trim()}
+                className={`px-3 py-2 rounded-lg text-white ${
+                  password.trim()
+                    ? "bg-red-600 hover:bg-red-700"
+                    : "bg-red-300 cursor-not-allowed"
+                }`}
+              >
+                Konfirmo
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+
+
+
+      
     </div>
   );
 }
