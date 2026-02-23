@@ -10,7 +10,10 @@ import { useAuth } from "./AuthContext";
 export default function VerifyEmail() {
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { isEmailVerified, refreshMe } = useAuth();
+
+  // ✅ Lägg till logout här
+  const { isEmailVerified, refreshMe, logout } = useAuth();
+
   const [reactivated, setReactivated] = useState(false);
   const token = params.get("token");
 
@@ -26,12 +29,23 @@ export default function VerifyEmail() {
     api
       .post("/accounts/verify-email/", { token })
       .then((res) => {
+        const wasReactivated = !!res.data?.reactivated;
+
         setStatus("success");
-        setMessage(res.data?.detail || "Email-i u verifikua me sukses.");
-        setReactivated(!!res.data?.reactivated);
+        setReactivated(wasReactivated);
+
+        // ✅ Sätt en tydlig standardtext om backend inte skickar detail
+        setMessage(
+          res.data?.detail ||
+            (wasReactivated
+              ? "Llogaria u riaktivizua me sukses. Ju lutem identifikohuni përsëri."
+              : "Email-i u verifikua me sukses.")
+        );
 
         setTimeout(async () => {
-          if (res.data?.reactivated) {
+          if (wasReactivated) {
+            // 🔥 VIKTIGT: rensa tokens + auth-state (enterprise)
+            logout?.();
             navigate("/login", { replace: true });
           } else {
             await refreshMe();
@@ -46,7 +60,7 @@ export default function VerifyEmail() {
             "Linku i verifikimit është i pavlefshëm ose ka skaduar."
         );
       });
-  }, [token, navigate, refreshMe]);
+  }, [token, navigate, refreshMe, logout]);
 
   // ============================================================
   // ✅ Already verified
@@ -136,7 +150,9 @@ export default function VerifyEmail() {
             </h2>
             <p className="text-gray-700">{message}</p>
             <p className="text-sm text-gray-500 mt-4">
-              Do të ridrejtoheni automatikisht...
+              {reactivated
+                ? "Ju lutem identifikohuni përsëri..."
+                : "Do të ridrejtoheni automatikisht..."}
             </p>
           </>
         )}
