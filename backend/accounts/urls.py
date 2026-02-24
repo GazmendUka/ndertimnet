@@ -17,6 +17,8 @@ from .views import (
     CustomerConsentView,
     VerifyEmailView,
     ResendVerificationEmailView,
+    ForgotPasswordView,          
+    ResetPasswordConfirmView,
 )
 
 
@@ -45,5 +47,9 @@ urlpatterns = [
     path("resend-verification/", ResendVerificationEmailView.as_view(), name="resend-verification"),
     
     path("delete/", DeleteAccountView.as_view(), name="delete-account"),
+
+    # Reset password
+    path("forgot-password/", ForgotPasswordView.as_view()),
+    path("reset-password/", ResetPasswordConfirmView.as_view()),
 ]
 

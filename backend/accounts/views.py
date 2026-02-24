@@ -20,6 +20,15 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import TokenError
 
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.core.mail import send_mail
+from django.conf import settings
+
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
+
 User = get_user_model()
 
 from .serializers import (
@@ -509,3 +518,66 @@ class DeleteAccountView(APIView):
         user.save(update_fields=["is_active", "email_verified", "email_verified_at"])
 
         return success("Llogaria u çaktivizua me sukses.")
+    
+# ======================================================
+# 🇦🇱 RESET PASSWORD
+# ======================================================
+class ForgotPasswordView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        email = request.data.get("email")
+
+        if not email:
+            return error("Email mungon.", 400)
+
+        user = User.objects.filter(email__iexact=email, is_active=True).first()
+
+        if user:
+            token = PasswordResetTokenGenerator().make_token(user)
+            uid = urlsafe_base64_encode(force_bytes(user.pk))
+            reset_url = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}"
+
+            send_mail(
+                subject="Rivendos fjalëkalimin - Ndërtimnet",
+                message=f"Kliko këtu për të rivendosur fjalëkalimin: {reset_url}",
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[user.email],
+            )
+
+        return success("Nëse email ekziston, do të merrni një link për rivendosje.")
+
+
+class ResetPasswordConfirmView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        uid = request.data.get("uid")
+        token = request.data.get("token")
+        password = request.data.get("password")
+
+        if not uid or not token or not password:
+            return error("Kërkesa është e pavlefshme.", 400)
+
+        try:
+            user_id = force_str(urlsafe_base64_decode(uid))
+        except:
+            return error("Linku është i pavlefshëm.", 400)
+
+        user = User.objects.filter(pk=user_id, is_active=True).first()
+
+        if not user:
+            return error("Linku është i pavlefshëm.", 400)
+
+        if not PasswordResetTokenGenerator().check_token(user, token):
+            return error("Linku është i pavlefshëm ose ka skaduar.", 400)
+
+        try:
+            validate_password(password, user)
+        except ValidationError as e:
+            return error(e.messages, 400)
+
+        user.set_password(password)
+        user.save()
+
+        return success("Fjalëkalimi u përditësua me sukses.")

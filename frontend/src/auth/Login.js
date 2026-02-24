@@ -1,8 +1,8 @@
-//frontend/src/auth/login.js
+// frontend/src/auth/Login.js
 
 import React, { useState } from "react";
 import { useAuth } from "./AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { Eye, EyeOff, Loader2 } from "lucide-react";
 
 const Login = () => {
@@ -18,18 +18,20 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
+    if (loading) return;
+
     setError("");
     setLoading(true);
 
     try {
       const user = await login(email, password, remember);
+
       if (!user) {
         setError("Email ose fjalëkalim i pasaktë.");
-        setLoading(false);
         return;
       }
 
-      // 🔀 Redirect based on role
       if (user.role === "customer") {
         navigate("/dashboard/customer");
       } else if (user.role === "company") {
@@ -46,9 +48,9 @@ const Login = () => {
         err.message ||
         "Diçka shkoi keq gjatë kyçjes."
       );
+    } finally {
+      setLoading(false);
     }
-
-    setLoading(false);
   };
 
   return (
@@ -75,7 +77,8 @@ const Login = () => {
             <label className="block mb-1 font-medium">Email</label>
             <input
               type="email"
-              className="w-full px-4 py-2 border rounded-lg focus:ring focus:ring-blue-200"
+              disabled={loading}
+              className="w-full px-4 py-2 border rounded-lg focus:ring focus:ring-blue-200 disabled:opacity-60"
               placeholder="shembull@mail.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -88,7 +91,8 @@ const Login = () => {
             <label className="block mb-1 font-medium">Fjalëkalimi</label>
             <input
               type={showPass ? "text" : "password"}
-              className="w-full px-4 py-2 border rounded-lg pr-10 focus:ring focus:ring-blue-200"
+              disabled={loading}
+              className="w-full px-4 py-2 border rounded-lg pr-10 focus:ring focus:ring-blue-200 disabled:opacity-60"
               placeholder="••••••••"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -115,20 +119,19 @@ const Login = () => {
               <span className="text-sm">Më mbaj mend</span>
             </label>
 
-            <button
-              type="button"
+            <Link
+              to="/forgot-password"
               className="text-sm text-blue-600 hover:underline"
-              onClick={() => alert("Rivendosja e fjalëkalimit nuk është implementuar ende")}
             >
               Keni harruar fjalëkalimin?
-            </button>
+            </Link>
           </div>
 
           {/* LOGIN BUTTON */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2"
+            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
           >
             {loading && <Loader2 size={20} className="animate-spin" />}
             {loading ? "Duke u kyçur..." : "Hyni"}

@@ -21,6 +21,8 @@ import VerifyEmail from "./auth/VerifyEmail";
 import AuthRedirect from "./auth/AuthRedirect";
 import PublicOnlyRoute from "./auth/PublicOnlyRoute";
 import OnboardingGuard from "./routes/OnboardingGuard";
+import ForgotPassword from "./pages/auth/ForgotPassword";
+import ResetPassword from "./pages/auth/ResetPassword";
 
 /* CUSTOMER PAGES */
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
@@ -76,8 +78,9 @@ function App() {
           <Route path="/register/success" element={<RegisterSuccess />} />
           <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
           <Route path="/verify-email" element={<VerifyEmail />} />
-
-          
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
+                    
           {/* ======================================
               SHARED ROUTES (CUSTOMER + COMPANY)
               BOTH CAN SEE JOBREQUEST LIST
