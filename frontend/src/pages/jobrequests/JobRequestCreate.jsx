@@ -11,7 +11,7 @@ import customerConsentService from "../../services/customerConsentService";
 import { useAuth } from "../../auth/AuthContext";
 import { isEmailNotVerifiedError } from "../../utils/emailVerification";
 import { toast } from "react-hot-toast";
-
+import api from "../../api/axios";
 
 export default function JobRequestCreate() {
   const navigate = useNavigate();
@@ -82,13 +82,14 @@ export default function JobRequestCreate() {
     const loadLookups = async () => {
       try {
         const [cityRes, professionRes] = await Promise.all([
-          fetch("http://localhost:8000/api/locations/cities/").then((r) => r.json()),
-          fetch("http://localhost:8000/api/taxonomy/professions/").then((r) => r.json()),
+          api.get("/locations/cities/"),
+          api.get("/taxonomy/professions/"),
         ]);
 
-        setCities(cityRes.results || []);
-        setProfessions(professionRes.results || []);
+        setCities(cityRes.data.results || []);
+        setProfessions(professionRes.data.results || []);
       } catch (err) {
+        console.error("Lookup load failed:", err);
         setError("Nuk mund të ngarkohen qytetet ose profesionet.");
       } finally {
         setLookupsLoading(false);
