@@ -332,6 +332,12 @@ LOGGING = {
 # ======================================================
 # EMAIL VERIFICATION (Ndertimnet)
 # ======================================================
+# Used for password reset links
+FRONTEND_URL = os.environ.get(
+    "FRONTEND_URL",
+    "http://localhost:3000"
+)
+
 EMAIL_VERIFICATION_TOKEN_TTL_HOURS = int(os.environ.get("EMAIL_VERIFICATION_TOKEN_TTL_HOURS", "24"))
 
 # Use env so prod points to your Vercel/custom domain, dev points to localhost
