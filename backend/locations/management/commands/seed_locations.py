@@ -6,102 +6,75 @@ from locations.models import City
 
 
 class Command(BaseCommand):
-    help = "Seed cities for Kosova (XK) and Shqipëri (AL)"
-
+    help = "Seed ALL official municipalities for Kosovo (XK) and Albania (AL)"
 
     def handle(self, *args, **options):
 
+        # 🔥 1. Rensa gamla städer
+        City.objects.all().delete()
+        self.stdout.write(self.style.WARNING("⚠️ Alla befintliga städer raderade"))
+
         countries = {
-            "XK": {
-                "label": "Kosova",
-                "cities": [
-                    "Deçani",
-                    "Dragashi",
-                    "Drenasi",
-                    "Ferizaj",
-                    "Fushë Kosova",
-                    "Gjakova",
-                    "Gjilan",
-                    "Graçanica",
-                    "Hani i Elezit",
-                    "Istog",
-                    "Junik",
-                    "Kaçanik",
-                    "Kamenica",
-                    "Klina",
-                    "Kllokot",
-                    "Leposaviq",
-                    "Malishev",
-                    "Mamushës",
-                    "Mitrovica",
-                    "Novo Brdo",
-                    "Obiliq",
-                    "Parteshi",
-                    "Peja",
-                    "Prishtinë",
-                    "Prizren",
-                    "Podujevë",
-                    "Rahovec",
-                    "Ranillug",
-                    "Shtime",
-                    "Skenderaj",
-                    "Shtërpcë",
-                    "Thërandë",
-                    "Viti",
-                    "Vushtrri",
-                    "Zubin Potok",
-                    "Zvečan",
-                ],
-            },
-            "AL": {
-                "label": "Shqipëri",
-                "cities": [
-                        "Berat",
-                        "Dibër",
-                        "Durrës",
-                        "Elbasan",
-                        "Fier",
-                        "Gjirokastër",
-                        "Korçë",
-                        "Kukës",
-                        "Lezhë",
-                        "Shkodër",
-                        "Tirana",
-                        "Vlorë",
-                ],
-            },
+
+            # 🇽🇰 KOSOVO — 38 kommuner
+            "XK": [
+                "Deçan", "Dragash", "Drenas", "Ferizaj", "Fushë Kosovë",
+                "Gjakovë", "Gjilan", "Graçanicë", "Hani i Elezit",
+                "Istog", "Junik", "Kaçanik", "Kamenicë", "Klinë",
+                "Kllokot", "Leposaviq", "Lipjan", "Malishevë",
+                "Mamushë", "Mitrovicë e Jugut", "Mitrovicë e Veriut",
+                "Novobërdë", "Obiliq", "Partesh", "Pejë",
+                "Prishtinë", "Prizren", "Podujevë", "Rahovec",
+                "Ranillug", "Shtime", "Skenderaj", "Shtërpcë",
+                "Suharekë", "Viti", "Vushtrri", "Zubin Potok", "Zveçan",
+            ],
+
+            # 🇦🇱 ALBANIA — 61 bashki
+            "AL": [
+                "Berat", "Belsh", "Bulqizë", "Cërrik", "Delvinë",
+                "Devoll", "Dibër", "Divjakë", "Durrës", "Elbasan",
+                "Fier", "Finiq", "Gjirokastër", "Gramsh", "Has",
+                "Himarë", "Kamëz", "Kavajë", "Këlcyrë", "Klos",
+                "Kolonjë", "Konispol", "Korçë", "Krujë", "Kuçovë",
+                "Kukës", "Kurbin", "Lezhë", "Libohovë", "Librazhd",
+                "Lushnjë", "Malësi e Madhe", "Mallakastër", "Mat",
+                "Memaliaj", "Mirditë", "Patos", "Peqin", "Përmet",
+                "Pogradec", "Poliçan", "Prrenjas", "Pukë", "Roskovec",
+                "Rrogozhinë", "Sarandë", "Selenicë", "Shijak",
+                "Shkodër", "Skrapar", "Tepelenë", "Tiranë",
+                "Tropojë", "Ura Vajgurore", "Vau i Dejës",
+                "Vlorë", "Vorë",
+            ],
         }
 
         total_created = 0
 
-        for country_code, data in countries.items():
+        # 🔥 2. Seed data
+        for country_code, cities in countries.items():
+
             created = 0
 
-            for city_name in data["cities"]:
+            for city_name in cities:
                 slug = slugify(f"{city_name}-{country_code}")
 
-                _, was_created = City.objects.get_or_create(
+                City.objects.create(
                     name=city_name,
                     country=country_code,
-                    defaults={
-                        "slug": slug,
-                        "is_active": True,
-                    },
+                    slug=slug,
+                    is_active=True,
                 )
 
-
-                if was_created:
-                    created += 1
-                    total_created += 1
+                created += 1
+                total_created += 1
 
             self.stdout.write(
                 self.style.SUCCESS(
-                    f"✅ {created} städer tillagda för {data['label']} ({country_code})"
+                    f"✅ {created} städer tillagda för {country_code}"
                 )
             )
 
         self.stdout.write(
             self.style.SUCCESS(
-                f"\n🎉 Klar! Totalt {total_created} nya städer tillagda."
+                f"\n🎉 KLART — Totalt {total_created} städer skapade"
             )
         )
