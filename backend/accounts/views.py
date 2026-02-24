@@ -3,13 +3,14 @@
 from datetime import timedelta
 from django.contrib.auth import get_user_model
 from django.utils import timezone
-
 from .models import Customer, Company
-from .emails import send_verification_email
-from .utils.email_verification import (
-    verify_email_token,
-    generate_email_verification_token,
-)
+
+from django.contrib.auth.tokens import PasswordResetTokenGenerator
+from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
+from django.utils.encoding import force_bytes, force_str
+from django.conf import settings
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError
 
 from rest_framework import viewsets, status, generics
 from rest_framework.decorators import api_view, permission_classes, authentication_classes
@@ -20,14 +21,14 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import TokenError
 
-from django.contrib.auth.tokens import PasswordResetTokenGenerator
-from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
-from django.utils.encoding import force_bytes, force_str
-from django.core.mail import send_mail
-from django.conf import settings
-
-from django.contrib.auth.password_validation import validate_password
-from django.core.exceptions import ValidationError
+from .utils.email_verification import (
+    verify_email_token,
+    generate_email_verification_token,
+)
+from .emails import (
+    send_verification_email,
+    send_password_reset_email,
+)
 
 User = get_user_model()
 
@@ -538,13 +539,11 @@ class ForgotPasswordView(APIView):
             uid = urlsafe_base64_encode(force_bytes(user.pk))
             reset_url = f"{settings.FRONTEND_URL}/reset-password/{uid}/{token}"
 
-            send_mail(
-                subject="Rivendos fjalëkalimin - Ndërtimnet",
-                message=f"Kliko këtu për të rivendosur fjalëkalimin: {reset_url}",
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                recipient_list=[user.email],
-            )
-
+            try:
+                send_password_reset_email(user, reset_url)
+            except Exception:
+                pass
+        
         return success("Nëse email ekziston, do të merrni një link për rivendosje.")
 
 
