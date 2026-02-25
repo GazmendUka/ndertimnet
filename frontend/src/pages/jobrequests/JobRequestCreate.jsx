@@ -761,7 +761,26 @@ const Step5 = (
         })}
       </div>
 
-      <p className="text-sm text-gray-500 mt-2">Hapi {currentStep} nga 5</p>
+      <div className="mt-2 flex items-center justify-between">
+        <p className="text-sm text-gray-500">Hapi {currentStep} nga 5</p>
+
+        {/* Autosave indicator (moved here to avoid layout jump) */}
+        <div className="flex items-center justify-end" style={{ minWidth: 110 }}>
+          {saveStatus === "saving" && (
+            <span className="text-blue-600 text-sm flex items-center gap-1">
+              <Loader2 size={14} className="animate-spin" /> Duke ruajtur…
+            </span>
+          )}
+          {saveStatus === "saved" && (
+            <span className="text-green-600 text-sm flex items-center gap-1">
+              ✓ Ruajtur
+            </span>
+          )}
+          {saveStatus === "error" && (
+            <span className="text-red-600 text-sm">Gabim gjatë ruajtjes!</span>
+          )}
+        </div>
+      </div>
     </div>
   );
 
