@@ -840,29 +840,34 @@ const Step5 = (
 
       {/* Toast – existing draft */}
       {draftToast.show && draftToast.existingDraft && (
-        <div className="fixed bottom-4 right-4 max-w-sm z-50">
-          <div className="premium-card p-4 shadow-lg border border-gray-200 bg-white relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+
+          <div className="premium-card w-full max-w-md p-6 shadow-2xl border border-gray-200 bg-white relative animate-fadeIn">
+
             <button
-              className="absolute top-2 right-2 text-gray-400 hover:text-gray-600"
+              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
               onClick={() => setDraftToast({ show: false, existingDraft: null })}
               aria-label="Close"
             >
-              <X size={16} />
+              <X size={18} />
             </button>
 
             <div className="flex items-start gap-3">
               <div className="mt-1">
-                <FileEdit size={20} className="text-blue-600" />
+                <FileEdit size={24} className="text-blue-600" />
               </div>
+
               <div>
-                <h3 className="font-semibold mb-1">
+                <h3 className="text-lg font-semibold mb-2">
                   Keni një draft të papërfunduar
                 </h3>
-                <p className="text-sm text-gray-600 mb-3">
-                  Duket që keni filluar një kërkesë më herët. Dëshironi ta
-                  vazhdoni apo të filloni nga e para?
+
+                <p className="text-sm text-gray-600 mb-4">
+                  Duket që keni filluar një kërkesë më herët. 
+                  Dëshironi ta vazhdoni apo të filloni nga e para?
                 </p>
-                <div className="flex gap-2">
+
+                <div className="flex gap-3">
                   <button
                     onClick={handleContinueExisting}
                     className="premium-btn btn-dark flex items-center gap-2"
@@ -871,6 +876,7 @@ const Step5 = (
                     <FileEdit size={16} />
                     Vazhdoni draftin
                   </button>
+
                   <button
                     onClick={handleStartNew}
                     className="premium-btn btn-light flex items-center gap-2"
@@ -930,4 +936,13 @@ const INLINE_CSS = `
 /* IN phase */
 .jr-in.jr-next { opacity: 1; transform: translateX(0); }
 .jr-in.jr-back { opacity: 1; transform: translateX(0); }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 180ms ease-out;
+}
 `;
