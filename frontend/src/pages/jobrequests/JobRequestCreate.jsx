@@ -12,6 +12,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { isEmailNotVerifiedError } from "../../utils/emailVerification";
 import { toast } from "react-hot-toast";
 import api from "../../api/axios";
+import SearchableSelect from "../../components/ui/SearchableSelect";
 
 export default function JobRequestCreate() {
   const navigate = useNavigate();
@@ -86,8 +87,8 @@ export default function JobRequestCreate() {
           api.get("/taxonomy/professions/"),
         ]);
 
-        setCities(cityRes.data.results || []);
-        setProfessions(professionRes.data.results || []);
+        setCities(cityRes.data.results ?? cityRes.data ?? []);
+        setProfessions(professionRes.data.results ?? professionRes.data ?? []);
       } catch (err) {
         console.error("Lookup load failed:", err);
         setError("Nuk mund të ngarkohen qytetet ose profesionet.");
@@ -462,83 +463,60 @@ export default function JobRequestCreate() {
   // Step 3 – 
   // ------------------------------------------------------------
   const Step3 = (
-  <div className="space-y-4">
+    <div className="space-y-4">
 
-    {lookupsLoading && (
-      <p className="text-sm text-gray-500">
-        Duke ngarkuar qytetet dhe profesionet…
-      </p>
-    )}
+      {lookupsLoading && (
+        <p className="text-sm text-gray-500">
+          Duke ngarkuar qytetet dhe profesionet…
+        </p>
+      )}
 
-    <div>
-      <label className="block mb-1 font-medium">Profesioni *</label>
-      <select
-        className="premium-input"
-        value={formData.profession ?? ""}
-        onChange={(e) =>
-          updateField(
-            "profession",
-            e.target.value ? Number(e.target.value) : null
-          )
-        }
-        disabled={saving || submitting || lookupsLoading}
-      >
-        <option value="">
-          {lookupsLoading ? "Duke ngarkuar..." : "Zgjidh profesionin"}
-        </option>
+      {/* Profession */}
+      <div>
+        <label className="block mb-1 font-medium">Profesioni *</label>
+        <SearchableSelect
+          options={professions}
+          value={formData.profession}
+          onChange={(val) => updateField("profession", val)}
+          placeholder="Zgjidh profesionin"
+        />
+      </div>
 
-        {professions.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.name}
-          </option>
-        ))}
-      </select>
+      {/* City */}
+      <div>
+        <label className="block mb-1 font-medium">Qyteti *</label>
+        <SearchableSelect
+          options={cities}
+          value={formData.city}
+          onChange={(val) => updateField("city", val)}
+          placeholder="Zgjidh qytetin"
+        />
+      </div>
+
+      <div className="flex justify-between mt-4">
+        <button
+          type="button"
+          onClick={goBack}
+          disabled={saving || submitting}
+          className="premium-btn btn-light"
+        >
+          Kthehu
+        </button>
+
+        <button
+          onClick={goNext}
+          disabled={
+            lookupsLoading ||
+            !formData.city ||
+            !formData.profession
+          }
+          className="premium-btn btn-dark"
+        >
+          Vazhdo
+        </button>
+      </div>
     </div>
-
-    <div>
-      <label className="block mb-1 font-medium">Qyteti *</label>
-      <select
-        className="premium-input"
-        value={formData.city ?? ""}
-        onChange={(e) =>
-          updateField(
-            "city",
-            e.target.value ? Number(e.target.value) : null
-          )
-        }
-        disabled={saving || submitting || lookupsLoading}
-      >
-        <option value="">
-          {lookupsLoading ? "Duke ngarkuar..." : "Zgjidh qytetin"}
-        </option>
-
-        {cities.map((c) => (
-          <option key={c.id} value={c.id}>
-            {c.name}
-          </option>
-        ))}
-      </select>
-    </div>
-
-    <div className="flex justify-between mt-4">
-      <button type="button" onClick={goBack} className="premium-btn btn-light">
-        Kthehu
-      </button>
-      <button
-        onClick={goNext}
-        disabled={
-          lookupsLoading ||
-          !formData.city ||
-          !formData.profession
-        }
-        className="premium-btn btn-dark"
-      >
-        Vazhdo
-      </button>
-    </div>
-  </div>
-);
-
+  );
 
 
 
