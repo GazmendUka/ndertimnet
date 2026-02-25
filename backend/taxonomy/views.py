@@ -8,5 +8,6 @@ class ProfessionViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Profession.objects.filter(is_active=True)
     serializer_class = ProfessionSerializer
     permission_classes = [permissions.AllowAny]
+    pagination_class = None
 
 
