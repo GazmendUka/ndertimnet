@@ -833,25 +833,8 @@ const Step5 = (
 
       {!showOnlyToast && draft && (
         <div className="premium-card p-6 space-y-4">
-          {/* Autosave indicator */}
-          <div className="flex justify-end mb-2">
-            {saveStatus === "saving" && (
-              <span className="text-blue-600 text-sm flex items-center gap-1">
-                <Loader2 size={14} className="animate-spin" /> Duke ruajtur…
-              </span>
-            )}
-            {saveStatus === "saved" && (
-              <span className="text-green-600 text-sm flex items-center gap-1">
-                ✓ Ruajtur
-              </span>
-            )}
-            {saveStatus === "error" && (
-              <span className="text-red-600 text-sm">Gabim gjatë ruajtjes!</span>
-            )}
-          </div>
 
           {Stepper}
-
           {/* Step content with slide+fade */}
           <div className={stepAnimClass}>{renderStep()}</div>
         </div>
