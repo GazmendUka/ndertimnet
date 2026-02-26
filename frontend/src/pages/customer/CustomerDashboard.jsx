@@ -192,7 +192,7 @@ function RequestsTable({ latestJobs }) {
           {latestJobs.map((job) => (
             <tr key={job.id} className="premium-row">
               <Td>{job.title || "—"}</Td>
-              {req.city_detail?.name || "Pa qytet"}
+              <Td>{job.city_detail?.name || "Pa qytet"}</Td>
               <Td>
                 <StatusBadge active={job.is_active} />
               </Td>
