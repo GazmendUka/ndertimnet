@@ -214,11 +214,14 @@ export default function CustomerJobDetails() {
         <p className="text-label mb-1">Detajet e kërkesës</p>
 
         <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
-          <div>
-            <h1 className="page-title">{job.title}</h1>
-            <p className="text-dim">
-              Shikoni detajet dhe menaxhoni ofertat.
-            </p>
+          <div className="max-w-4xl">
+            <h1 className="page-title mb-4">{job.title}</h1>
+
+            {job.description && (
+              <div className="text-gray-700 leading-relaxed whitespace-pre-line text-sm sm:text-base">
+                {job.description || "Nuk ka përshkrim."}
+              </div>
+            )}
           </div>
 
           <div className="flex flex-col items-start sm:items-end gap-2">
@@ -266,11 +269,7 @@ export default function CustomerJobDetails() {
             <h2 className="text-base font-semibold mb-3">
               Informacioni i punës
             </h2>
-
-            <p className="text-gray-700 mb-4">
-              {job.description || "Nuk ka përshkrim."}
-            </p>
-
+            
             <div className="space-y-2 text-sm text-gray-700">
               <p className="flex items-center gap-2">
                 <MapPin size={16} />
