@@ -1,9 +1,9 @@
 // src/pages/customer/CustomerDashboard.jsx
 
 import React, { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
+import { Link, useNavigate } from "react-router-dom";
 
 // Icons
 import { FileText, PlusCircle, CheckCircle2, Clock4 } from "lucide-react";
@@ -176,6 +176,7 @@ function LatestRequests({ latestJobs, loading }) {
    Table
 --------------------------------------------------- */
 function RequestsTable({ latestJobs }) {
+  const navigate = useNavigate();
   return (
     <div className="premium-table">
       <table className="w-full text-left text-sm">
@@ -190,7 +191,11 @@ function RequestsTable({ latestJobs }) {
 
         <tbody className="divide-y divide-gray-100 bg-white">
           {latestJobs.map((job) => (
-            <tr key={job.id} className="premium-row">
+            <tr
+              key={job.id}
+              onClick={() => navigate(`/jobrequests/${job.id}`)}
+              className="premium-row cursor-pointer hover:bg-gray-50 transition"
+            >
               <Td>{job.title || "—"}</Td>
               <Td>{job.city_detail?.name || "Pa qytet"}</Td>
               <Td>
@@ -198,6 +203,7 @@ function RequestsTable({ latestJobs }) {
               </Td>
               <Td className="text-right">
                 <Link
+                  onClick={(e) => e.stopPropagation()}
                   to={`/jobrequests/${job.id}`}
                   className="text-xs font-medium text-gray-700 hover:text-gray-900"
                 >
