@@ -213,6 +213,11 @@ export default function CustomerJobDetails() {
       <section className="premium-section mb-5">
         <p className="text-label mb-1">Detajet e kërkesës</p>
 
+        <p className="text-xs text-gray-400 italic mb-2 flex items-center gap-1">
+          <Clock size={12} />
+          Krijuar më: {formatDate(job.created_at)}
+        </p>
+
         <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
           <div className="max-w-4xl">
             <h1 className="page-title mb-4">{job.title}</h1>
@@ -284,11 +289,6 @@ export default function CustomerJobDetails() {
               <p className="flex items-center gap-2">
                 <Tag size={16} />
                 Kategoria: {job.profession_detail?.name || "—"}
-              </p>
-
-              <p className="text-xs flex items-center gap-2 text-gray-500">
-                <Clock size={14} />
-                Krijuar më: {formatDate(job.created_at)}
               </p>
             </div>
 
