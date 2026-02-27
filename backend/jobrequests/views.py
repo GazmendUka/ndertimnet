@@ -1,35 +1,34 @@
 # backend/jobrequests/views.py
 
+from datetime import timedelta
+
+from django.db import transaction
 from django.utils import timezone
 
-from rest_framework import viewsets, permissions, status
+from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.response import Response
-from rest_framework.exceptions import ValidationError, PermissionDenied
+from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 
+from accounts.permissions import IsCompanyProfileComplete, IsEmailVerified
 from main.pagination import AlbanianPagination
-from accounts.permissions import IsEmailVerified, IsCompanyProfileComplete
+
+from offers.models import Offer, OfferStatus
+from leads.models import ArchivedJob  # behåll om du vill fortsätta arkivera
 
 from .models import JobRequest, JobRequestAudit, JobRequestDraft
 from .serializers import (
-    JobRequestSerializer,
-    JobRequestListSerializer,
     JobRequestAuditSerializer,
     JobRequestDraftSerializer,
+    JobRequestListSerializer,
+    JobRequestSerializer,
+    JobRequestUpdateSerializer,
 )
-
-# OBS:
-# LeadMatch används fortfarande i accept/decline i denna fil.
-# Det är en kvarvarande "legacy" som bör migreras till offers.Offer senare,
-# eftersom Payment/Lead unlock nu bygger på offers.Offer + lead_unlocked.
-from leads.models import LeadMatch, ArchivedJob
-
-from offers.models import Offer
 
 
 # ------------------------------------------------------------
-# 🔐 GLOBALT SKYDD (gäller alla ViewSets i denna fil)
+# 🔐 GLOBALT SKYDD
 # ------------------------------------------------------------
 
 class ActiveAccountGuardMixin:
@@ -68,13 +67,13 @@ class IsCustomerAndOwner(permissions.BasePermission):
     """
 
     def has_permission(self, request, view):
-        if not request.user.is_authenticated:
-            return False
-        return getattr(request.user, "role", None) == "customer"
+        return bool(
+            request.user.is_authenticated and getattr(request.user, "role", None) == "customer"
+        )
 
     def has_object_permission(self, request, view, obj):
         customer_profile = getattr(request.user, "customer_profile", None)
-        return obj.customer == customer_profile
+        return bool(customer_profile and obj.customer == customer_profile)
 
 
 # ------------------------------------------------------------
@@ -115,11 +114,7 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
     """
 
     serializer_class = JobRequestDraftSerializer
-    permission_classes = [
-        IsAuthenticated,
-        IsEmailVerified,
-        IsCustomerAndOwner,
-    ]
+    permission_classes = [IsAuthenticated, IsEmailVerified, IsCustomerAndOwner]
     pagination_class = None
 
     def get_queryset(self):
@@ -132,9 +127,7 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         if not customer_profile:
             return JobRequestDraft.objects.none()
 
-        return JobRequestDraft.objects.filter(customer=customer_profile).order_by(
-            "-created_at"
-        )
+        return JobRequestDraft.objects.filter(customer=customer_profile).order_by("-created_at")
 
     def perform_create(self, serializer):
         user = self.request.user
@@ -193,7 +186,7 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
 
         JobRequestAudit.objects.create(
             job_request=job,
-            action="job_closed",  # kan senare bytas till en egen action "created_from_draft"
+            action="created_from_draft",
             message="Kërkesa u krijua nga një draft multi-step.",
         )
 
@@ -216,9 +209,8 @@ class IsCustomerOrReadOnly(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
 
-        return (
-            request.user.is_authenticated
-            and getattr(request.user, "role", None) == "customer"
+        return bool(
+            request.user.is_authenticated and getattr(request.user, "role", None) == "customer"
         )
 
     def has_object_permission(self, request, view, obj):
@@ -226,7 +218,7 @@ class IsCustomerOrReadOnly(permissions.BasePermission):
             return True
 
         customer_profile = getattr(request.user, "customer_profile", None)
-        return customer_profile is not None and obj.customer == customer_profile
+        return bool(customer_profile and obj.customer == customer_profile)
 
 
 # ------------------------------------------------------------
@@ -240,8 +232,8 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
     • GET /api/jobrequests/          → roll-baserad lista
     • POST /api/jobrequests/         → skapa ny (customer)
     • GET /api/jobrequests/{id}/     → detaljer
-    • POST /api/jobrequests/{id}/accept-offer/   → kund accepterar offert
-    • POST /api/jobrequests/{id}/decline-offer/  → kund nekar offert
+    • POST /api/jobrequests/{id}/accept-offer/   → kund accepterar offert (Offer-truth)
+    • POST /api/jobrequests/{id}/decline-offer/  → kund nekar offert (Offer-truth)
     • POST /api/jobrequests/{id}/reopen/         → runda 2 (nya 5 offerter)
     • GET  /api/jobrequests/mine/                → kundens egna requests
     """
@@ -258,6 +250,10 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
     def get_serializer_class(self):
         if self.action == "list":
             return JobRequestListSerializer
+
+        if self.action in ["update", "partial_update"]:
+            return JobRequestUpdateSerializer
+
         return JobRequestSerializer
 
     # --------------------------------------------------------
@@ -274,8 +270,11 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         if params.get("mine") == "1":
             customer_profile = getattr(user, "customer_profile", None)
             if customer_profile and getattr(user, "role", None) == "customer":
-                return JobRequest.objects.filter(customer=customer_profile).order_by(
-                    "-created_at"
+                return (
+                    JobRequest.objects.filter(customer=customer_profile)
+                    .select_related("customer", "city", "profession")
+                    .prefetch_related("offers")
+                    .order_by("-created_at")
                 )
             return JobRequest.objects.none()
 
@@ -283,8 +282,11 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         if getattr(user, "role", None) == "customer":
             customer_profile = getattr(user, "customer_profile", None)
             if customer_profile:
-                return JobRequest.objects.filter(customer=customer_profile).order_by(
-                    "-created_at"
+                return (
+                    JobRequest.objects.filter(customer=customer_profile)
+                    .select_related("customer", "city", "profession")
+                    .prefetch_related("offers")
+                    .order_by("-created_at")
                 )
             return JobRequest.objects.none()
 
@@ -292,12 +294,22 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         if getattr(user, "role", None) == "company":
             company_profile = getattr(user, "company_profile", None)
             if company_profile and company_profile.is_active:
-                return JobRequest.objects.filter(is_active=True).order_by("-created_at")
+                return (
+                    JobRequest.objects.filter(is_active=True)
+                    .select_related("customer", "city", "profession")
+                    .prefetch_related("offers")
+                    .order_by("-created_at")
+                )
             return JobRequest.objects.none()
 
         # Admin → see all
         if user.is_superuser:
-            return JobRequest.objects.all().order_by("-created_at")
+            return (
+                JobRequest.objects.all()
+                .select_related("customer", "city", "profession")
+                .prefetch_related("offers")
+                .order_by("-created_at")
+            )
 
         return JobRequest.objects.none()
 
@@ -316,34 +328,78 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         serializer.save(customer=customer_profile)
 
     # --------------------------------------------------------
+    # ✏️ PATCH /api/jobrequests/{id}/
+    # --------------------------------------------------------
+    def partial_update(self, request, *args, **kwargs):
+        job = self.get_object()
+        user = request.user
+
+        if getattr(user, "role", None) != "customer":
+            raise PermissionDenied("Vetëm klientët mund të ndryshojnë kërkesën.")
+
+        customer_profile = getattr(user, "customer_profile", None)
+        if not customer_profile or job.customer != customer_profile:
+            raise PermissionDenied("Kjo kërkesë nuk është e juaja.")
+
+        if not job.is_active:
+            raise ValidationError("Kërkesa është mbyllur dhe nuk mund të ndryshohet.")
+
+        if job.is_completed or job.winner_offer_id:
+            raise ValidationError(
+                "Kërkesa ka ofertë të pranuar dhe nuk mund të ndryshohet."
+            )
+
+        # ✅ Offer-truth: lås edit om det finns offers som inte är DRAFT
+        if job.offers.exclude(status=OfferStatus.DRAFT).exists():
+            raise ValidationError("Kjo kërkesë nuk mund të ndryshohet sepse ka oferta.")
+
+        # ✅ Policy: inom 48 timmar
+        if job.created_at and timezone.now() > job.created_at + timedelta(hours=48):
+            raise ValidationError("Kjo kërkesë nuk mund të ndryshohet pas 48 orësh.")
+
+        response = super().partial_update(request, *args, **kwargs)
+
+        JobRequestAudit.objects.create(
+            job_request=job,
+            action="job_updated",
+            message="Klienti përditësoi kërkesën.",
+        )
+
+        return response
+
+    # --------------------------------------------------------
+    # 🔒 Blockera PUT (redirect till samma logik)
+    # --------------------------------------------------------
+    def update(self, request, *args, **kwargs):
+        return self.partial_update(request, *args, **kwargs)
+
+    # --------------------------------------------------------
     # 👤 GET /api/jobrequests/mine/
     # --------------------------------------------------------
     @action(detail=False, methods=["get"])
     def mine(self, request):
         user = request.user
         if not user.is_authenticated:
-            return Response(
-                {"detail": "Not authenticated"},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
+            return Response({"detail": "Not authenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
         if getattr(user, "role", None) != "customer":
-            return Response(
-                {"detail": "Not allowed"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+            return Response({"detail": "Not allowed"}, status=status.HTTP_403_FORBIDDEN)
 
         customer_profile = getattr(user, "customer_profile", None)
         if not customer_profile:
             return Response([], status=status.HTTP_200_OK)
 
-        qs = JobRequest.objects.filter(customer=customer_profile).order_by("-created_at")
+        qs = (
+            JobRequest.objects.filter(customer=customer_profile)
+            .select_related("customer", "city", "profession")
+            .prefetch_related("offers")
+            .order_by("-created_at")
+        )
         serializer = self.get_serializer(qs, many=True, context={"request": request})
         return Response(serializer.data)
 
     # --------------------------------------------------------
-    # ✅ POST /api/jobrequests/{id}/accept-offer/
-    # Kund accepterar en offert → vinnare, arkiv, logg
+    # ✅ POST /api/jobrequests/{id}/accept-offer/ (Offer-truth)
     # --------------------------------------------------------
     @action(detail=True, methods=["post"], url_path="accept-offer")
     def accept_offer(self, request, pk=None):
@@ -367,66 +423,91 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        # LEGACY: här används fortfarande LeadMatch som "offer"
         try:
-            offer = LeadMatch.objects.get(id=offer_id, job_request=job)
-        except LeadMatch.DoesNotExist:
+            offer = Offer.objects.select_related("company", "current_version").get(
+                id=offer_id, job_request=job
+            )
+        except Offer.DoesNotExist:
+            return Response({"detail": "Oferta nuk u gjet."}, status=status.HTTP_404_NOT_FOUND)
+
+        if offer.status == OfferStatus.REJECTED:
             return Response(
-                {"detail": "Oferta nuk u gjet."},
-                status=status.HTTP_404_NOT_FOUND,
+                {"detail": "Nuk mund të pranoni një ofertë të refuzuar."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
-        offer.status = "accepted"
-        offer.save()
+        # Kräver signering innan accept
+        if not offer.current_version or not offer.current_version.is_signed:
+            return Response(
+                {"detail": "Oferta duhet të jetë e nënshkruar para pranimit."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
 
-        LeadMatch.objects.filter(job_request=job).exclude(id=offer.id).update(
-            status="declined"
-        )
+        with transaction.atomic():
+            now = timezone.now()
 
-        job.accepted_company = offer.company
-        job.accepted_price = offer.price
-        job.winner_company = offer.company
-        job.winner_price = offer.price
-        job.winner_offer = offer
-        job.is_completed = True
-        job.is_active = False
-        job.save()
+            # ✅ Accept selected + unlock lead (efter accept ska de alltid ha access)
+            offer.status = OfferStatus.ACCEPTED
+            offer.accepted_at = now
+            offer.lead_unlocked = True
+            offer.save(update_fields=["status", "accepted_at", "lead_unlocked", "updated_at"])
 
-        ArchivedJob.objects.create(
-            title=job.title,
-            description=job.description,
-            category=job.profession.name,
-            location=job.city.name,
-            date_accepted=timezone.now(),
-            price=offer.price or (job.budget or 0),
-            company=offer.company,
-        )
+            # ✅ Reject other offers (men rör inte DRAFT)
+            Offer.objects.filter(job_request=job).exclude(id=offer.id).exclude(
+                status__in=[OfferStatus.REJECTED, OfferStatus.DRAFT]
+            ).update(
+                status=OfferStatus.REJECTED,
+                rejected_at=now,
+                updated_at=now,
+            )
 
-        JobRequestAudit.objects.create(
-            job_request=job,
-            company=offer.company,
-            action="offer_accepted",
-            message="Klienti pranoi ofertën.",
-        )
-        JobRequestAudit.objects.create(
-            job_request=job,
-            company=offer.company,
-            action="winner_selected",
-            message="Kompania u zgjodh si fituese.",
-        )
-        JobRequestAudit.objects.create(
-            job_request=job,
-            company=offer.company,
-            action="job_closed",
-            message="Kërkesa u mbyll pas pranimit të ofertës.",
-        )
+            # ✅ Update job fields (för UI/compat)
+            price = offer.current_version.price_amount if offer.current_version else None
+
+            job.accepted_company = offer.company
+            job.accepted_price = price or job.budget
+            job.winner_company = offer.company
+            job.winner_price = price or job.budget
+            job.winner_offer = offer
+            job.is_completed = True
+            job.is_active = False
+            job.save()
+
+            # Archive (om du vill behålla)
+            ArchivedJob.objects.create(
+                title=job.title,
+                description=job.description,
+                category=job.profession.name,
+                location=job.city.name,
+                date_accepted=now,
+                price=price or (job.budget or 0),
+                company=offer.company,
+            )
+
+            JobRequestAudit.objects.create(
+                job_request=job,
+                company=offer.company,
+                action="offer_accepted",
+                message="Klienti pranoi ofertën.",
+            )
+            JobRequestAudit.objects.create(
+                job_request=job,
+                company=offer.company,
+                action="winner_selected",
+                message="Kompania u zgjodh si fituese.",
+            )
+            JobRequestAudit.objects.create(
+                job_request=job,
+                company=offer.company,
+                action="job_closed",
+                message="Kërkesa u mbyll pas pranimit të ofertës.",
+            )
 
         serializer = self.get_serializer(job, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)
 
     # --------------------------------------------------------
-    # ❌ POST /api/jobrequests/{id}/decline-offer/
-    # Kund nekar en specifik offert
+    # ❌ POST /api/jobrequests/{id}/decline-offer/ (Offer-truth)
     # --------------------------------------------------------
     @action(detail=True, methods=["post"], url_path="decline-offer")
     def decline_offer(self, request, pk=None):
@@ -438,34 +519,25 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
 
         customer_profile = getattr(user, "customer_profile", None)
         if job.customer != customer_profile:
-            return Response(
-                {"detail": "Kjo kërkesë nuk është e juaja."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+            return Response({"detail": "Kjo kërkesë nuk është e juaja."}, status=status.HTTP_403_FORBIDDEN)
 
         offer_id = request.data.get("offer_id")
         if not offer_id:
-            return Response(
-                {"detail": "offer_id është i detyrueshëm."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"detail": "offer_id është i detyrueshëm."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # LEGACY: här används fortfarande LeadMatch som "offer"
         try:
-            offer = LeadMatch.objects.get(id=offer_id, job_request=job)
-        except LeadMatch.DoesNotExist:
-            return Response(
-                {"detail": "Oferta nuk u gjet."},
-                status=status.HTTP_404_NOT_FOUND,
-            )
+            offer = Offer.objects.select_related("company").get(id=offer_id, job_request=job)
+        except Offer.DoesNotExist:
+            return Response({"detail": "Oferta nuk u gjet."}, status=status.HTTP_404_NOT_FOUND)
 
-        if offer.status == "accepted":
+        if offer.status == OfferStatus.ACCEPTED:
             return Response(
                 {"detail": "Nuk mund të refuzoni një ofertë të pranuar."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        offer.status = "declined"
+        offer.status = OfferStatus.REJECTED
+        offer.rejected_at = timezone.now()
         offer.save()
 
         JobRequestAudit.objects.create(
@@ -478,8 +550,7 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         return Response({"detail": "Oferta u refuzua."}, status=status.HTTP_200_OK)
 
     # --------------------------------------------------------
-    # 🔁 POST /api/jobrequests/{id}/reopen/
-    # Runda 2 – deri në +5 extra offerter
+    # 🔁 POST /api/jobrequests/{id}/reopen/ (Offer-truth)
     # --------------------------------------------------------
     @action(detail=True, methods=["post"], url_path="reopen")
     def reopen_for_more_offers(self, request, pk=None):
@@ -491,16 +562,10 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
 
         customer_profile = getattr(user, "customer_profile", None)
         if job.customer != customer_profile:
-            return Response(
-                {"detail": "Kjo kërkesë nuk është e juaja."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+            return Response({"detail": "Kjo kërkesë nuk është e juaja."}, status=status.HTTP_403_FORBIDDEN)
 
         if job.is_completed:
-            return Response(
-                {"detail": "Kjo kërkesë është mbyllur tashmë."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"detail": "Kjo kërkesë është mbyllur tashmë."}, status=status.HTTP_400_BAD_REQUEST)
 
         if job.is_reopened:
             return Response(
@@ -508,30 +573,24 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        existing_offers = job.matches.all()
+        existing_offers = Offer.objects.filter(job_request=job)
+
         if not existing_offers.exists():
-            return Response(
-                {"detail": "Nuk ka oferta të mjaftueshme për rihapje."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"detail": "Nuk ka oferta të mjaftueshme për rihapje."}, status=status.HTTP_400_BAD_REQUEST)
 
-        if existing_offers.filter(status="accepted").exists():
-            return Response(
-                {"detail": "Ka një ofertë të pranuar – nuk mund të rihapet."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+        # Block om någon accepted
+        if existing_offers.filter(status=OfferStatus.ACCEPTED).exists():
+            return Response({"detail": "Ka një ofertë të pranuar – nuk mund të rihapet."}, status=status.HTTP_400_BAD_REQUEST)
 
-        if existing_offers.filter(status="pending").exists():
+        # ✅ Block om det finns aktiva offers (SIGNED/ACCEPTED)
+        if existing_offers.filter(status__in=[OfferStatus.SIGNED, OfferStatus.ACCEPTED]).exists():
             return Response(
-                {"detail": "Ka oferta në pritje – vendosni fillimisht për to."},
+                {"detail": "Ka oferta aktive – vendosni fillimisht për to."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         if job.offers_count < 7:
-            return Response(
-                {"detail": "Rundi i parë nuk është plotësuar ende."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+            return Response({"detail": "Rundi i parë nuk është plotësuar ende."}, status=status.HTTP_400_BAD_REQUEST)
 
         job.is_reopened = True
         job.max_offers = 12
@@ -556,10 +615,7 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         user = request.user
 
         if not user.is_authenticated:
-            return Response(
-                {"detail": "Not authenticated"},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
+            return Response({"detail": "Not authenticated"}, status=status.HTTP_401_UNAUTHORIZED)
 
         role = getattr(user, "role", None)
 
@@ -567,32 +623,20 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         if role == "customer":
             customer_profile = getattr(user, "customer_profile", None)
             if not customer_profile or job.customer != customer_profile:
-                return Response(
-                    {"detail": "Not allowed"},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
+                return Response({"detail": "Not allowed"}, status=status.HTTP_403_FORBIDDEN)
 
         # Company: endast om lead är upplåst via Offer + kräver aktiv company
         elif role == "company":
             company = getattr(user, "company_profile", None)
             if not company or not company.is_active:
-                return Response(
-                    {"detail": "Not allowed"},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
+                return Response({"detail": "Not allowed"}, status=status.HTTP_403_FORBIDDEN)
 
             offer = Offer.objects.filter(company=company, job_request=job).first()
             if not offer or not offer.lead_unlocked:
-                return Response(
-                    {"detail": "Lead is locked"},
-                    status=status.HTTP_403_FORBIDDEN,
-                )
+                return Response({"detail": "Lead is locked"}, status=status.HTTP_403_FORBIDDEN)
 
         else:
-            return Response(
-                {"detail": "Not allowed"},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+            return Response({"detail": "Not allowed"}, status=status.HTTP_403_FORBIDDEN)
 
         logs = job.audit_logs.all().order_by("-created_at")
         serializer = JobRequestAuditSerializer(logs, many=True)

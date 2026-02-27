@@ -1,18 +1,12 @@
-# backend/jobrequests/models.py 
+# backend/jobrequests/models.py
 
 from django.db import models
 from django.utils import timezone
 from datetime import timedelta
 from locations.models import City
 from taxonomy.models import Profession
-
-
 from accounts.models import Customer, Company
 
-
-# ============================================================
-# 🏆  AUDIT LOG – historik för ändringar och viktiga händelser
-# ============================================================
 
 class JobRequestAudit(models.Model):
     ACTION_CHOICES = [
@@ -22,6 +16,8 @@ class JobRequestAudit(models.Model):
         ("job_closed", "Kërkesa u mbyll"),
         ("reopened_round_two", "Rihapja e rundit të dytë"),
         ("winner_selected", "Fituesi u përzgjodh"),
+        ("job_updated", "Kërkesa u përditësua"),
+        ("created_from_draft", "Kërkesa u krijua nga draft"),
     ]
 
     job_request = models.ForeignKey(
@@ -29,6 +25,7 @@ class JobRequestAudit(models.Model):
         on_delete=models.CASCADE,
         related_name="audit_logs"
     )
+
     company = models.ForeignKey(
         Company,
         on_delete=models.SET_NULL,
@@ -36,6 +33,7 @@ class JobRequestAudit(models.Model):
         blank=True,
         related_name="audit_company"
     )
+
     action = models.CharField(max_length=50, choices=ACTION_CHOICES)
     message = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
@@ -48,10 +46,6 @@ class JobRequestAudit(models.Model):
         return f"{self.action} – {self.job_request.id}"
 
 
-# ============================================================
-# 🏗️  JOB REQUEST – den riktiga publicerade jobbannonsen
-# ============================================================
-
 class JobRequest(models.Model):
     customer = models.ForeignKey(
         Customer,
@@ -62,82 +56,57 @@ class JobRequest(models.Model):
 
     title = models.CharField(max_length=255, verbose_name="Titulli i punës")
     description = models.TextField(verbose_name="Përshkrimi")
-    budget = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        blank=True,
-        null=True,
-        verbose_name="Buxheti €"
-    )
-    city = models.ForeignKey(
-        City,
-        on_delete=models.PROTECT,
-        related_name="job_requests",
-        verbose_name="Qyteti"
-    )
+    budget = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Buxheti €")
 
-    profession = models.ForeignKey(
-        Profession,
-        on_delete=models.PROTECT,
-        related_name="job_requests",
-        verbose_name="Profesioni"
-    )
-
+    city = models.ForeignKey(City, on_delete=models.PROTECT, related_name="job_requests", verbose_name="Qyteti")
+    profession = models.ForeignKey(Profession, on_delete=models.PROTECT, related_name="job_requests", verbose_name="Profesioni")
 
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Krijuar më")
-    is_active = models.BooleanField(default=True, verbose_name="Aktive")
+
+    # 🔥 Index for performance
+    is_active = models.BooleanField(default=True, db_index=True, verbose_name="Aktive")
+    is_completed = models.BooleanField(default=False, db_index=True, verbose_name="Përfunduar")
+
     max_offers = models.PositiveIntegerField(default=7, verbose_name="Numri maksimal i ofertave")
     last_offer_at = models.DateTimeField(null=True, blank=True, verbose_name="Data e ofertës së fundit")
+
     is_reopened = models.BooleanField(default=False, verbose_name="Rihapur")
     reopened_at = models.DateTimeField(null=True, blank=True, verbose_name="Rihapur më")
-
-    # 🔁 Status / resultat
-    is_completed = models.BooleanField(default=False, verbose_name="Përfunduar")
 
     accepted_company = models.ForeignKey(
         Company,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        verbose_name="Kompania e pranuar"
+        related_name="accepted_jobs",
+        verbose_name="Kompania e pranuar",
     )
-    accepted_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name="Çmimi i pranuar"
-    )
+
+    accepted_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Çmimi i pranuar")
 
     expires_at = models.DateTimeField(null=True, blank=True, verbose_name="Skadon më")
 
-    # 🏆 Fitues
     winner_company = models.ForeignKey(
         Company,
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
         related_name="winner_jobs",
-        verbose_name="Fituesi"
+        verbose_name="Fituesi",
     )
-    winner_price = models.DecimalField(
-        max_digits=10,
-        decimal_places=2,
-        null=True,
-        blank=True,
-        verbose_name="Çmimi fitues"
-    )
+
+    winner_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Çmimi fitues")
+
     winner_offer = models.ForeignKey(
-        "leads.LeadMatch",
+        "offers.Offer",
         null=True,
         blank=True,
         on_delete=models.SET_NULL,
-        related_name="winning_offer",
-        verbose_name="Oferta fituese"
+        related_name="winning_jobs",
+        verbose_name="Oferta fituese",
     )
 
     def save(self, *args, **kwargs):
-        """Vendos automatikisht datën e skadimit 40 ditë më vonë nëse nuk është vendosur."""
         if not self.expires_at:
             self.expires_at = timezone.now() + timedelta(days=40)
         super().save(*args, **kwargs)
@@ -147,17 +116,15 @@ class JobRequest(models.Model):
 
     @property
     def offers_count(self):
-        """Numri i kompanive që kanë dërguar ofertë."""
-        return self.matches.count()
+        from offers.models import OfferStatus
+        return self.offers.exclude(status=OfferStatus.DRAFT).count()
 
     @property
     def offers_left(self):
-        """Sa oferta të lira kanë mbetur."""
         return max(self.max_offers - self.offers_count, 0)
 
     @property
     def extra_offers_added(self):
-        """Numri i ofertave shtesë pas rihapjes."""
         return max(self.max_offers - 7, 0)
 
     class Meta:
@@ -165,46 +132,16 @@ class JobRequest(models.Model):
         verbose_name_plural = "Kërkesa për Punë"
 
 
-# ============================================================
-# 🆕  JOB REQUEST DRAFT – används av multi-step formuläret
-# ============================================================
-
 class JobRequestDraft(models.Model):
-    """
-    Stegvis utkast som kunden fyller i (1–4)
-    innan det blir en riktig JobRequest.
-    """
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="jobrequest_drafts")
 
-    customer = models.ForeignKey(
-        Customer,
-        on_delete=models.CASCADE,
-        related_name="jobrequest_drafts"
-    )
-
-    # Fält som fylls i under olika steg
     title = models.CharField(max_length=255, blank=True)
     description = models.TextField(blank=True)
     budget = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
-    city = models.ForeignKey(
-        City,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="jobrequest_drafts",
-        verbose_name="Qyteti"
-    )
 
-    profession = models.ForeignKey(
-        Profession,
-        on_delete=models.PROTECT,
-        null=True,
-        blank=True,
-        related_name="jobrequest_drafts",
-        verbose_name="Profesioni"
-    )
+    city = models.ForeignKey(City, on_delete=models.PROTECT, null=True, blank=True, related_name="jobrequest_drafts", verbose_name="Qyteti")
+    profession = models.ForeignKey(Profession, on_delete=models.PROTECT, null=True, blank=True, related_name="jobrequest_drafts", verbose_name="Profesioni")
 
-
-    # Multi-step state
     current_step = models.PositiveSmallIntegerField(default=1)
     is_submitted = models.BooleanField(default=False)
 
