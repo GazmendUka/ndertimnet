@@ -60,6 +60,36 @@ export default function CustomerJobDetails() {
     [offers]
   );
 
+
+  // ------------------------------------------------------------
+  // Edit permission (UX-level only – backend is source of truth)
+  // ------------------------------------------------------------
+  const canEdit = useMemo(() => {
+    if (!job) return false;
+
+    const hasOffers = job.offers_count > 0;
+    const hasWinner = !!job.winner_offer;
+
+    const createdAt = job.created_at
+      ? new Date(job.created_at)
+      : null;
+
+    if (!createdAt) return false;
+
+    const now = new Date();
+    const within48h =
+      now.getTime() - createdAt.getTime() <= 48 * 60 * 60 * 1000;
+
+    return (
+      job.is_active &&
+      !job.is_completed &&
+      !hasWinner &&
+      !hasOffers &&
+      within48h
+    );
+  }, [job, acceptedOffer]);
+
+
   // ============================================================
   // Load job request (kundens eget jobb)
   // ============================================================
@@ -217,6 +247,17 @@ export default function CustomerJobDetails() {
           <Clock size={12} />
           Krijuar më: {formatDate(job.created_at)}
         </p>
+
+        <div className="flex justify-end mb-3">
+          {canEdit && (
+            <Link
+              to={`/jobrequests/${job.id}/edit`}
+              className="premium-btn btn-dark text-xs sm:text-sm"
+            >
+              ✏️ Përditëso kërkesën
+            </Link>
+          )}
+        </div>
 
         <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
           <div className="max-w-4xl">

@@ -145,6 +145,7 @@ class JobRequestSerializer(serializers.ModelSerializer):
             "profession_detail",
 
             "created_at",
+            "updated_at",
             "is_active",
             "lead_unlocked",
 
@@ -172,7 +173,7 @@ class JobRequestSerializer(serializers.ModelSerializer):
 
             "audit_logs",
         ]
-        read_only_fields = ("customer", "created_at", "last_offer_at", "reopened_at")
+        read_only_fields = ("customer", "created_at", "last_offer_at", "reopened_at", "updated_at")
 
     # ----------------------------
     # Helpers
@@ -347,7 +348,11 @@ class JobRequestUpdateSerializer(serializers.ModelSerializer):
         required=False,
         allow_null=True
     )
+    profession = serializers.PrimaryKeyRelatedField(
+        queryset=Profession.objects.all(),
+        required=False
+    )
 
     class Meta:
         model = JobRequest
-        fields = ["title", "description", "budget"]
+        fields = ["title", "description", "budget", "profession"]

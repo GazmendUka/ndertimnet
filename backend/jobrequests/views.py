@@ -359,8 +359,10 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
 
         response = super().partial_update(request, *args, **kwargs)
 
+        updated_job = self.get_object()
+
         JobRequestAudit.objects.create(
-            job_request=job,
+            job_request=updated_job,
             action="job_updated",
             message="Klienti përditësoi kërkesën.",
         )

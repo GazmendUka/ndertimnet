@@ -28,6 +28,7 @@ import ResetPassword from "./pages/auth/ResetPassword";
 import CustomerDashboard from "./pages/customer/CustomerDashboard";
 import CustomerProfile from "./pages/profile/CustomerProfile";
 import JobRequestCreate from "./pages/jobrequests/JobRequestCreate";
+import JobRequestEdit from "./pages/jobrequests/JobRequestEdit";
 import JobRequestList from "./pages/jobrequests/JobRequestList";
 import RoleBasedJobRequestDetail from "./pages/jobrequests/RoleBasedJobRequestDetail";
 import CustomerOfferDetailsPage from "./pages/customer/CustomerOfferDetailsPage";
@@ -103,6 +104,8 @@ function App() {
                 <Route path="/profile/customer" element={<CustomerProfile />} />
 
                 <Route path="/jobrequests/create" element={<JobRequestCreate />} />
+                <Route path="/jobrequests/:id/edit" element={<JobRequestEdit />} />
+                
                 <Route path="/customer/offers/:id" element={<CustomerOfferDetailsPage />} />
               </Route>
             </Route>

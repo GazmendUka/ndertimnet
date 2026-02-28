@@ -62,6 +62,7 @@ class JobRequest(models.Model):
     profession = models.ForeignKey(Profession, on_delete=models.PROTECT, related_name="job_requests", verbose_name="Profesioni")
 
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Krijuar më")
+    updated_at = models.DateTimeField(auto_now=True, verbose_name="Përditësuar më")
 
     # 🔥 Index for performance
     is_active = models.BooleanField(default=True, db_index=True, verbose_name="Aktive")
