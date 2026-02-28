@@ -17,41 +17,42 @@ export default function JobRequestEdit() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  // ----------------------------------------------------
-  // Fetch job + professions
-  // ----------------------------------------------------
-  useEffect(() => {
-    if (!access || !isCustomer) return;
+    // ----------------------------------------------------
+    // Fetch job + professions
+    // ----------------------------------------------------
+    useEffect(() => {
+        if (!access || !isCustomer) return;
 
-    async function fetchData() {
-      try {
-        const [jobRes, profRes] = await Promise.all([
-          api.get(`/jobrequests/${id}/`),
-          api.get("/taxonomy/professions/"),
-        ]);
+        async function fetchData() {
+            try {
+            const [jobResponse, profResponse] = await Promise.all([
+                api.get(`/jobrequests/${id}/`),
+                api.get("/taxonomy/professions/"),
+            ]);
 
-        setJob(jobRes.data);
-        setProfessions(profRes.data.results || profRes.data);
-      } catch (err) {
-        setError("Nuk u gjet kërkesa ose nuk lejohet.");
-      } finally {
-        setLoading(false);
-      }
-    }
+            const jobData = jobResponse.data;
 
-    const jobData = jobRes.data;
+            setJob(jobData);
+            setProfessions(profResponse.data.results || profResponse.data);
 
-    // Extra frontend-skydd (backend är ändå source of truth)
-    if (
-        jobData.offers_count > 0 ||
-        jobData.winner_offer ||
-        !jobData.is_active
-    ) {
-        setError("Kjo kërkesë nuk mund të përditësohet.");
-    }
+            // 🔒 Optional frontend guard
+            if (
+                jobData.offers_count > 0 ||
+                jobData.winner_offer ||
+                !jobData.is_active
+            ) {
+                setError("Kjo kërkesë nuk mund të përditësohet.");
+            }
 
-    fetchData();
-  }, [id, access, isCustomer]);
+            } catch (err) {
+            setError("Nuk u gjet kërkesa ose nuk lejohet.");
+            } finally {
+            setLoading(false);
+            }
+        }
+
+        fetchData();
+    }, [id, access, isCustomer]);
 
   // ----------------------------------------------------
   // Submit PATCH
