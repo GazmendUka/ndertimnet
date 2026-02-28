@@ -12,6 +12,10 @@ export default function JobRequestList() {
   const { user, access, isCompany, isCustomer } = useAuth();
   const navigate = useNavigate();
 
+  console.log("ACCESS:", access);
+  console.log("ROLE:", user?.role);
+  console.log("isCustomer:", isCustomer);
+
   const [company, setCompany] = useState(null);
   const [companyLoading, setCompanyLoading] = useState(true);
 
@@ -68,6 +72,8 @@ export default function JobRequestList() {
   // LOAD JOB REQUESTS
   // ============================================================
   useEffect(() => {
+    if (!access) return;   // 🔥 VIKTIGT
+
     async function fetchRequests() {
       if (uiLocked) {
         setRequests([]);
@@ -92,8 +98,8 @@ export default function JobRequestList() {
           : list;
 
         setRequests(filtered);
-      } catch {
-        // silent fail – UI shows empty state / placeholders
+      } catch (err) {
+        console.error("Error fetching jobrequests:", err);
       }
     }
 
