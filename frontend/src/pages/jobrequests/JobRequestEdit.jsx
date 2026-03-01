@@ -32,7 +32,13 @@ export default function JobRequestEdit() {
 
             const jobData = jobResponse.data;
 
-            setJob(jobData);
+            // ✅ Gör edit-vänlig version
+            const editJobData = {
+              ...jobData,
+              profession: jobData.profession_detail?.id || "",
+            };
+
+            setJob(editJobData);
             setProfessions(profResponse.data.results || profResponse.data);
 
             // 🔒 Optional frontend guard
