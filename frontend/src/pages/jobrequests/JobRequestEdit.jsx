@@ -64,6 +64,7 @@ export default function JobRequestEdit() {
   // Submit PATCH
   // ----------------------------------------------------
   const handleUpdate = async (payload) => {
+    if (saving) return;
     setSaving(true);
     setError(null);
 

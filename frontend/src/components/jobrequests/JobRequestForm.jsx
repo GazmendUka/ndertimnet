@@ -21,14 +21,19 @@ export default function JobRequestForm({
     if (initialData) {
       setTitle(initialData.title || "");
       setDescription(initialData.description || "");
-      setBudget(initialData.budget || "");
-      setProfession(initialData.profession || "");
+      setBudget(initialData.budget ?? "");
+      setProfession(
+        initialData.profession
+          ? String(initialData.profession)
+          : ""
+      );
     }
   }, [initialData]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
+    if (loading) return;
     setError(null);
 
     if (!title.trim()) {
@@ -36,11 +41,16 @@ export default function JobRequestForm({
       return;
     }
 
+    if (!profession) {
+      setError("Profesioni është i detyrueshëm.");
+      return;
+    }
+
     const payload = {
-      title,
-      description,
-      budget: budget === "" ? null : budget,
-      profession,
+      title: title.trim(),
+      description: description.trim(),
+      budget: budget === "" ? null : Number(budget),
+      profession: Number(profession),
     };
 
     onSubmit(payload);
