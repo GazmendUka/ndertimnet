@@ -271,7 +271,10 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
             customer_profile = getattr(user, "customer_profile", None)
             if customer_profile and getattr(user, "role", None) == "customer":
                 return (
-                    JobRequest.objects.filter(customer=customer_profile)
+                    JobRequest.objects.filter(
+                        customer=customer_profile,
+                        is_deleted=False
+                    )
                     .select_related("customer", "city", "profession")
                     .prefetch_related("offers")
                     .order_by("-created_at")
@@ -283,7 +286,10 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
             customer_profile = getattr(user, "customer_profile", None)
             if customer_profile:
                 return (
-                    JobRequest.objects.filter(customer=customer_profile)
+                    JobRequest.objects.filter(
+                        customer=customer_profile,
+                        is_deleted=False
+                    )
                     .select_related("customer", "city", "profession")
                     .prefetch_related("offers")
                     .order_by("-created_at")
@@ -295,7 +301,10 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
             company_profile = getattr(user, "company_profile", None)
             if company_profile and company_profile.is_active:
                 return (
-                    JobRequest.objects.filter(is_active=True)
+                    JobRequest.objects.filter(
+                        is_active=True,
+                        is_deleted=False
+                    )
                     .select_related("customer", "city", "profession")
                     .prefetch_related("offers")
                     .order_by("-created_at")
@@ -386,7 +395,10 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
             return Response([], status=status.HTTP_200_OK)
 
         qs = (
-            JobRequest.objects.filter(customer=customer_profile)
+            JobRequest.objects.filter(
+                customer=customer_profile,
+                is_deleted=False
+            )
             .select_related("customer", "city", "profession")
             .prefetch_related("offers")
             .order_by("-created_at")
@@ -637,3 +649,43 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         logs = job.audit_logs.all().order_by("-created_at")
         serializer = JobRequestAuditSerializer(logs, many=True)
         return Response(serializer.data, status=status.HTTP_200_OK)
+    
+    # --------------------------------------------------------
+    # 🗑️ DELETE /api/jobrequests/{id}/  → Soft delete
+    # --------------------------------------------------------
+    def destroy(self, request, *args, **kwargs):
+        job = self.get_object()
+        user = request.user
+
+        if getattr(user, "role", None) != "customer":
+            raise PermissionDenied("Vetëm klientët mund ta fshijnë kërkesën.")
+
+        customer_profile = getattr(user, "customer_profile", None)
+        if not customer_profile or job.customer != customer_profile:
+            raise PermissionDenied("Kjo kërkesë nuk është e juaja.")
+
+        if job.is_completed or job.winner_offer_id:
+            raise ValidationError("Kjo kërkesë nuk mund të fshihet sepse është përfunduar.")
+
+        now = timezone.now()
+
+        job.is_deleted = True
+        job.deleted_at = now
+        job.is_active = False
+
+        job.save(update_fields=[
+            "is_deleted",
+            "deleted_at",
+            "is_active",
+            "updated_at",
+        ])
+
+        JobRequestAudit.objects.create(
+            job_request=job,
+            action="job_closed",
+            message="Kërkesa u fshi (soft delete) nga klienti.",
+        )
+
+        return Response(status=status.HTTP_204_NO_CONTENT)
+    
+

@@ -8,7 +8,7 @@ from taxonomy.models import Profession
 from accounts.models import Customer, Company
 
 
-class JobRequestAudit(models.Model):
+class JobRequestAudit(models.Model):    
     ACTION_CHOICES = [
         ("offer_sent", "Ofertë e dërguar"),
         ("offer_accepted", "Oferta u pranua"),
@@ -47,6 +47,7 @@ class JobRequestAudit(models.Model):
 
 
 class JobRequest(models.Model):
+
     customer = models.ForeignKey(
         Customer,
         on_delete=models.CASCADE,
@@ -84,7 +85,6 @@ class JobRequest(models.Model):
     )
 
     accepted_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Çmimi i pranuar")
-
     expires_at = models.DateTimeField(null=True, blank=True, verbose_name="Skadon më")
 
     winner_company = models.ForeignKey(
@@ -106,6 +106,9 @@ class JobRequest(models.Model):
         related_name="winning_jobs",
         verbose_name="Oferta fituese",
     )
+
+    is_deleted = models.BooleanField(default=False)
+    deleted_at = models.DateTimeField(null=True, blank=True)
 
     def save(self, *args, **kwargs):
         if not self.expires_at:
