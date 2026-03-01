@@ -370,12 +370,6 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         return response
 
     # --------------------------------------------------------
-    # 🔒 Blockera PUT (redirect till samma logik)
-    # --------------------------------------------------------
-    def update(self, request, *args, **kwargs):
-        return self.partial_update(request, *args, **kwargs)
-
-    # --------------------------------------------------------
     # 👤 GET /api/jobrequests/mine/
     # --------------------------------------------------------
     @action(detail=False, methods=["get"])
