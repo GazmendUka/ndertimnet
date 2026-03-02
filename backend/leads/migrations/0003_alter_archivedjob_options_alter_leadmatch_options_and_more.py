@@ -7,7 +7,6 @@ class Migration(migrations.Migration):
 
     dependencies = [
         ('accounts', '0010_company_free_leads_remaining'),
-        ('jobrequests', '0006_jobrequest_deleted_at_jobrequest_is_deleted_and_more'),
         ('leads', '0002_leadmatch_can_chat_leadmatch_customer_info_unlocked_and_more'),
     ]
 
