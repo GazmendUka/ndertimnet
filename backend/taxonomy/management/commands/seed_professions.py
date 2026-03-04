@@ -12,71 +12,14 @@ from taxonomy.models import Profession
 # - Ändrar du ett namn här uppdateras det i databasen, inga dubbletter
 
 PROFESSIONS = [
-    # ⚡ Elektrikë / Hidraulikë / Teknikë
-    "Elektricist",
-    "Instalues i ngrohjes",
-    "Instalues i ventilimit",
-    "Teknik HVAC",
-    "Instalues kondicioneri",
-
-    # 🪚 Dru / Alumini
-    "Zdrukthëtar",
-    "Marangoz",
-    "Punues druri",
-    "Punues alumini",
-    "Punues PVC",
-
-    # 🧱 Mur / Suvatim / Gips
-    "Murator",
-    "Suvatues",
-    "Punues gipsi",
-    "Plakist",
-
-    # 🧱 Dysheme / Pllaka
-    "Shtrues pllakash",
-    "Shtrues dyshemeje",
-    "Parketist",
-
-    # 🎨 Lyerje / Dekor
-    "Moler",
-    "Dekorues",
-    "Punime dekorative",
-
-    # 🏠 Çati
-    "Punime çatie",
-    "Mbulesa çatie",
-    "Izolim çatie",
-
-    # 🧊 Izolim / Fasadë
-    "Izolim termik",
-    "Izolim hidro",
-    "Montues fasade",
-    "Fasadist",
-
-    # 🚪 Dyer / Dritare
-    "Montim dritaresh dhe dyersh",
-
-    # 🏗️ Beton / Hekur / Tokë
-    "Punime betoni",
-    "Punime hekuri",
-    "Armaturist",
-    "Gërmime",
-    "Punime toke",
-
-    # 🏗️ Ndërtim / Renovim
+    "Nuk e di",
     "Ndërtim i përgjithshëm",
-    "Kompani ndërtimi",
-    "Ndërmarrje ndërtimi",
-    "Renovim banese",
-    "Renovim total",
-    "Rikonstruksion",
-
-    # 📐 Projektim / Mbikëqyrje
-    "Arkitekt",
-    "Inxhinier ndërtimi",
-    "Projektues",
-    "Mbikëqyrje ndërtimi",
-    "Menaxhim projekti",
+    "Elektricist",
+    "Hidraulik",
+    "Punime çatie",
+    "Dyer dhe dritare",
+    "Fasada dhe izolim",
+    "Punime të brendshme",
 ]
 
 
