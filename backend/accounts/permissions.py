@@ -29,15 +29,24 @@ class IsCompanyProfileComplete(BasePermission):
 
 
 class IsEmailVerified(BasePermission):
-    message = "E-postadressen måste verifieras för att utföra denna åtgärd."
+    """
+    Lejon vetëm përdoruesit me email të verifikuar.
+    Admin/staff përjashtohen.
+    """
+
+    message = "Ju lutem verifikoni email-in për të vazhduar."
 
     def has_permission(self, request, view):
         user = request.user
-        return bool(
-            user
-            and user.is_authenticated
-            and getattr(user, "email_verified", False)
-        )
+
+        if not user or not user.is_authenticated:
+            return False
+
+        # Admin/staff blockeras inte
+        if user.is_staff or user.is_superuser:
+            return True
+
+        return getattr(user, "email_verified", False)
 
 class IsCompanyProfileCompleteOnlyForCompanies(BasePermission):
     message = "Slutför din företagsprofil."

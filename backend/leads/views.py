@@ -14,9 +14,7 @@ from jobrequests.serializers import JobRequestSerializer
 from core.pagination import AlbanianPagination
 
 from accounts.permissions import IsEmailVerified, IsCompanyProfileCompleteOnlyForCompanies
-
 from payments.services.access import has_offer_access
-from payments.services.access import has_chat_access
 
 
 # ------------------------------------------------------------
@@ -444,9 +442,9 @@ class LeadMessageViewSet(viewsets.ModelViewSet):
 
         company = get_company_for_user(self.request.user)
 
-        # 🔐 Företag måste ha chat access
+        # 🔐 Företag måste ha unlockat lead
         if company:
-            if not has_chat_access(company, lead):
+            if not has_offer_access(company, lead.job_request):
                 return qs.none()
 
         return qs.filter(lead=lead).order_by("created_at")
@@ -478,12 +476,12 @@ class LeadMessageViewSet(viewsets.ModelViewSet):
                     {"detail": "Nuk keni autorizim për këtë lead."}
                 )
 
-            # 🔐 STEG 5B — kräver chat access (5€)
-            if not has_chat_access(company, lead):
+            # 🔐 Lead måste vara upplåst
+            if not has_offer_access(company, lead.job_request):
                 raise serializers.ValidationError(
                     {
-                        "detail": "Chat access (5€) krävs för att skriva meddelanden.",
-                        "code": "chat_access_required",
+                        "detail": "Lead måste vara upplåst för att skriva meddelanden.",
+                        "code": "offer_access_required",
                     }
                 )
 

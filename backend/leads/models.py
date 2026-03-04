@@ -1,4 +1,4 @@
-# NDERTIMNET/BACKEND/LEADS/MODELS.PY
+# ndertimet/backend/leads/models.py
 
 from django.db import models
 from django.utils import timezone
