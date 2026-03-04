@@ -48,9 +48,14 @@ class PaymentViewSet(viewsets.ViewSet):
             payment, created = Payment.objects.get_or_create(
                 offer=offer,
                 type=PaymentType.UNLOCK_LEAD,
-                defaults={"status": PaymentStatus.PAID},
+                defaults={
+                    "amount": 0,
+                    "currency": "EUR",
+                    "provider": "internal",
+                    "status": PaymentStatus.PAID,
+                },
             )
-
+            
             if not created:
                 return Response(
                     {"detail": "Lead är redan upplåst."},
