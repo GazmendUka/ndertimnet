@@ -47,6 +47,7 @@ class PaymentViewSet(viewsets.ViewSet):
 
             payment, created = Payment.objects.get_or_create(
                 offer=offer,
+                company=company,
                 type=PaymentType.UNLOCK_LEAD,
                 defaults={
                     "amount": 0,
