@@ -127,7 +127,7 @@ export default function CustomerJobDetails() {
 
     async function fetchOffers() {
       try {
-        const res = await api.get(`leads/leadmatches/?job_request=${id}`);
+        const res = await api.get(`offers/?job_request=${id}`);
         const list = res.data.results || res.data || [];
         setOffers(Array.isArray(list) ? list : []);
       } catch (err) {
@@ -374,13 +374,12 @@ export default function CustomerJobDetails() {
             ) : (
               <div className="space-y-4">
                 {offers.map((offer) => {
-                  const isPending = offer.status === "pending";
+                  const isPending = offer.status === "signed";
                   const isAccepted = offer.status === "accepted";
                   const isDeclined = offer.status === "declined";
 
                   const displayPrice =
-                    offer.price ||
-                    offer.suggested_price ||
+                    offer.current_version?.price_amount ||
                     job.budget ||
                     null;
 
@@ -398,10 +397,7 @@ export default function CustomerJobDetails() {
                       <div className="flex justify-between mb-2">
                         <div>
                           <h3 className="font-semibold text-gray-900">
-                            {offer.company?.name ||
-                              offer.kompania?.name ||
-                              offer.kompania?.emri ||
-                              "Kompani"}
+                            {offer.company?.company_name || "Kompani"}
                           </h3>
                           <p className="text-xs text-gray-500">
                             Dërguar më: {formatDateTime(offer.created_at)}
@@ -417,9 +413,9 @@ export default function CustomerJobDetails() {
                         </span>
                       </div>
 
-                      {offer.message && (
+                      {offer.current_version?.presentation_text && (
                         <div className="text-sm text-gray-700 bg-gray-50 p-3 rounded border">
-                          {offer.message}
+                          {offer.current_version.presentation_text}
                         </div>
                       )}
 
