@@ -1,3 +1,5 @@
+# backend/offers/views.py
+
 from io import BytesIO
 
 from django.http import FileResponse
@@ -38,15 +40,29 @@ class OfferViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
 
-        # Steg 2: vi exponerar just nu offers bara för company-sidan.
         if getattr(user, "role", None) == "company":
             company = getattr(user, "company_profile", None)
             if not company:
                 return Offer.objects.none()
-            return self.queryset.filter(company=company)
+
+            return (
+                self.queryset
+                .filter(company=company)
+                .select_related("current_version", "job_request")
+            )
+
+        if getattr(user, "role", None) == "customer":
+            customer = getattr(user, "customer_profile", None)
+            if not customer:
+                return Offer.objects.none()
+
+            return (
+                self.queryset
+                .filter(job_request__customer=customer)
+                .select_related("current_version", "job_request")
+            )
 
         return Offer.objects.none()
-
     # --------------------------------------------------
     # LIST – My offers
     # GET /api/offers/mine/
