@@ -1,5 +1,3 @@
-// src/pages/company/MyLeads.js
-
 import React, { useEffect, useState, useMemo } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../../api/axios";
@@ -11,6 +9,8 @@ import {
   Briefcase,
   CheckCircle2,
   XCircle,
+  AlertTriangle,
+  Send,
 } from "lucide-react";
 
 export default function MyLeads() {
@@ -20,7 +20,6 @@ export default function MyLeads() {
   const [offers, setOffers] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Filters & sorting
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortOption, setSortOption] = useState("newest");
 
@@ -29,6 +28,9 @@ export default function MyLeads() {
   // ============================================================
   useEffect(() => {
     if (!access || !isCompany) return;
+
+    // markera leads som sedda
+    localStorage.setItem("lastVisitMyLeads", new Date().toISOString());
 
     async function load() {
       try {
@@ -49,6 +51,7 @@ export default function MyLeads() {
   // ============================================================
   const timeAgo = (isoDate) => {
     if (!isoDate) return "kohë e panjohur";
+
     const diff = Date.now() - new Date(isoDate).getTime();
     const min = Math.floor(diff / 60000);
     const hrs = Math.floor(min / 60);
@@ -61,13 +64,14 @@ export default function MyLeads() {
   };
 
   const getJob = (offer) => offer.job_request || {};
-  const getDate = (offer) => offer.created_at;
 
   const getBudget = (offer) =>
     offer.job_request?.budget ??
     offer.job_request?.cmimi ??
     offer.job_request?.price ??
     null;
+
+  const getDate = (offer) => offer.created_at;
 
   const sorters = {
     newest: (a, b) => new Date(getDate(b)) - new Date(getDate(a)),
@@ -80,23 +84,38 @@ export default function MyLeads() {
   // STATUS BADGE
   // ============================================================
   const renderOfferStatus = (offer) => {
-    if (offer.status === "accepted")
+
+    if (offer.status === "draft")
       return (
-        <span className="text-xs inline-flex items-center gap-1 text-green-700">
-          <CheckCircle2 size={14} /> Vunnet
+        <span className="text-xs inline-flex items-center gap-1 text-yellow-700">
+          <AlertTriangle size={14} /> Oferta nuk është dërguar
         </span>
       );
 
-    if (offer.status === "declined")
+    if (offer.status === "signed")
+      return (
+        <span className="text-xs inline-flex items-center gap-1 text-blue-700">
+          <Send size={14} /> Dërguar te klienti
+        </span>
+      );
+
+    if (offer.status === "accepted")
+      return (
+        <span className="text-xs inline-flex items-center gap-1 text-green-700">
+          <CheckCircle2 size={14} /> Fitues
+        </span>
+      );
+
+    if (offer.status === "rejected")
       return (
         <span className="text-xs inline-flex items-center gap-1 text-red-600">
-          <XCircle size={14} /> Förlorat
+          <XCircle size={14} /> Humbur
         </span>
       );
 
     return (
-      <span className="text-xs inline-flex items-center gap-1 text-gray-500">
-        Aktiv offert
+      <span className="text-xs text-gray-500">
+        Status i panjohur
       </span>
     );
   };
@@ -105,28 +124,29 @@ export default function MyLeads() {
   // FILTER + SORT
   // ============================================================
   const sortedFiltered = useMemo(() => {
+
     let list = [...offers];
 
-    // AKTIVA = allt som INTE är vunnet eller förlorat
     if (statusFilter === "active")
       list = list.filter(
-        (o) => o.status !== "accepted" && o.status !== "declined"
+        (o) => o.status !== "accepted" && o.status !== "rejected"
       );
 
     if (statusFilter === "accepted")
       list = list.filter((o) => o.status === "accepted");
 
     if (statusFilter === "declined")
-      list = list.filter((o) => o.status === "declined");
+      list = list.filter((o) => o.status === "rejected");
 
     return list.sort(sorters[sortOption]);
-  }, [offers, statusFilter, sortOption]);
 
+  }, [offers, statusFilter, sortOption]);
 
   // ============================================================
   // GUARDS
   // ============================================================
   if (!user) return <div className="p-6">Duke ngarkuar...</div>;
+
   if (!isCompany)
     return (
       <div className="p-6 text-red-600 font-semibold">
@@ -150,16 +170,19 @@ export default function MyLeads() {
           className="premium-btn btn-light inline-flex items-center"
         >
           <ArrowLeft size={18} />
-          Kthehu te Dashboard
+          Kthehu te dashboard
         </button>
       </div>
 
-      <h1 className="page-title mb-4">Oferta e mia 💼</h1>
+      <h1 className="page-title mb-4">Ofertat e mia 💼</h1>
 
       {/* FILTERS */}
       <div className="flex flex-col md:flex-row md:justify-between gap-4 mb-6">
+
         <div className="inline-flex rounded-full border bg-white overflow-hidden">
+
           {["all", "active", "accepted", "declined"].map((key) => (
+
             <button
               key={key}
               onClick={() => setStatusFilter(key)}
@@ -174,11 +197,14 @@ export default function MyLeads() {
               {key === "accepted" && "Fitues"}
               {key === "declined" && "Humbës"}
             </button>
+
           ))}
+
         </div>
 
         <div className="text-sm flex items-center gap-2">
           <span className="text-gray-500">Rendit sipas:</span>
+
           <select
             value={sortOption}
             onChange={(e) => setSortOption(e.target.value)}
@@ -190,20 +216,26 @@ export default function MyLeads() {
             <option value="budget_low">Buxheti më i ulët</option>
           </select>
         </div>
+
       </div>
 
       {/* LIST */}
       <div className="space-y-4">
+
         {sortedFiltered.map((offer) => {
+
           const job = getJob(offer);
-          
+
           return (
+
             <div
               key={offer.id}
               className="premium-card p-4 flex flex-col md:flex-row md:justify-between gap-4 border border-gray-100"
             >
+
               {/* LEFT */}
               <div className="flex-1">
+
                 <h3 className="font-semibold text-lg flex items-center gap-2">
                   <Briefcase size={16} />
                   {job.title || "Pa titull"}
@@ -215,26 +247,49 @@ export default function MyLeads() {
                 </p>
 
                 <p className="text-xs text-gray-400 italic flex items-center gap-1 mt-1">
-                  <Clock size={12} /> Përditësuar {timeAgo(offer.created_at)}
+                  <Clock size={12} />
+                  Përditësuar {timeAgo(offer.created_at)}
                 </p>
 
                 <div className="flex flex-wrap items-center gap-2 mt-2">
                   {renderOfferStatus(offer)}
                 </div>
+
+                {offer.status === "draft" && (
+                  <div className="mt-3 bg-yellow-50 border border-yellow-200 text-yellow-800 text-sm px-3 py-2 rounded">
+                    ⚠️ Oferta është ruajtur por nuk është dërguar te klienti.
+                  </div>
+                )}
+
               </div>
 
               {/* RIGHT */}
               <div className="flex flex-col items-start md:items-end gap-2 min-w-[220px]">
-                <Link
-                  to={`/offers/${offer.id}`}
-                  className="premium-btn btn-light inline-flex items-center gap-1 mt-2"
-                >
-                  Shiko ofertën
-                </Link>
+
+                {offer.status === "draft" ? (
+                  <Link
+                    to={`/offers/${offer.id}`}
+                    className="premium-btn btn-dark inline-flex items-center gap-1 mt-2"
+                  >
+                    Përfundo ofertën
+                  </Link>
+                ) : (
+                  <Link
+                    to={`/offers/${offer.id}`}
+                    className="premium-btn btn-light inline-flex items-center gap-1 mt-2"
+                  >
+                    Shiko ofertën
+                  </Link>
+                )}
+
               </div>
+
             </div>
+
           );
+
         })}
+
       </div>
     </div>
   );

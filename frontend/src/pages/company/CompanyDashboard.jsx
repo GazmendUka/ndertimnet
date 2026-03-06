@@ -93,7 +93,6 @@ export default function CompanyDashboard() {
         if (alive) setLeads([]);
       } finally {
         if (!alive) return;
-        localStorage.setItem("lastVisitMyLeads", new Date().toISOString());
         setLoading(false);
       }
     }
@@ -170,7 +169,7 @@ export default function CompanyDashboard() {
 function NewLeadNotification({ count }) {
   return (
     <div className="mb-6 p-4 bg-yellow-50 border border-yellow-300 text-yellow-900 rounded-lg text-sm font-medium">
-      🔔 Keni {count} ofertë të re që nuk e keni parë ende.
+      🔔 Keni {count} ofertë të reja që nuk i keni parë ende.
     </div>
   );
 }
@@ -185,7 +184,7 @@ function Header({ user, stats, newLeads }) {
 
       <div className="flex items-center gap-3">
         <h1 className="page-title">
-          Mirësevini, {user.company_name || user.email} 👋
+          Mirë se vini, {user.company_name || user.email} 👋
         </h1>
 
         {newLeads > 0 && (
@@ -332,7 +331,7 @@ function OfferInsights({ offers }) {
         </div>
 
         <div className="premium-card p-5">
-          <p className="text-xs text-gray-500">Refuzuara</p>
+          <p className="text-xs text-gray-500">Të humbura</p>
           <p className="text-2xl font-bold text-red-600">
             {rejected}
           </p>
