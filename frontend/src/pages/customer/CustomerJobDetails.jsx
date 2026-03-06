@@ -8,7 +8,6 @@ import { useAuth } from "../../auth/AuthContext";
 import { isEmailNotVerifiedError } from "../../utils/emailVerification";
 import { toast } from "react-hot-toast";
 
-
 import { ArrowLeft, MapPin, Euro, Tag, Users, Clock } from "lucide-react";
 import StatusBadge from "../../components/ui/StatusBadge";
 
@@ -60,7 +59,6 @@ export default function CustomerJobDetails() {
     [offers]
   );
 
-
   // ------------------------------------------------------------
   // Edit permission (UX-level only – backend is source of truth)
   // ------------------------------------------------------------
@@ -70,9 +68,7 @@ export default function CustomerJobDetails() {
     const hasOffers = job.offers_count > 0;
     const hasWinner = !!job.winner_offer;
 
-    const createdAt = job.created_at
-      ? new Date(job.created_at)
-      : null;
+    const createdAt = job.created_at ? new Date(job.created_at) : null;
 
     if (!createdAt) return false;
 
@@ -88,7 +84,6 @@ export default function CustomerJobDetails() {
       within48h
     );
   }, [job, acceptedOffer]);
-
 
   // ============================================================
   // Load job request (kundens eget jobb)
@@ -208,9 +203,7 @@ export default function CustomerJobDetails() {
         err.response?.data?.message ||
         err.response?.data?.error;
 
-      setError(
-        backendMsg || "Gabim gjatë përditësimit të ofertës."
-      );
+      setError(backendMsg || "Gabim gjatë përditësimit të ofertës.");
     } finally {
       setActionLoadingId(null);
     }
@@ -276,10 +269,7 @@ export default function CustomerJobDetails() {
             {acceptedOffer && (
               <p className="text-xs text-green-700 font-medium">
                 ✅ Kompania fituese:{" "}
-                {acceptedOffer.company?.name ||
-                  acceptedOffer.kompania?.name ||
-                  acceptedOffer.kompania?.emri ||
-                  "Kompani"}
+                {acceptedOffer.company?.company_name || "Kompani"}
               </p>
             )}
 
@@ -315,7 +305,7 @@ export default function CustomerJobDetails() {
             <h2 className="text-base font-semibold mb-3">
               Informacioni i punës
             </h2>
-            
+
             <div className="space-y-2 text-sm text-gray-700">
               <p className="flex items-center gap-2">
                 <MapPin size={16} />
@@ -332,7 +322,6 @@ export default function CustomerJobDetails() {
                 Kategoria: {job.profession_detail?.name || "—"}
               </p>
             </div>
-
           </div>
 
           <div className="premium-card p-5 bg-gray-900 text-white">
@@ -384,9 +373,10 @@ export default function CustomerJobDetails() {
                     null;
 
                   return (
-                    <div
+                    <Link
+                      to={`/offers/${offer.id}`}
                       key={offer.id}
-                      className={`premium-card p-5 border ${
+                      className={`block premium-card p-5 border ${
                         isAccepted
                           ? "bg-green-50 border-green-300"
                           : isDeclined
@@ -431,8 +421,15 @@ export default function CustomerJobDetails() {
                         {job.is_active && isPending && (
                           <div className="flex gap-2">
                             <button
-                              onClick={() => handleUpdateOffer(offer.id, "accepted")}
-                              disabled={!isEmailVerified || actionLoadingId === offer.id}
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleUpdateOffer(offer.id, "accepted");
+                              }}
+                              disabled={
+                                !isEmailVerified ||
+                                actionLoadingId === offer.id
+                              }
                               className={`px-4 py-2 rounded-lg text-xs font-semibold
                                 bg-green-600 text-white hover:bg-green-700
                                 disabled:opacity-60`}
@@ -442,12 +439,18 @@ export default function CustomerJobDetails() {
                                 : "Prano"}
                             </button>
 
-
                             <button
-                              onClick={() => handleUpdateOffer(offer.id, "declined")}
-                                disabled={!isEmailVerified || actionLoadingId === offer.id}
-                                className="px-4 py-2 rounded-lg text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-60"
-                              >
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                handleUpdateOffer(offer.id, "declined");
+                              }}
+                              disabled={
+                                !isEmailVerified ||
+                                actionLoadingId === offer.id
+                              }
+                              className="px-4 py-2 rounded-lg text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-60"
+                            >
                               {actionLoadingId === offer.id
                                 ? "Duke refuzuar..."
                                 : "Refuzo"}
@@ -457,7 +460,8 @@ export default function CustomerJobDetails() {
 
                         {job.is_active && isPending && !isEmailVerified && (
                           <p className="text-xs text-amber-700 mt-2">
-                            ⚠️ Verifikoni email-in tuaj për të pranuar ose refuzuar ofertat.
+                            ⚠️ Verifikoni email-in tuaj për të pranuar ose
+                            refuzuar ofertat.
                           </p>
                         )}
 
@@ -467,7 +471,7 @@ export default function CustomerJobDetails() {
                           </p>
                         )}
                       </div>
-                    </div>
+                    </Link>
                   );
                 })}
               </div>
