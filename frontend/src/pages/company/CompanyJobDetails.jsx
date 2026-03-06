@@ -67,29 +67,27 @@ export default function CompanyJobDetails() {
   // ------------------------------
   // CHECK IF OFFER EXISTS
   // ------------------------------
-  useEffect(() => {
+  const checkOffer = async () => {
     if (!access) return;
 
-    async function checkOffer() {
-      setLoadingOffer(true);
-      try {
-        const res = await api.get(`offers/check-by-job/${id}/`);
-        setOfferInfo({
-          exists: res.data.exists,
-          id: res.data.offer_id || null,
-        });
-      } catch (err) {
-        console.error(err);
-        setOfferInfo({
-          exists: false,
-          id: null,
-        });
-      } finally {
-        setLoadingOffer(false);
-      }
+    setLoadingOffer(true);
+    try {
+      const res = await api.get(`offers/check-by-job/${id}/`);
+      setOfferInfo({
+        exists: res.data.exists,
+        id: res.data.offer_id || null,
+      });
+    } catch (err) {
+      console.error(err);
+      setOfferInfo({ exists: false, id: null });
+    } finally {
+      setLoadingOffer(false);
     }
+  };
 
+  useEffect(() => {
     checkOffer();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id, access]);
 
   // ------------------------------
@@ -104,20 +102,14 @@ export default function CompanyJobDetails() {
       </div>
     );
 
-  if (loadingJob)
-    return <p className="text-center mt-10">🔄 Po ngarkohet...</p>;
-
-  if (error)
-    return <p className="text-center text-red-500 mt-10">{error}</p>;
-
-  if (!job)
-    return <p className="text-center mt-10">Kërkesa nuk u gjet.</p>;
+  if (loadingJob) return <p className="text-center mt-10">🔄 Po ngarkohet...</p>;
+  if (error) return <p className="text-center text-red-500 mt-10">{error}</p>;
+  if (!job) return <p className="text-center mt-10">Kërkesa nuk u gjet.</p>;
 
   // ------------------------------
   // LOCK RULE (EXTRA STRIKT)
   // ------------------------------
   const leadUnlocked = job.lead_unlocked === true;
-  const hasOffer = offerInfo.exists === true;
   const isClosed = !job.is_active;
 
   const formatBudget = (b) => (b ? `${b} €` : "Pa buxhet");
@@ -126,11 +118,14 @@ export default function CompanyJobDetails() {
   // ------------------------------
   // HANDLERS
   // ------------------------------
-  const handleViewOffer = () => {
-    if (offerInfo.id) {
+  const handleViewOrCreateOffer = () => {
+    // Om offert finns → visa details
+    if (offerInfo?.id) {
       navigate(`/offers/${offerInfo.id}`);
       return;
     }
+
+    // Annars → gå till wizard (OfferEdit auto-creates via POST /offers/)
     navigate(`/company/jobrequests/${id}/offer/edit`);
   };
 
@@ -151,13 +146,14 @@ export default function CompanyJobDetails() {
         offers_left: res.data.free_leads_remaining,
       }));
 
+      // Efter unlock: refresh offer-exists (så UI direkt blir korrekt)
+      await checkOffer();
     } catch (e) {
       toast.error("Nuk u arrit të hapet lead.");
     } finally {
       setUnlocking(false);
     }
   };
-
 
   // ------------------------------
   // UI
@@ -189,9 +185,7 @@ export default function CompanyJobDetails() {
         <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
           <div>
             <h1 className="page-title">{job.title}</h1>
-            <p className="text-dim">
-              Shikoni detajet dhe menaxhoni ofertën tuaj.
-            </p>
+            <p className="text-dim">Shikoni detajet dhe menaxhoni ofertën tuaj.</p>
           </div>
 
           <StatusBadge active={job.is_active} />
@@ -242,80 +236,78 @@ export default function CompanyJobDetails() {
         {/* RIGHT */}
         <div className="lg:col-span-2">
           <div className="premium-section space-y-4">
-            <h2 className="text-lg font-semibold">
-              Menaxhimi i ofertës
-            </h2>
+            <h2 className="text-lg font-semibold">Menaxhimi i ofertës</h2>
 
             {/* JOB CLOSED */}
             {isClosed && (
-              <div className="premium-card p-6 text-dim">
-                ❌ Kjo kërkesë është mbyllur.
-              </div>
+              <div className="premium-card p-6 text-dim">❌ Kjo kërkesë është mbyllur.</div>
             )}
 
             {/* OFFER LOADING */}
             {!isClosed && loadingOffer && (
-              <div className="premium-card p-6">
-                🔄 Po kontrollohet oferta...
-              </div>
+              <div className="premium-card p-6">🔄 Po kontrollohet oferta...</div>
             )}
 
             {/* NO OFFER */}
-            {!isClosed &&
-              offerInfo.exists === false &&
-              !loadingOffer && (
-                <div className="premium-card p-6 space-y-4">
-                  <h3 className="font-semibold text-lg">
-                    🚀 Nuk keni dërguar ofertë
-                  </h3>
+            {!isClosed && offerInfo.exists === false && !loadingOffer && (
+              <div className="premium-card p-6 space-y-4">
+                <h3 className="font-semibold text-lg">🚀 Nuk keni dërguar ofertë</h3>
 
-                  {!leadUnlocked ? (
-                    <div className="flex items-start gap-3">
-                      <Lock size={18} />
-                      <div>
-                        <p className="text-dim">
-                          Duhet të hapni lead-in përpara se të krijoni ofertë.
-                        </p>
-                        <p className="text-sm mt-1">
-                          <span className="line-through text-gray-500">15 €</span>
-                          <span className="ml-2 font-semibold text-green-600">
-                            Gratis tani
-                          </span>
-                        </p>
-                        <p className="text-xs text-gray-500 mt-1">
-                          Ju keni <strong>{job.offers_left}</strong> hapje falas të mbetura
-                        </p>
-
-                      </div>
-                    </div>
-                  ) : (
-                    <>
+                {!leadUnlocked ? (
+                  <div className="flex items-start gap-3">
+                    <Lock size={18} />
+                    <div>
                       <p className="text-dim">
-                        Klikoni më poshtë për të filluar procesin e ofertës.
+                        Duhet të hapni lead-in përpara se të krijoni ofertë.
                       </p>
+                      <p className="text-sm mt-1">
+                        <span className="line-through text-gray-500">15 €</span>
+                        <span className="ml-2 font-semibold text-green-600">Gratis tani</span>
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Ju keni <strong>{job.offers_left}</strong> hapje falas të mbetura
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <p className="text-dim">
+                      Klikoni më poshtë për të filluar procesin e ofertës.
+                    </p>
 
-                      <button
-                        onClick={() =>
-                          navigate(`/company/jobrequests/${id}/offer/edit`)
-                        }
-                        className="premium-btn btn-dark inline-flex items-center gap-2"
-                      >
-                        <FileText size={16} />
-                        Krijo ofertë
-                      </button>
-                    </>
-                  )}
-                </div>
+                    <button
+                      onClick={handleViewOrCreateOffer}
+                      className="premium-btn btn-dark inline-flex items-center gap-2"
+                    >
+                      <FileText size={16} />
+                      Krijo ofertë
+                    </button>
+                  </>
+                )}
+              </div>
             )}
 
+            {/* OFFER EXISTS */}
+            {!isClosed && offerInfo.exists === true && !loadingOffer && (
+              <div className="premium-card p-6 space-y-3">
+                <h3 className="font-semibold text-lg">✅ Oferta ekziston</h3>
+                <p className="text-dim">Mund ta hapni ofertën ose ta redaktoni.</p>
+
+                <button
+                  onClick={handleViewOrCreateOffer}
+                  className="premium-btn btn-dark inline-flex items-center gap-2"
+                >
+                  <FileText size={16} />
+                  Shiko ofertën
+                </button>
+              </div>
+            )}
 
             {/* ============================
                 CUSTOMER / PAYMENT GATE
                ============================ */}
             <div className="premium-card p-6">
-              <h3 className="font-semibold text-lg mb-3">
-                Informacioni i klientit
-              </h3>
+              <h3 className="font-semibold text-lg mb-3">Informacioni i klientit</h3>
 
               {!leadUnlocked ? (
                 <div className="relative">
@@ -328,20 +320,14 @@ export default function CompanyJobDetails() {
                   <div className="mt-4 flex items-start gap-3">
                     <Lock size={18} />
                     <div className="flex-1">
-                      <p className="font-medium">
-                        Lead është i mbyllur
-                      </p>
+                      <p className="font-medium">Lead është i mbyllur</p>
                       <p className="text-sm text-gray-600">
                         Hapeni për të parë të dhënat e klientit.
                       </p>
 
                       <div className="mt-2 text-sm">
-                        <span className="line-through text-gray-500">
-                          15 €
-                        </span>
-                        <span className="ml-2 font-semibold text-green-600">
-                          Gratis tani
-                        </span>
+                        <span className="line-through text-gray-500">15 €</span>
+                        <span className="ml-2 font-semibold text-green-600">Gratis tani</span>
                       </div>
 
                       <button
@@ -375,9 +361,7 @@ export default function CompanyJobDetails() {
             {/* AUDIT LOGS (VISIBLE ONLY AFTER UNLOCK) */}
             {leadUnlocked && Array.isArray(job.audit_logs) && (
               <div className="premium-card p-6">
-                <h3 className="font-semibold text-lg mb-3">
-                  Historiku
-                </h3>
+                <h3 className="font-semibold text-lg mb-3">Historiku</h3>
 
                 {job.audit_logs.length === 0 ? (
                   <p className="text-dim">Nuk ka histori.</p>
@@ -386,9 +370,7 @@ export default function CompanyJobDetails() {
                     {job.audit_logs.map((log) => (
                       <li key={log.id} className="border rounded-lg p-3">
                         <div className="font-medium">{log.action}</div>
-                        <div className="text-gray-600 text-xs">
-                          {formatDate(log.created_at)}
-                        </div>
+                        <div className="text-gray-600 text-xs">{formatDate(log.created_at)}</div>
                       </li>
                     ))}
                   </ul>
