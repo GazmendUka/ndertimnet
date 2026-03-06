@@ -39,30 +39,39 @@ class OfferViewSet(viewsets.ModelViewSet):
     # --------------------------------------------------
     def get_queryset(self):
         user = self.request.user
+        qs = self.queryset
 
+        # -----------------------------
+        # Company
+        # -----------------------------
         if getattr(user, "role", None) == "company":
             company = getattr(user, "company_profile", None)
             if not company:
                 return Offer.objects.none()
 
-            return (
-                self.queryset
-                .filter(company=company)
-                .select_related("current_version", "job_request")
-            )
+            qs = qs.filter(company=company)
 
-        if getattr(user, "role", None) == "customer":
+        # -----------------------------
+        # Customer
+        # -----------------------------
+        elif getattr(user, "role", None) == "customer":
             customer = getattr(user, "customer_profile", None)
             if not customer:
                 return Offer.objects.none()
 
-            return (
-                self.queryset
-                .filter(job_request__customer=customer)
-                .select_related("current_version", "job_request")
-            )
+            qs = qs.filter(job_request__customer=customer)
 
-        return Offer.objects.none()
+        else:
+            return Offer.objects.none()
+
+        # -----------------------------
+        # Optional job filter
+        # -----------------------------
+        job_request_id = self.request.query_params.get("job_request")
+        if job_request_id:
+            qs = qs.filter(job_request_id=job_request_id)
+
+        return qs
     # --------------------------------------------------
     # LIST – My offers
     # GET /api/offers/mine/
@@ -302,7 +311,11 @@ class OfferViewSet(viewsets.ModelViewSet):
         job = get_object_or_404(JobRequest, pk=job_id)
 
         offer = (
-            Offer.objects.select_related("current_version", "job_request")
+            Offer.objects.select_related(
+                "current_version",
+                "job_request",
+                "company",
+            )
             .filter(company=company, job_request=job)
             .first()
         )
