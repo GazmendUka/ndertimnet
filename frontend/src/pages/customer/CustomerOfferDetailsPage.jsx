@@ -20,9 +20,9 @@ import {
 
 export default function CustomerOfferDetailsPage() {
 
-  const { id } = useParams(); // Offer ID
+  const { id } = useParams();
   const navigate = useNavigate();
-  const { access, user, isCustomer } = useAuth();
+  const { access, user } = useAuth();
 
   const [offer, setOffer] = useState(null);
   const [job, setJob] = useState(null);
@@ -35,8 +35,7 @@ export default function CustomerOfferDetailsPage() {
   // ===========================================
   // LOAD OFFER
   // ===========================================
-  async function fetchOffer() {
-
+  const fetchOffer = async () => {
     try {
 
       setLoading(true);
@@ -59,10 +58,12 @@ export default function CustomerOfferDetailsPage() {
       setLoading(false);
 
     }
-  }
+  };
 
   useEffect(() => {
-    if (access) fetchOffer();
+    if (access) {
+      fetchOffer();
+    }
   }, [access, id]);
 
   // ===========================================
@@ -86,6 +87,7 @@ export default function CustomerOfferDetailsPage() {
       alert("Nuk mund të pranohet oferta.");
 
     }
+
   };
 
   // ===========================================
@@ -108,30 +110,43 @@ export default function CustomerOfferDetailsPage() {
       alert("Nuk mund të refuzohet oferta.");
 
     }
+
   };
 
   // ===========================================
   // GUARDS
   // ===========================================
-  if (!user) return <div className="p-6">Duke ngarkuar…</div>;
 
-  if (!isCustomer) {
+  if (!user) {
+    return <div className="p-6">Duke ngarkuar…</div>;
+  }
+
+  if (user.role !== "customer") {
     return (
       <div className="p-6 text-red-600 font-semibold">
-        Akses i ndaluar. (Vetëm klientët mund ta shohin këtë faqe)
+        Nuk keni qasje në këtë faqe.
       </div>
     );
   }
 
-  if (loading) return <p className="text-center mt-10">Po ngarkohet…</p>;
-  if (error) return <p className="text-center text-red-500">{error}</p>;
-  if (!offer) return <p className="text-center mt-10">Oferta nuk u gjet.</p>;
+  if (loading) {
+    return <div className="p-6">Po ngarkohet oferta…</div>;
+  }
+
+  if (error) {
+    return <p className="text-center text-red-500">{error}</p>;
+  }
+
+  if (!offer) {
+    return <p className="text-center mt-10">Oferta nuk u gjet.</p>;
+  }
 
   const createdDate = new Date(offer.created_at).toLocaleString("sv-SE");
 
   // ===========================================
   // UI
   // ===========================================
+
   return (
 
     <div className="premium-container mt-4">
@@ -147,23 +162,27 @@ export default function CustomerOfferDetailsPage() {
           Kthehu te paneli im
         </button>
 
-        {job && (
-          <Link
-            to={`/jobrequests/${job.id}`}
-            className="premium-btn btn-light"
-          >
-            Shiko kërkesën
-          </Link>
-        )}
+        <div className="flex gap-2">
 
-        <a
-          href={`${import.meta.env.VITE_API_URL}/offers/${offer.id}/pdf/`}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="premium-btn btn-dark"
-        >
-          PDF
-        </a>
+          {job && (
+            <Link
+              to={`/jobrequests/${job.id}`}
+              className="premium-btn btn-light"
+            >
+              Shiko kërkesën
+            </Link>
+          )}
+
+          <a
+            href={`${import.meta.env.VITE_API_URL}/offers/${offer.id}/pdf/`}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="premium-btn btn-dark"
+          >
+            PDF
+          </a>
+
+        </div>
 
       </div>
 
