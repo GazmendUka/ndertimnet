@@ -376,7 +376,7 @@ export default function CustomerJobDetails() {
                     <Link
                       to={`/offers/${offer.id}`}
                       key={offer.id}
-                      className={`block premium-card p-5 border ${
+                      className={`block premium-card p-5 border hover:border-blue-400 hover:shadow-md transition ${
                         isAccepted
                           ? "bg-green-50 border-green-300"
                           : isDeclined
@@ -410,6 +410,7 @@ export default function CustomerJobDetails() {
                       )}
 
                       <div className="flex flex-wrap justify-between items-center mt-3 gap-3">
+
                         <span className="text-sm flex items-center gap-1">
                           <Euro size={14} />
                           Oferta:{" "}
@@ -418,59 +419,21 @@ export default function CustomerJobDetails() {
                             : "Pa çmim"}
                         </span>
 
-                        {job.is_active && isPending && (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleUpdateOffer(offer.id, "accepted");
-                              }}
-                              disabled={
-                                !isEmailVerified ||
-                                actionLoadingId === offer.id
-                              }
-                              className={`px-4 py-2 rounded-lg text-xs font-semibold
-                                bg-green-600 text-white hover:bg-green-700
-                                disabled:opacity-60`}
-                            >
-                              {actionLoadingId === offer.id
-                                ? "Duke pranuar..."
-                                : "Prano"}
-                            </button>
-
-                            <button
-                              onClick={(e) => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                handleUpdateOffer(offer.id, "declined");
-                              }}
-                              disabled={
-                                !isEmailVerified ||
-                                actionLoadingId === offer.id
-                              }
-                              className="px-4 py-2 rounded-lg text-xs font-semibold bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-60"
-                            >
-                              {actionLoadingId === offer.id
-                                ? "Duke refuzuar..."
-                                : "Refuzo"}
-                            </button>
-                          </div>
-                        )}
-
-                        {job.is_active && isPending && !isEmailVerified && (
-                          <p className="text-xs text-amber-700 mt-2">
-                            ⚠️ Verifikoni email-in tuaj për të pranuar ose
-                            refuzuar ofertat.
-                          </p>
-                        )}
+                        {/* VIEW OFFER BUTTON */}
+                        <div>
+                          <span className="premium-btn btn-dark text-xs">
+                            Shiko ofertën →
+                          </span>
+                        </div>
 
                         {isAccepted && (
                           <p className="text-xs text-green-700 font-medium">
                             ✅ Oferta fituese
                           </p>
                         )}
+
                       </div>
+
                     </Link>
                   );
                 })}

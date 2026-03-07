@@ -156,6 +156,15 @@ export default function CustomerOfferDetailsPage() {
           </Link>
         )}
 
+        <a
+          href={`${import.meta.env.VITE_API_URL}/offers/${offer.id}/pdf/`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="premium-btn btn-dark"
+        >
+          PDF
+        </a>
+
       </div>
 
       {/* HEADER */}
