@@ -374,7 +374,7 @@ export default function CustomerJobDetails() {
 
                   return (
                     <Link
-                      to={`/offers/${offer.id}`}
+                      to={`/customer/offers/${offer.id}`}
                       key={offer.id}
                       className={`block premium-card p-5 border hover:border-blue-400 hover:shadow-md transition ${
                         isAccepted
