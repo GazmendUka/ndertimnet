@@ -32,16 +32,24 @@ export default function CustomerOfferDetailsPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const API_URL = import.meta.env.VITE_API_URL || "";
+
   // ===========================================
   // LOAD OFFER
   // ===========================================
   const fetchOffer = async () => {
+
     try {
 
       setLoading(true);
 
       const res = await api.get(`offers/${id}/`);
-      const data = res.data;
+      const data = res?.data;
+
+      if (!data) {
+        setError("Oferta nuk u gjet.");
+        return;
+      }
 
       setOffer(data);
       setJob(data.job_request || null);
@@ -58,10 +66,11 @@ export default function CustomerOfferDetailsPage() {
       setLoading(false);
 
     }
+
   };
 
   useEffect(() => {
-    if (access) {
+    if (access && id) {
       fetchOffer();
     }
   }, [access, id]);
@@ -141,7 +150,9 @@ export default function CustomerOfferDetailsPage() {
     return <p className="text-center mt-10">Oferta nuk u gjet.</p>;
   }
 
-  const createdDate = new Date(offer.created_at).toLocaleString("sv-SE");
+  const createdDate = offer?.created_at
+    ? new Date(offer.created_at).toLocaleString("sv-SE")
+    : "—";
 
   // ===========================================
   // UI
@@ -174,7 +185,7 @@ export default function CustomerOfferDetailsPage() {
           )}
 
           <a
-            href={`${import.meta.env.VITE_API_URL}/offers/${offer.id}/pdf/`}
+            href={`${API_URL}/offers/${offer.id}/pdf/`}
             target="_blank"
             rel="noopener noreferrer"
             className="premium-btn btn-dark"
@@ -208,11 +219,11 @@ export default function CustomerOfferDetailsPage() {
           <div className="premium-card p-4 space-y-1 text-gray-700">
 
             <p className="font-semibold">
-              {company.company_name}
+              {company?.company_name || "Kompani"}
             </p>
 
-            <p>📞 {company.phone}</p>
-            <p>📧 {company.user?.email}</p>
+            <p>📞 {company?.phone || "—"}</p>
+            <p>📧 {company?.user?.email || "—"}</p>
 
             <p className="text-xs text-gray-500 mt-1">
               Oferta dërguar më: {createdDate}
@@ -236,16 +247,16 @@ export default function CustomerOfferDetailsPage() {
 
           <div className="premium-card p-4 space-y-2 text-gray-700">
 
-            <p>{job.description}</p>
+            <p>{job?.description || "—"}</p>
 
             <p className="flex items-center gap-2">
               <MapPin size={16} />
-              {job.city_detail?.name || job.location}
+              {job?.city_detail?.name || job?.location || "—"}
             </p>
 
             <p className="flex items-center gap-2">
               <Euro size={16} />
-              {job.budget ? `${job.budget} €` : "Pa buxhet"}
+              {job?.budget ? `${job.budget} €` : "Pa buxhet"}
             </p>
 
           </div>
@@ -265,17 +276,17 @@ export default function CustomerOfferDetailsPage() {
 
           <div className="premium-card p-4 text-gray-700 space-y-3">
 
-            {version.presentation_text && (
+            {version?.presentation_text && (
               <p className="whitespace-pre-line">
                 {version.presentation_text}
               </p>
             )}
 
             <p className="text-lg font-bold">
-              💶 {version.price_amount} {version.currency || "EUR"}
+              💶 {version?.price_amount || "—"} {version?.currency || "EUR"}
             </p>
 
-            {version.duration_text && (
+            {version?.duration_text && (
               <p className="text-sm text-gray-600">
                 Afati: {version.duration_text}
               </p>
@@ -288,7 +299,7 @@ export default function CustomerOfferDetailsPage() {
       )}
 
       {/* ACTIONS */}
-      {offer.status === "signed" && (
+      {offer?.status === "signed" && (
 
         <div className="flex gap-4 mt-4">
 
