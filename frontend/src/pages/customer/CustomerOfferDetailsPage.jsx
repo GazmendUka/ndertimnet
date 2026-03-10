@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 
 export default function CustomerOfferDetailsPage() {
+  console.log("CustomerOfferDetailsPage mounted");
 
   const { id } = useParams();
   const navigate = useNavigate();
