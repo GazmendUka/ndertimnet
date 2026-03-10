@@ -76,9 +76,10 @@ export const AuthProvider = ({ children }) => {
 
       // ❌ Hård logout endast vid riktiga auth-fel
       if (status === 401) {
-        logout();
+        setUser(null);
+        setAccess(null);
+        setRefresh(null);
       }
-
       throw err;
     }
   };
@@ -87,7 +88,10 @@ export const AuthProvider = ({ children }) => {
   // 🔑 LOGIN
   // ============================================================
   const login = async (email, password, rememberMe = true) => {
+    setLoading(true);
+
     try {
+
       const res = await api.post(
         "accounts/login/",
         {
@@ -107,10 +111,10 @@ export const AuthProvider = ({ children }) => {
       setAccess(data.access);
       setRefresh(data.refresh);
 
-      // 🔥 Sätt user direkt från login
+      // sätt user direkt
       setUser(data.user);
 
-      // Försök uppdatera via /me
+      // säkerställ att /me syncas
       try {
         await fetchCurrentUser(data.access);
       } catch {}
@@ -118,14 +122,22 @@ export const AuthProvider = ({ children }) => {
       return data.user;
 
     } catch (err) {
+
       throw new Error(err.response?.data?.message || "Gabim gjatë hyrjes");
+
+    } finally {
+
+      setLoading(false);
+
     }
   };
-
   // ============================================================
   // 🚪 LOGOUT
   // ============================================================
   const logout = () => {
+
+    setLoading(true);
+
     localStorage.removeItem("access");
     localStorage.removeItem("refresh");
     sessionStorage.removeItem("access");
@@ -136,6 +148,8 @@ export const AuthProvider = ({ children }) => {
     setUser(null);
     setAccess(null);
     setRefresh(null);
+
+    setLoading(false);
   };
 
   // ============================================================
@@ -172,6 +186,7 @@ export const AuthProvider = ({ children }) => {
   // 🔄 Refresh helper
   // ============================================================
   const refreshMe = async () => {
+    if (!access) return;
     await fetchCurrentUser();
   };
 
