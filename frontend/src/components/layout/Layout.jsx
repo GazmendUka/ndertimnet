@@ -15,23 +15,7 @@ export default function Layout() {
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
 
-  // ===========================================
-  // AUTH GUARD (VERY IMPORTANT)
-  // Prevent rendering layout before auth loads
-  // ===========================================
-
-  if (loading || !user) {
-    return (
-      <div className="flex items-center justify-center min-h-screen text-gray-600">
-        Po ngarkohet paneli...
-      </div>
-    );
-  }
-
-  // ===========================================
-  // CLOSE DROPDOWN ON OUTSIDE CLICK
-  // ===========================================
-
+  // 🔒 Close dropdown when clicking outside
   useEffect(() => {
 
     function handleClickOutside(event) {
@@ -48,28 +32,31 @@ export default function Layout() {
 
   }, []);
 
+  // ===========================================
+  // AUTH GUARD
+  // ===========================================
+
+  if (loading || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-screen text-gray-600">
+        Po ngarkohet paneli...
+      </div>
+    );
+  }
+
   return (
 
     <div className="flex min-h-screen bg-gray-50">
 
-      {/* =======================================
-          SIDEBAR — DESKTOP
-      ======================================= */}
-
+      {/* SIDEBAR — Desktop */}
       <div className="hidden lg:block">
         <Sidebar />
       </div>
 
-      {/* =======================================
-          MAIN AREA
-      ======================================= */}
-
+      {/* MAIN AREA */}
       <div className="flex-1 flex flex-col">
 
-        {/* =======================================
-            TOPBAR
-        ======================================= */}
-
+        {/* TOPBAR */}
         <header
           className="
             premium-header sticky top-0 z-20
@@ -79,7 +66,6 @@ export default function Layout() {
         >
 
           {/* LEFT TITLE */}
-
           <h1 className="text-lg font-semibold text-gray-800 tracking-tight">
             {user?.role === "company"
               ? "Panel i Kompanisë"
@@ -87,41 +73,30 @@ export default function Layout() {
           </h1>
 
           {/* RIGHT USER / COMPANY INFO */}
-
           <div className="flex items-center gap-4">
 
-            {/* USER / COMPANY NAME */}
-
+            {/* Name Section */}
             <div className="text-right">
 
               {user?.role === "company" ? (
-
                 <>
                   <p className="font-medium text-gray-800">
                     {user?.company?.company_name || "Company"}
                   </p>
-                  <p className="text-xs text-gray-400">
-                    Kompani
-                  </p>
+                  <p className="text-xs text-gray-400">Kompani</p>
                 </>
-
               ) : (
-
                 <>
                   <p className="font-medium text-gray-800">
                     {user?.first_name} {user?.last_name}
                   </p>
-                  <p className="text-xs text-gray-400">
-                    Klient
-                  </p>
+                  <p className="text-xs text-gray-400">Klient</p>
                 </>
-
               )}
 
             </div>
 
-            {/* AVATAR + DROPDOWN */}
-
+            {/* Avatar + Dropdown */}
             <div className="relative" ref={dropdownRef}>
 
               <div
@@ -159,7 +134,6 @@ export default function Layout() {
               </div>
 
               {/* DROPDOWN */}
-
               {dropdownOpen && (
 
                 <div
@@ -207,39 +181,29 @@ export default function Layout() {
 
         </header>
 
-        {/* =======================================
-            PAGE CONTENT
-        ======================================= */}
-
+        {/* PAGE CONTENT */}
         <main className="flex-1 px-6 md:px-10 pt-6 pb-10">
 
           <div className="max-w-6xl mx-auto space-y-8">
 
             {/* COMPANY ONBOARDING */}
-
             {isCompany && (
-
               <CompanyOnboardingBanner
                 company={user?.company || null}
                 resendVerificationEndpoint="/accounts/resend-verification/"
                 profileRoute="/profile/company"
               />
-
             )}
 
             {/* CUSTOMER EMAIL VERIFICATION */}
-
             {isCustomer && user && (
-
               <CustomerEmailVerificationBanner
                 user={user}
                 resendVerificationEndpoint="/accounts/resend-verification/"
               />
-
             )}
 
-            {/* ROUTED PAGE */}
-
+            {/* PAGE */}
             <Outlet />
 
           </div>
@@ -248,10 +212,7 @@ export default function Layout() {
 
       </div>
 
-      {/* =======================================
-          MOBILE NAV
-      ======================================= */}
-
+      {/* MOBILE NAV */}
       <div className="lg:hidden">
         <MobileNav />
       </div>
@@ -259,5 +220,4 @@ export default function Layout() {
     </div>
 
   );
-
 }
