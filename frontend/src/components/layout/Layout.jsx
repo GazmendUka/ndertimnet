@@ -50,7 +50,7 @@ export default function Layout() {
 
       {/* SIDEBAR — Desktop */}
       <div className="hidden lg:block">
-        {/* <Sidebar /> */}
+        <Sidebar />
       </div>
 
       {/* MAIN AREA */}
@@ -214,7 +214,7 @@ export default function Layout() {
 
       {/* MOBILE NAV */}
       <div className="lg:hidden">
-        {/* <MobileNav /> */}
+        <MobileNav />
       </div>
 
     </div>
