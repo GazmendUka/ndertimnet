@@ -121,7 +121,7 @@ function App() {
                 <Route path="/company/jobrequests/:jobId/offer/edit" element={<OfferEdit />} />
                 <Route path="/leads/mine" element={<MyLeads />} />
                 <Route path="/leads/:id" element={<LeadDetailsPage />} />
-                <Route path="/offers/:id" element={<OfferDetails />} />
+                <Route path="/company/offers/:id" element={<OfferDetails />} />
               </Route>
             </Route>
           </Route>

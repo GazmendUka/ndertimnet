@@ -46,6 +46,8 @@ export default function CustomerOfferDetailsPage() {
       const res = await api.get(`offers/${id}/`);
       const data = res?.data;
 
+      console.log("OFFER API RESPONSE:", data);
+
       if (!data) {
         setError("Oferta nuk u gjet.");
         return;
