@@ -3,6 +3,7 @@
 from rest_framework import serializers
 from django.utils import timezone
 from django.db import transaction
+from accounts.serializers import CompanySerializer
 from jobrequests.serializers import JobRequestSerializer
 from jobrequests.models import JobRequest
 from payments.models import LeadAccess
@@ -17,7 +18,7 @@ from .models import (
     OfferStatus,
     UnlockType,
 )
-from accounts.models import Company
+
 
 
 class OfferVersionSerializer(serializers.ModelSerializer):
@@ -43,6 +44,7 @@ class OfferVersionSerializer(serializers.ModelSerializer):
 
 
 class OfferSerializer(serializers.ModelSerializer):
+    company = CompanySerializer(read_only=True)   # ⭐ FIX
     current_version = OfferVersionSerializer(read_only=True)
     job_request = JobRequestSerializer(read_only=True)
 
