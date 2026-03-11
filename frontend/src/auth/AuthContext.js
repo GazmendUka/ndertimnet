@@ -1,85 +1,114 @@
-// frontend/src/auth/AuthContext.js
-
 import { createContext, useContext, useState, useEffect } from "react";
 import api from "../api/axios";
 
 const AuthContext = createContext();
 
+// ------------------------------------------------------------
+// 🔧 Helper functions for storage
+// ------------------------------------------------------------
+
+const getAccessToken = () =>
+  localStorage.getItem("access") || sessionStorage.getItem("access");
+
+const getRefreshToken = () =>
+  localStorage.getItem("refresh") || sessionStorage.getItem("refresh");
+
+const getStorage = () =>
+  localStorage.getItem("access") ? localStorage : sessionStorage;
+
+const clearStorage = () => {
+  localStorage.removeItem("access");
+  localStorage.removeItem("refresh");
+  localStorage.removeItem("user");
+
+  sessionStorage.removeItem("access");
+  sessionStorage.removeItem("refresh");
+  sessionStorage.removeItem("user");
+};
+
+// ============================================================
+// AUTH PROVIDER
+// ============================================================
+
 export const AuthProvider = ({ children }) => {
+
   const [user, setUser] = useState(null);
   const [access, setAccess] = useState(null);
   const [refresh, setRefresh] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // ============================================================
-  // 🔧 Init auth: load tokens + fetch current user
+  // 🔧 Init auth (runs once on app start)
   // ============================================================
-  useEffect(() => {
-    const initAuth = async () => {
-      const token =
-        localStorage.getItem("access") || sessionStorage.getItem("access");
-      const refreshToken =
-        localStorage.getItem("refresh") || sessionStorage.getItem("refresh");
 
-      // 1️⃣ Ingen token → ej inloggad
+  useEffect(() => {
+
+    const initAuth = async () => {
+
+      const token = getAccessToken();
+      const refreshToken = getRefreshToken();
+
+      // ❌ No tokens
       if (!token || !refreshToken) {
         setLoading(false);
         return;
       }
 
-      // 2️⃣ Tokens finns → sätt state
       setAccess(token);
       setRefresh(refreshToken);
 
-      // 3️⃣ Hämta user
       try {
         await fetchCurrentUser(token);
-      } catch {
-        // logout sker i fetchCurrentUser
+      } catch (err) {
+        console.warn("Auth init failed");
+        logout();
       } finally {
         setLoading(false);
       }
     };
 
     initAuth();
+
   }, []);
 
   // ============================================================
-  // 👤 Fetch logged-in user
+  // 👤 Fetch logged in user
   // ============================================================
-  const fetchCurrentUser = async (forcedAccessToken = null) => {
+
+  const fetchCurrentUser = async (forcedToken = null) => {
+
     try {
+
       const res = await api.get(
         "accounts/me/",
-        forcedAccessToken
+        forcedToken
           ? {
               headers: {
-                Authorization: `Bearer ${forcedAccessToken}`,
+                Authorization: `Bearer ${forcedToken}`,
               },
             }
           : undefined
       );
 
-      const usr = res.data.data;
+      const usr = res.data?.data || res.data;
+
       setUser(usr);
 
-      const storage =
-        localStorage.getItem("access") ? localStorage : sessionStorage;
+      const storage = getStorage();
       storage.setItem("user", JSON.stringify(usr));
 
       return usr;
+
     } catch (err) {
+
       const status = err.response?.status;
-      const code = err.response?.data?.code;
 
-      console.warn("fetchCurrentUser failed", status, code);
+      console.warn("fetchCurrentUser failed:", status);
 
-      // ❌ Hård logout endast vid riktiga auth-fel
       if (status === 401) {
-        setUser(null);
-        setAccess(null);
-        setRefresh(null);
+        logout();
       }
+
       throw err;
     }
   };
@@ -87,7 +116,9 @@ export const AuthProvider = ({ children }) => {
   // ============================================================
   // 🔑 LOGIN
   // ============================================================
+
   const login = async (email, password, rememberMe = true) => {
+
     setLoading(true);
 
     try {
@@ -105,16 +136,15 @@ export const AuthProvider = ({ children }) => {
       const data = res.data.data;
 
       const storage = rememberMe ? localStorage : sessionStorage;
+
       storage.setItem("access", data.access);
       storage.setItem("refresh", data.refresh);
 
       setAccess(data.access);
       setRefresh(data.refresh);
 
-      // sätt user direkt
       setUser(data.user);
 
-      // säkerställ att /me syncas
       try {
         await fetchCurrentUser(data.access);
       } catch {}
@@ -123,7 +153,9 @@ export const AuthProvider = ({ children }) => {
 
     } catch (err) {
 
-      throw new Error(err.response?.data?.message || "Gabim gjatë hyrjes");
+      throw new Error(
+        err.response?.data?.message || "Gabim gjatë hyrjes"
+      );
 
     } finally {
 
@@ -131,37 +163,32 @@ export const AuthProvider = ({ children }) => {
 
     }
   };
+
   // ============================================================
   // 🚪 LOGOUT
   // ============================================================
+
   const logout = () => {
 
-    setLoading(true);
-
-    localStorage.removeItem("access");
-    localStorage.removeItem("refresh");
-    sessionStorage.removeItem("access");
-    sessionStorage.removeItem("refresh");
-    localStorage.removeItem("user");
-    sessionStorage.removeItem("user");
+    clearStorage();
 
     setUser(null);
     setAccess(null);
     setRefresh(null);
-
-    setLoading(false);
   };
 
   // ============================================================
-  // 📧 EMAIL / PROFILE STATUS
+  // 📧 STATUS FLAGS
   // ============================================================
+
   const isAuthenticated = !!user;
   const isEmailVerified = !!user?.email_verified;
   const isProfileComplete = !!user?.profile_completed;
 
   // ============================================================
-  // 🧭 ONBOARDING STEP LOGIC (NYTT)
+  // 🧭 ONBOARDING STEP LOGIC
   // ============================================================
+
   let onboardingStep = 0;
 
   if (!isAuthenticated) {
@@ -174,25 +201,35 @@ export const AuthProvider = ({ children }) => {
     onboardingStep = 3;
   }
 
+  // ============================================================
+  // 🔐 PERMISSIONS
+  // ============================================================
 
-  // ============================================================
-  // 🔐 PERMISSIONS (kan användas överallt)
-  // ============================================================
   const canVerifyEmail = onboardingStep === 1;
   const canEditProfile = onboardingStep >= 2;
   const hasFullAccess = onboardingStep === 3;
 
   // ============================================================
-  // 🔄 Refresh helper
+  // 🔄 Refresh user helper
   // ============================================================
+
   const refreshMe = async () => {
-    if (!access) return;
-    await fetchCurrentUser();
+
+    const token = getAccessToken();
+
+    if (!token) return;
+
+    await fetchCurrentUser(token);
   };
+
+  // ============================================================
+  // CONTEXT VALUE
+  // ============================================================
 
   return (
     <AuthContext.Provider
       value={{
+
         // core
         user,
         access,
@@ -226,5 +263,9 @@ export const AuthProvider = ({ children }) => {
     </AuthContext.Provider>
   );
 };
+
+// ============================================================
+// Hook
+// ============================================================
 
 export const useAuth = () => useContext(AuthContext);

@@ -1,100 +1,169 @@
 // src/api/axios.js
 
 import axios from "axios";
-const BASE_URL = process.env.REACT_APP_API_BASE_URL;
+
+// ============================================================
+// 🌐 BASE URL
+// ============================================================
+
+const BASE_URL =
+  process.env.REACT_APP_API_BASE_URL ||
+  "http://127.0.0.1:8000/api/";
+
+
+// ============================================================
+// 🔄 Helper: get tokens (local OR session)
+// ============================================================
+
+const getAccessToken = () =>
+  localStorage.getItem("access") || sessionStorage.getItem("access");
+
+const getRefreshToken = () =>
+  localStorage.getItem("refresh") || sessionStorage.getItem("refresh");
+
+const saveAccessToken = (token) => {
+  if (localStorage.getItem("access")) {
+    localStorage.setItem("access", token);
+  } else {
+    sessionStorage.setItem("access", token);
+  }
+};
+
+const clearTokens = () => {
+  localStorage.removeItem("access");
+  localStorage.removeItem("refresh");
+  sessionStorage.removeItem("access");
+  sessionStorage.removeItem("refresh");
+};
+
+
+// ============================================================
+// 🔁 Axios instance for refresh requests
+// ============================================================
 
 const refreshApi = axios.create({
-  //baseURL: "http://127.0.0.1:8000/api/",
   baseURL: BASE_URL,
-
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
   },
 });
 
+
+// ============================================================
+// 🌐 Main API instance
+// ============================================================
 
 const api = axios.create({
-  // baseURL: "http://127.0.0.1:8000/api/",
-  baseURL: BASE_URL,  
+  baseURL: BASE_URL,
   headers: {
     "Content-Type": "application/json",
     Accept: "application/json",
   },
 });
 
-// ------------------------------------------------------------
-// 🔐 Attach access token to all requests (unless skipAuth)
-// ------------------------------------------------------------
-api.interceptors.request.use((config) => {
-  if (config.skipAuth) return config;
 
-  const token = localStorage.getItem("access");
+// ============================================================
+// 🔐 Request interceptor
+// Attach access token automatically
+// ============================================================
+
+api.interceptors.request.use((config) => {
+
+  if (config.skipAuth) {
+    return config;
+  }
+
+  const token = getAccessToken();
+
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
+
   return config;
 });
 
-// ------------------------------------------------------------
-// 🔁 Auto-refresh token on 401 errors
-// ------------------------------------------------------------
+
+// ============================================================
+// 🔁 Response interceptor
+// Auto refresh expired tokens
+// ============================================================
+
 api.interceptors.response.use(
   (response) => response,
+
   async (error) => {
+
     const originalRequest = error.config;
 
-    if (!originalRequest || !originalRequest.url) {
+    if (!originalRequest) {
       return Promise.reject(error);
     }
 
-    // 🚫 Aldrig refresha refresh-endpointen
-    if (originalRequest.url.includes("token/refresh")) {
-      return Promise.reject(error);
-    }
-
-    // 🚫 hoppa över om skipAuth
-    if (originalRequest.skipAuth) {
-      return Promise.reject(error);
-    }
-
-    // 🚫 redan försökt
+    // 🚫 Skip if already retried
     if (originalRequest._retry) {
       return Promise.reject(error);
     }
 
+    // 🚫 Skip refresh endpoint
+    if (originalRequest.url?.includes("token/refresh")) {
+      return Promise.reject(error);
+    }
+
+    // 🚫 Skip if skipAuth
+    if (originalRequest.skipAuth) {
+      return Promise.reject(error);
+    }
+
     if (error.response?.status === 401) {
+
       originalRequest._retry = true;
 
-      const refresh = localStorage.getItem("refresh");
-      if (!refresh) {
-        localStorage.removeItem("access");
-        localStorage.removeItem("refresh");
+      const refreshToken = getRefreshToken();
+
+      if (!refreshToken) {
+        clearTokens();
+        window.location.href = "/login";
         return Promise.reject(error);
       }
 
       try {
-        const r = await refreshApi.post("token/refresh/", { refresh });
-        const newAccess = r.data.access;
 
-        localStorage.setItem("access", newAccess);
-
-        return api.request({
-          ...originalRequest,
-          headers: {
-            ...originalRequest.headers,
-            Authorization: `Bearer ${newAccess}`,
-          },
-          skipAuth: true,
+        const res = await refreshApi.post("token/refresh/", {
+          refresh: refreshToken,
         });
-      } catch (refreshErr) {
-        localStorage.removeItem("access");
-        localStorage.removeItem("refresh");
-        return Promise.reject(refreshErr);
+
+        const newAccess = res.data.access;
+
+        saveAccessToken(newAccess);
+
+        originalRequest.headers.Authorization = `Bearer ${newAccess}`;
+
+        return api(originalRequest);
+
+      } catch (refreshError) {
+
+        clearTokens();
+        window.location.href = "/login";
+
+        return Promise.reject(refreshError);
       }
     }
 
     return Promise.reject(error);
+  }
+);
+
+
+// ============================================================
+// 🧪 Debug logger (optional but useful)
+// ============================================================
+
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    console.error("API ERROR:", err?.response || err);
+    return Promise.reject(err);
   }
 );
 
