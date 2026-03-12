@@ -12,17 +12,18 @@ function App() {
   return (
     <AuthProvider>
       <ErrorBoundary>
-
         <Router>
           <Routes>
 
             <PublicRoutes />
 
-            {/* <SharedRoutes /> */}
-            {/* <CustomerRoutes /> */}
-            {/* <CompanyRoutes /> */}
+            <SharedRoutes />
 
-            {/* 404 fallback */}
+            <CustomerRoutes />
+
+            <CompanyRoutes />
+
+            {/* fallback */}
             <Route
               path="*"
               element={<div style={{ padding: 40 }}>Page not found</div>}
@@ -30,7 +31,6 @@ function App() {
 
           </Routes>
         </Router>
-
       </ErrorBoundary>
     </AuthProvider>
   );

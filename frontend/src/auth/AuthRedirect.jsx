@@ -20,11 +20,11 @@ const AuthRedirect = () => {
   }
 
   // 🔀 INLOGGAD → DASHBOARD BASERAT PÅ ROLL
-  if (user.role === "customer") {
+  if (user?.role === "customer") {
     return <Navigate to="/dashboard/customer" replace />;
   }
 
-  if (user.role === "company") {
+  if (user?.role === "company") {
     return <Navigate to="/dashboard/company" replace />;
   }
 
