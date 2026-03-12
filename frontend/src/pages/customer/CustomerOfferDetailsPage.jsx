@@ -21,8 +21,6 @@ import {
 export default function CustomerOfferDetailsPage() {
   console.log("CustomerOfferDetailsPage mounted");
 
-  throw new Error("test error");
-
   const { id } = useParams();
   const navigate = useNavigate();
   const { access, user } = useAuth();
