@@ -18,11 +18,9 @@ function App() {
 
             <PublicRoutes />
 
-            <SharedRoutes />
-
-            <CustomerRoutes />
-
-            <CompanyRoutes />
+            {/* <SharedRoutes /> */}
+            {/* <CustomerRoutes /> */}
+            {/* <CompanyRoutes /> */}
 
             {/* 404 fallback */}
             <Route
