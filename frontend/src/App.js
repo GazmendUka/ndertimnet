@@ -14,20 +14,13 @@ function App() {
       <ErrorBoundary>
         <Router>
           <Routes>
+            
+            {PublicRoutes()}
+            {SharedRoutes()}
+            {CustomerRoutes()}
+            {CompanyRoutes()}
 
-            <PublicRoutes />
-
-            <SharedRoutes />
-
-            <CustomerRoutes />
-
-            <CompanyRoutes />
-
-            {/* fallback */}
-            <Route
-              path="*"
-              element={<div style={{ padding: 40 }}>Page not found</div>}
-            />
+            <Route path="*" element={<div style={{ padding: 40 }}>Page not found</div>} />
 
           </Routes>
         </Router>
