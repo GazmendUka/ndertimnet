@@ -1,5 +1,3 @@
-// src/components/PrivateRoute.js
-
 import React from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../auth/AuthContext";
@@ -7,7 +5,9 @@ import { useAuth } from "../auth/AuthContext";
 export default function PrivateRoute({ roles }) {
   const { user, access, loading } = useAuth();
 
-  // 1️⃣ Auth state håller fortfarande på att laddas
+  // ------------------------------------------------
+  // 1️⃣ Auth state laddar fortfarande
+  // ------------------------------------------------
   if (loading) {
     return (
       <div className="p-10 text-center text-gray-600">
@@ -16,14 +16,28 @@ export default function PrivateRoute({ roles }) {
     );
   }
 
-  // 2️⃣ Ingen token = inte inloggad ⇒ omdirigera
+  // ------------------------------------------------
+  // 2️⃣ Ingen token → inte inloggad
+  // ------------------------------------------------
   if (!access) {
-    return <Navigate to="/" replace />;
+    return <Navigate to="/login" replace />;
   }
 
+  // ------------------------------------------------
+  // 3️⃣ Token finns men user saknas (vänta)
+  // ------------------------------------------------
+  if (access && !user) {
+    return (
+      <div className="p-10 text-center text-gray-600">
+        Po ngarkohet profili...
+      </div>
+    );
+  }
 
-  // 3️⃣ Rollbaserad åtkomst
-  if (roles && (!user || !roles.includes(user.role))) {
+  // ------------------------------------------------
+  // 4️⃣ Rollkontroll
+  // ------------------------------------------------
+  if (roles && !roles.includes(user.role)) {
     return (
       <div className="p-10 text-center text-red-600 font-semibold">
         Nuk keni qasje në këtë faqe.
@@ -31,6 +45,8 @@ export default function PrivateRoute({ roles }) {
     );
   }
 
-  // 4️⃣ Allt OK → släpp fram routed components via Outlet
+  // ------------------------------------------------
+  // 5️⃣ Allt OK
+  // ------------------------------------------------
   return <Outlet />;
 }

@@ -18,7 +18,10 @@ class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return (
         <div style={{ padding: 40 }}>
-          Something went wrong.
+        <p>⚠️ Diçka shkoi gabim.</p>
+        <p>Ju lutemi rifreskoni faqen ose provoni përsëri më vonë.</p>
+        <br />          
+        <p>Diçka shkoi gabim. Ne po punojmë për ta rregulluar.</p>
         </div>
       );
     }
