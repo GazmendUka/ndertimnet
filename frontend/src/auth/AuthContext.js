@@ -13,8 +13,11 @@ const getAccessToken = () =>
 const getRefreshToken = () =>
   localStorage.getItem("refresh") || sessionStorage.getItem("refresh");
 
-const getStorage = () =>
-  localStorage.getItem("access") ? localStorage : sessionStorage;
+const getStorage = () => {
+  if (localStorage.getItem("access")) return localStorage;
+  if (sessionStorage.getItem("access")) return sessionStorage;
+  return localStorage;
+};
 
 const clearStorage = () => {
   localStorage.removeItem("access");
@@ -169,12 +172,11 @@ export const AuthProvider = ({ children }) => {
   // ============================================================
 
   const logout = () => {
-
     clearStorage();
-
     setUser(null);
     setAccess(null);
     setRefresh(null);
+    setLoading(false);
   };
 
   // ============================================================
@@ -219,7 +221,11 @@ export const AuthProvider = ({ children }) => {
 
     if (!token) return;
 
-    await fetchCurrentUser(token);
+    try {
+      await fetchCurrentUser(token);
+    } catch (err) {
+      console.warn("refreshMe failed");
+    }
   };
 
   // ============================================================

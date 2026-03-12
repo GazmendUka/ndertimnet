@@ -22,10 +22,12 @@ const getRefreshToken = () =>
   localStorage.getItem("refresh") || sessionStorage.getItem("refresh");
 
 const saveAccessToken = (token) => {
-  if (localStorage.getItem("access")) {
+  if (localStorage.getItem("refresh")) {
     localStorage.setItem("access", token);
-  } else {
+  } else if (sessionStorage.getItem("refresh")) {
     sessionStorage.setItem("access", token);
+  } else {
+    localStorage.setItem("access", token);
   }
 };
 
@@ -77,6 +79,7 @@ api.interceptors.request.use((config) => {
   const token = getAccessToken();
 
   if (token) {
+    config.headers = config.headers || {};
     config.headers.Authorization = `Bearer ${token}`;
   }
 
@@ -106,7 +109,7 @@ api.interceptors.response.use(
     }
 
     // 🚫 Skip refresh endpoint
-    if (originalRequest.url?.includes("token/refresh")) {
+    if (originalRequest.url?.includes("token/refresh/")) {
       return Promise.reject(error);
     }
 
