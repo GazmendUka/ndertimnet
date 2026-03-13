@@ -1,4 +1,10 @@
-import React, { useEffect, useState } from "react";
+// ==========================================================
+// src/pages/customer/CustomerOfferDetailsPage.jsx
+// Customer marketplace offer details page
+// Built from real backend structure
+// ==========================================================
+
+import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
@@ -6,17 +12,145 @@ import { useAuth } from "../../auth/AuthContext";
 import {
   ArrowLeft,
   Building2,
-  Euro,
+  CalendarDays,
   Clock3,
+  Euro,
   FileText,
-  MessageSquare,
-  Send,
   CheckCircle2,
   XCircle,
-  Star,
+  MessageSquare,
+  Send,
+  Phone,
+  Mail,
+  Loader2,
+  AlertCircle,
   ShieldCheck,
-  Hammer,
 } from "lucide-react";
+
+
+// ==========================================================
+// Helpers
+// ==========================================================
+
+function formatDate(value) {
+  if (!value) return "—";
+
+  try {
+    return new Intl.DateTimeFormat("sq-AL", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
+function formatDateTime(value) {
+  if (!value) return "—";
+
+  try {
+    return new Intl.DateTimeFormat("sq-AL", {
+      day: "2-digit",
+      month: "long",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(new Date(value));
+  } catch {
+    return value;
+  }
+}
+
+function formatPrice(priceAmount, currency, priceType) {
+  if (!priceAmount && priceAmount !== 0) return "—";
+
+  const amount = `${priceAmount} ${currency || "EUR"}`;
+
+  if (priceType === "hourly") {
+    return `${amount} / orë`;
+  }
+
+  return amount;
+}
+
+
+// ==========================================================
+// Status Badge
+// ==========================================================
+
+function StatusBadge({ status }) {
+  const normalized = (status || "").toLowerCase();
+
+  if (normalized === "accepted") {
+    return (
+      <span className="inline-flex items-center rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
+        E pranuar
+      </span>
+    );
+  }
+
+  if (normalized === "rejected") {
+    return (
+      <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
+        E refuzuar
+      </span>
+    );
+  }
+
+  if (normalized === "signed") {
+    return (
+      <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
+        Gati për vendim
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold text-zinc-700">
+      {status || "—"}
+    </span>
+  );
+}
+
+
+// ==========================================================
+// UI Components
+// ==========================================================
+
+function DetailCard({ label, value, icon: Icon }) {
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+        {Icon && <Icon size={14} />}
+        {label}
+      </div>
+
+      <div className="mt-3 text-base font-semibold text-zinc-900">
+        {value || "—"}
+      </div>
+    </div>
+  );
+}
+
+function TextBlock({ title, text }) {
+  if (!text) return null;
+
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
+      <h3 className="text-sm font-semibold text-zinc-900">{title}</h3>
+
+      <p className="mt-3 whitespace-pre-line text-sm leading-7 text-zinc-700">
+        {text}
+      </p>
+    </div>
+  );
+}
+
+
+// ==========================================================
+// Page
+// ==========================================================
 
 export default function CustomerOfferDetailsPage() {
 
@@ -28,24 +162,19 @@ export default function CustomerOfferDetailsPage() {
   const [company, setCompany] = useState(null);
   const [version, setVersion] = useState(null);
 
-  const [messages, setMessages] = useState([
-    {
-      id: 1,
-      sender: "company",
-      text: "Përshëndetje! Nëse keni pyetje për ofertën, na shkruani këtu.",
-    }
-  ]);
-
-  const [input, setInput] = useState("");
-
   const [loading, setLoading] = useState(true);
   const [decisionLoading, setDecisionLoading] = useState("");
+  const [error, setError] = useState("");
+
+  const [messages, setMessages] = useState([]);
+  const [messageInput, setMessageInput] = useState("");
 
   const API_URL = process.env.REACT_APP_API_BASE_URL || "";
 
-  // =====================================================
-  // LOAD OFFER
-  // =====================================================
+
+  // ==========================================================
+  // Fetch offer
+  // ==========================================================
 
   const fetchOffer = async () => {
 
@@ -54,15 +183,21 @@ export default function CustomerOfferDetailsPage() {
       setLoading(true);
 
       const res = await api.get(`offers/${id}/`);
-      const data = res.data;
+      const data = res?.data;
+
+      if (!data) {
+        setError("Oferta nuk u gjet.");
+        return;
+      }
 
       setOffer(data);
       setCompany(data.company || null);
       setVersion(data.current_version || null);
 
-    } catch {
+    } catch (err) {
 
-      console.error("Failed loading offer");
+      console.error(err);
+      setError("Nuk mund të ngarkohet oferta.");
 
     } finally {
 
@@ -73,35 +208,17 @@ export default function CustomerOfferDetailsPage() {
   };
 
   useEffect(() => {
+
     if (access && id) {
       fetchOffer();
     }
+
   }, [access, id]);
 
-  // =====================================================
-  // CHAT SEND
-  // =====================================================
 
-  const sendMessage = () => {
-
-    if (!input.trim()) return;
-
-    setMessages([
-      ...messages,
-      {
-        id: Date.now(),
-        sender: "customer",
-        text: input,
-      },
-    ]);
-
-    setInput("");
-
-  };
-
-  // =====================================================
-  // ACCEPT
-  // =====================================================
+  // ==========================================================
+  // Accept
+  // ==========================================================
 
   const handleAccept = async () => {
 
@@ -110,15 +227,15 @@ export default function CustomerOfferDetailsPage() {
       setDecisionLoading("accept");
 
       await api.post(`offers/${id}/decision/`, {
-        decision: "accept",
+        decision: "accept"
       });
 
       await fetchOffer();
-
       alert("Oferta u pranua!");
 
-    } catch {
+    } catch (err) {
 
+      console.error(err);
       alert("Nuk mund të pranohet oferta.");
 
     } finally {
@@ -129,25 +246,32 @@ export default function CustomerOfferDetailsPage() {
 
   };
 
-  // =====================================================
-  // DECLINE
-  // =====================================================
+
+  // ==========================================================
+  // Reject
+  // ==========================================================
 
   const handleDecline = async () => {
+
+    const confirmed = window.confirm(
+      "A jeni i sigurt që dëshironi ta refuzoni këtë ofertë?"
+    );
+
+    if (!confirmed) return;
 
     try {
 
       setDecisionLoading("reject");
 
       await api.post(`offers/${id}/decision/`, {
-        decision: "reject",
+        decision: "reject"
       });
 
-      alert("Oferta u refuzua.");
-      navigate("/dashboard/customer");
+      await fetchOffer();
 
-    } catch {
+    } catch (err) {
 
+      console.error(err);
       alert("Nuk mund të refuzohet oferta.");
 
     } finally {
@@ -158,234 +282,283 @@ export default function CustomerOfferDetailsPage() {
 
   };
 
-  // =====================================================
-  // GUARDS
-  // =====================================================
+
+  // ==========================================================
+  // Chat send (MVP)
+  // ==========================================================
+
+  const handleSendMessage = () => {
+
+    if (!messageInput.trim()) return;
+
+    setMessages(prev => [
+      ...prev,
+      {
+        id: Date.now(),
+        sender: "customer",
+        text: messageInput.trim(),
+        createdAt: new Date().toISOString()
+      }
+    ]);
+
+    setMessageInput("");
+
+  };
+
+
+  // ==========================================================
+  // Derived
+  // ==========================================================
+
+  const pdfUrl = offer
+    ? `${API_URL}/offers/${offer.id}/pdf/`
+    : "#";
+
+  const canDecide = offer?.status === "signed";
+
+  const priceLabel = useMemo(() => {
+
+    return formatPrice(
+      version?.price_amount,
+      version?.currency,
+      version?.price_type
+    );
+
+  }, [version]);
+
+
+  // ==========================================================
+  // Guards
+  // ==========================================================
 
   if (!user) return <div className="p-6">Duke ngarkuar...</div>;
-  if (user.role !== "customer") return <div className="p-6">Nuk keni qasje.</div>;
-  if (loading) return <div className="p-6">Po ngarkohet oferta...</div>;
 
-  const pdfUrl = `${API_URL}/offers/${offer.id}/pdf/`;
+  if (user.role !== "customer") {
+    return (
+      <div className="p-6 text-red-600 font-semibold">
+        Nuk keni qasje në këtë faqe.
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div className="p-6 flex items-center gap-2">
+        <Loader2 className="animate-spin" size={18} />
+        Po ngarkohet oferta...
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 text-red-600">
+        {error}
+      </div>
+    );
+  }
+
+  if (!offer || !version) {
+    return (
+      <div className="p-6">
+        Oferta nuk u gjet.
+      </div>
+    );
+  }
+
+
+  // ==========================================================
+  // UI
+  // ==========================================================
 
   return (
 
     <div className="premium-container mt-6">
 
-      {/* BACK */}
+      {/* Header */}
 
-      <button
-        onClick={() => navigate(-1)}
-        className="premium-btn btn-light flex items-center gap-2 mb-6"
-      >
-        <ArrowLeft size={18} />
-        Kthehu
-      </button>
+      <div className="flex justify-between items-center mb-6">
 
-      <div className="grid lg:grid-cols-[2fr_1fr] gap-8">
+        <button
+          onClick={() => navigate(-1)}
+          className="premium-btn btn-light flex items-center gap-2"
+        >
+          <ArrowLeft size={18} />
+          Kthehu
+        </button>
 
-        {/* LEFT */}
+        <StatusBadge status={offer?.status} />
 
-        <div className="space-y-6">
+      </div>
+
+
+      {/* Layout */}
+
+      <div className="grid gap-8 lg:grid-cols-[2fr_360px]">
+
+
+        {/* LEFT COLUMN */}
+
+        <div className="space-y-8">
+
 
           {/* COMPANY */}
 
-          <div className="premium-section">
+          <section className="premium-card p-6">
 
-            <h2 className="section-title flex items-center gap-2">
-              <Building2 size={20} />
+            <h2 className="text-xl font-semibold mb-3">
               Kompania që dërgoi ofertën
             </h2>
 
-            <div className="premium-card p-6 space-y-4">
+            <p className="font-semibold text-lg">
+              {company?.company_name || "Kompani"}
+            </p>
 
-              <div>
+            <p className="flex items-center gap-2 text-sm text-gray-600">
+              <Phone size={14} />
+              {company?.phone || "—"}
+            </p>
 
-                <p className="text-xl font-semibold">
-                  {company?.company_name}
-                </p>
+            <p className="flex items-center gap-2 text-sm text-gray-600">
+              <Mail size={14} />
+              {company?.user?.email || "—"}
+            </p>
 
-                <p className="text-sm text-gray-500">
-                  Oferta nga kjo kompani për projektin tuaj.
-                </p>
+          </section>
 
-              </div>
 
-              <div className="grid md:grid-cols-3 gap-4">
+          {/* OFFER DETAILS */}
 
-                <div className="premium-card p-4">
+          <section className="premium-card p-6 space-y-6">
 
-                  <div className="flex items-center gap-2 text-sm font-semibold">
-                    <Star size={16} />
-                    Vlerësimi
-                  </div>
-
-                  <p className="text-gray-500 text-sm">
-                    Së shpejti
-                  </p>
-
-                </div>
-
-                <div className="premium-card p-4">
-
-                  <div className="flex items-center gap-2 text-sm font-semibold">
-                    <ShieldCheck size={16} />
-                    Verifikimi
-                  </div>
-
-                  <p className="text-gray-500 text-sm">
-                    Së shpejti
-                  </p>
-
-                </div>
-
-                <div className="premium-card p-4">
-
-                  <div className="flex items-center gap-2 text-sm font-semibold">
-                    <Hammer size={16} />
-                    Projekte
-                  </div>
-
-                  <p className="text-gray-500 text-sm">
-                    Së shpejti
-                  </p>
-
-                </div>
-
-              </div>
-
-            </div>
-
-          </div>
-
-          {/* OFFER */}
-
-          <div className="premium-section">
-
-            <h2 className="section-title">
+            <h2 className="text-xl font-semibold">
               Detajet e ofertës
             </h2>
 
-            <div className="premium-card p-6 space-y-4">
+            <div className="grid md:grid-cols-3 gap-4">
 
-              <div className="grid md:grid-cols-2 gap-4">
+              <DetailCard
+                label="Çmimi"
+                value={priceLabel}
+                icon={Euro}
+              />
 
-                <div className="premium-card p-4">
+              <DetailCard
+                label="Fillimi"
+                value={formatDate(version?.can_start_from)}
+                icon={CalendarDays}
+              />
 
-                  <p className="text-xs text-gray-500">
-                    Çmimi
-                  </p>
-
-                  <p className="text-2xl font-bold">
-                    {version?.price_amount} {version?.currency}
-                  </p>
-
-                </div>
-
-                <div className="premium-card p-4">
-
-                  <p className="text-xs text-gray-500">
-                    Afati
-                  </p>
-
-                  <p className="flex items-center gap-2">
-                    <Clock3 size={16} />
-                    {version?.duration_text}
-                  </p>
-
-                </div>
-
-              </div>
-
-              <p className="whitespace-pre-line">
-                {version?.presentation_text}
-              </p>
-
-              <a
-                href={pdfUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="premium-btn btn-dark flex items-center gap-2 w-fit"
-              >
-                <FileText size={18} />
-                Shkarko kontratën PDF
-              </a>
+              <DetailCard
+                label="Kohëzgjatja"
+                value={version?.duration_text}
+                icon={Clock3}
+              />
 
             </div>
 
-          </div>
+            <TextBlock
+              title="Çfarë përfshihet"
+              text={version?.includes_text}
+            />
+
+            <TextBlock
+              title="Çfarë nuk përfshihet"
+              text={version?.excludes_text}
+            />
+
+            <TextBlock
+              title="Kushtet e pagesës"
+              text={version?.payment_terms}
+            />
+
+            <TextBlock
+              title="Koment nga kompania"
+              text={version?.presentation_text}
+            />
+
+            <a
+              href={pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="premium-btn btn-dark inline-flex items-center gap-2"
+            >
+              <FileText size={16} />
+              Shkarko kontratën PDF
+            </a>
+
+          </section>
+
 
           {/* CHAT */}
 
-          <div className="premium-section">
+          <section className="premium-card p-6">
 
-            <h2 className="section-title flex items-center gap-2">
-              <MessageSquare size={20} />
+            <h2 className="text-xl font-semibold mb-4">
               Komunikimi me kompaninë
             </h2>
 
-            <div className="premium-card p-6">
+            <div className="space-y-3 mb-4">
 
-              {/* MESSAGES */}
+              {messages.map(msg => (
 
-              <div className="space-y-3 mb-4">
-
-                {messages.map((msg) => (
-
-                  <div
-                    key={msg.id}
-                    className={`p-3 rounded-lg text-sm ${
-                      msg.sender === "customer"
-                        ? "bg-blue-100 text-right"
-                        : "bg-gray-100"
-                    }`}
-                  >
-                    {msg.text}
-                  </div>
-
-                ))}
-
-              </div>
-
-              {/* INPUT */}
-
-              <div className="flex gap-2">
-
-                <input
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  placeholder="Shkruani mesazh..."
-                  className="premium-input flex-1"
-                />
-
-                <button
-                  onClick={sendMessage}
-                  className="premium-btn btn-dark flex items-center gap-2"
+                <div
+                  key={msg.id}
+                  className={`p-3 rounded-lg max-w-md ${
+                    msg.sender === "customer"
+                      ? "bg-black text-white ml-auto"
+                      : "bg-gray-100"
+                  }`}
                 >
-                  <Send size={16} />
-                </button>
+                  {msg.text}
+                </div>
 
-              </div>
+              ))}
 
             </div>
 
-          </div>
+            <div className="flex gap-2">
+
+              <input
+                type="text"
+                value={messageInput}
+                onChange={(e) => setMessageInput(e.target.value)}
+                placeholder="Shkruani mesazhin..."
+                className="premium-input flex-1"
+              />
+
+              <button
+                onClick={handleSendMessage}
+                className="premium-btn btn-dark"
+              >
+                <Send size={16} />
+              </button>
+
+            </div>
+
+          </section>
 
         </div>
 
-        {/* SIDEBAR */}
 
-        <div className="premium-card p-6 h-fit sticky top-6">
+        {/* RIGHT COLUMN */}
 
-          <h3 className="font-semibold text-lg mb-3">
+        <aside className="sticky top-6 premium-card p-6 h-fit">
+
+          <h3 className="text-lg font-semibold mb-4">
             Vendimi juaj
           </h3>
 
-          <div className="flex flex-col gap-3">
+          <p className="text-3xl font-bold mb-4">
+            {priceLabel}
+          </p>
+
+          <div className="space-y-3">
 
             <button
               onClick={handleAccept}
-              className="premium-btn bg-green-600 text-white flex items-center gap-2 justify-center"
+              disabled={!canDecide}
+              className="premium-btn bg-green-600 text-white w-full flex items-center justify-center gap-2"
             >
               <CheckCircle2 size={18} />
               Prano ofertën
@@ -393,7 +566,8 @@ export default function CustomerOfferDetailsPage() {
 
             <button
               onClick={handleDecline}
-              className="premium-btn bg-red-600 text-white flex items-center gap-2 justify-center"
+              disabled={!canDecide}
+              className="premium-btn bg-red-600 text-white w-full flex items-center justify-center gap-2"
             >
               <XCircle size={18} />
               Refuzo ofertën
@@ -401,11 +575,12 @@ export default function CustomerOfferDetailsPage() {
 
           </div>
 
-        </div>
+        </aside>
 
       </div>
 
     </div>
 
   );
+
 }
