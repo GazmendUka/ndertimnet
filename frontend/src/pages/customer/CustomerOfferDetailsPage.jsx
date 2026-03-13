@@ -1,7 +1,6 @@
 // ==========================================================
 // src/pages/customer/CustomerOfferDetailsPage.jsx
 // Customer marketplace offer details page
-// Built from real backend structure
 // ==========================================================
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -11,20 +10,16 @@ import { useAuth } from "../../auth/AuthContext";
 
 import {
   ArrowLeft,
-  Building2,
   CalendarDays,
   Clock3,
   Euro,
   FileText,
   CheckCircle2,
   XCircle,
-  MessageSquare,
   Send,
   Phone,
   Mail,
-  Loader2,
-  AlertCircle,
-  ShieldCheck,
+  Loader2
 } from "lucide-react";
 
 
@@ -39,23 +34,7 @@ function formatDate(value) {
     return new Intl.DateTimeFormat("sq-AL", {
       day: "2-digit",
       month: "long",
-      year: "numeric",
-    }).format(new Date(value));
-  } catch {
-    return value;
-  }
-}
-
-function formatDateTime(value) {
-  if (!value) return "—";
-
-  try {
-    return new Intl.DateTimeFormat("sq-AL", {
-      day: "2-digit",
-      month: "long",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
+      year: "numeric"
     }).format(new Date(value));
   } catch {
     return value;
@@ -76,52 +55,13 @@ function formatPrice(priceAmount, currency, priceType) {
 
 
 // ==========================================================
-// Status Badge
-// ==========================================================
-
-function StatusBadge({ status }) {
-  const normalized = (status || "").toLowerCase();
-
-  if (normalized === "accepted") {
-    return (
-      <span className="inline-flex items-center rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
-        E pranuar
-      </span>
-    );
-  }
-
-  if (normalized === "rejected") {
-    return (
-      <span className="inline-flex items-center rounded-full border border-red-200 bg-red-50 px-3 py-1 text-xs font-semibold text-red-700">
-        E refuzuar
-      </span>
-    );
-  }
-
-  if (normalized === "signed") {
-    return (
-      <span className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700">
-        Gati për vendim
-      </span>
-    );
-  }
-
-  return (
-    <span className="inline-flex items-center rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold text-zinc-700">
-      {status || "—"}
-    </span>
-  );
-}
-
-
-// ==========================================================
-// UI Components
+// Components
 // ==========================================================
 
 function DetailCard({ label, value, icon: Icon }) {
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-zinc-500">
+      <div className="flex items-center gap-2 text-xs font-semibold uppercase text-zinc-500">
         {Icon && <Icon size={14} />}
         {label}
       </div>
@@ -134,17 +74,23 @@ function DetailCard({ label, value, icon: Icon }) {
 }
 
 function TextBlock({ title, text }) {
+
   if (!text) return null;
 
   return (
     <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
-      <h3 className="text-sm font-semibold text-zinc-900">{title}</h3>
+
+      <h3 className="text-sm font-semibold text-zinc-900">
+        {title}
+      </h3>
 
       <p className="mt-3 whitespace-pre-line text-sm leading-7 text-zinc-700">
         {text}
       </p>
+
     </div>
   );
+
 }
 
 
@@ -217,7 +163,7 @@ export default function CustomerOfferDetailsPage() {
 
 
   // ==========================================================
-  // Accept
+  // Accept offer
   // ==========================================================
 
   const handleAccept = async () => {
@@ -248,7 +194,7 @@ export default function CustomerOfferDetailsPage() {
 
 
   // ==========================================================
-  // Reject
+  // Reject offer
   // ==========================================================
 
   const handleDecline = async () => {
@@ -307,12 +253,46 @@ export default function CustomerOfferDetailsPage() {
 
 
   // ==========================================================
-  // Derived
+  // Download PDF
   // ==========================================================
 
-  const pdfUrl = offer
-    ? `${API_URL}/offers/${offer.id}/pdf/`
-    : "#";
+  const handleDownloadPDF = async () => {
+
+    try {
+
+      const response = await api.get(`offers/${id}/pdf/`, {
+        responseType: "blob"
+      });
+
+      const blob = new Blob([response.data], {
+        type: "application/pdf"
+      });
+
+      const url = window.URL.createObjectURL(blob);
+
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `oferta_${offer.id}.pdf`;
+
+      document.body.appendChild(link);
+      link.click();
+
+      link.remove();
+      window.URL.revokeObjectURL(url);
+
+    } catch (error) {
+
+      console.error("PDF download error:", error);
+      alert("Nuk mund të shkarkohet kontrata.");
+
+    }
+
+  };
+
+
+  // ==========================================================
+  // Derived values
+  // ==========================================================
 
   const canDecide = offer?.status === "signed";
 
@@ -351,19 +331,11 @@ export default function CustomerOfferDetailsPage() {
   }
 
   if (error) {
-    return (
-      <div className="p-6 text-red-600">
-        {error}
-      </div>
-    );
+    return <div className="p-6 text-red-600">{error}</div>;
   }
 
   if (!offer || !version) {
-    return (
-      <div className="p-6">
-        Oferta nuk u gjet.
-      </div>
-    );
+    return <div className="p-6">Oferta nuk u gjet.</div>;
   }
 
 
@@ -387,22 +359,16 @@ export default function CustomerOfferDetailsPage() {
           Kthehu
         </button>
 
-        <StatusBadge status={offer?.status} />
-
       </div>
 
 
-      {/* Layout */}
-
       <div className="grid gap-8 lg:grid-cols-[2fr_360px]">
 
-
-        {/* LEFT COLUMN */}
+        {/* LEFT */}
 
         <div className="space-y-8">
 
-
-          {/* COMPANY */}
+          {/* Company */}
 
           <section className="premium-card p-6">
 
@@ -427,7 +393,7 @@ export default function CustomerOfferDetailsPage() {
           </section>
 
 
-          {/* OFFER DETAILS */}
+          {/* Offer details */}
 
           <section className="premium-card p-6 space-y-6">
 
@@ -457,40 +423,23 @@ export default function CustomerOfferDetailsPage() {
 
             </div>
 
-            <TextBlock
-              title="Çfarë përfshihet"
-              text={version?.includes_text}
-            />
+            <TextBlock title="Çfarë përfshihet" text={version?.includes_text} />
+            <TextBlock title="Çfarë nuk përfshihet" text={version?.excludes_text} />
+            <TextBlock title="Kushtet e pagesës" text={version?.payment_terms} />
+            <TextBlock title="Koment nga kompania" text={version?.presentation_text} />
 
-            <TextBlock
-              title="Çfarë nuk përfshihet"
-              text={version?.excludes_text}
-            />
-
-            <TextBlock
-              title="Kushtet e pagesës"
-              text={version?.payment_terms}
-            />
-
-            <TextBlock
-              title="Koment nga kompania"
-              text={version?.presentation_text}
-            />
-
-            <a
-              href={pdfUrl}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={handleDownloadPDF}
               className="premium-btn btn-dark inline-flex items-center gap-2"
             >
               <FileText size={16} />
               Shkarko kontratën PDF
-            </a>
+            </button>
 
           </section>
 
 
-          {/* CHAT */}
+          {/* Chat */}
 
           <section className="premium-card p-6">
 
@@ -541,7 +490,7 @@ export default function CustomerOfferDetailsPage() {
         </div>
 
 
-        {/* RIGHT COLUMN */}
+        {/* RIGHT */}
 
         <aside className="sticky top-6 premium-card p-6 h-fit">
 
