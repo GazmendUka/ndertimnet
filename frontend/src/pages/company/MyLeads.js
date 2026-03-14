@@ -221,7 +221,12 @@ export default function MyLeads() {
 
       {/* LIST */}
       <div className="space-y-4">
-
+        {sortedFiltered.length === 0 && (
+          <div className="premium-card p-6 text-center text-gray-500">
+            Nuk keni ende asnjë ofertë.
+          </div>
+        )}
+        
         {sortedFiltered.map((offer) => {
 
           const job = getJob(offer);
@@ -268,14 +273,14 @@ export default function MyLeads() {
 
                 {offer.status === "draft" ? (
                   <Link
-                    to={`/offers/${offer.id}`}
+                    to={`/company/offers/${offer.id}`}
                     className="premium-btn btn-dark inline-flex items-center gap-1 mt-2"
                   >
                     Përfundo ofertën
                   </Link>
                 ) : (
                   <Link
-                    to={`/offers/${offer.id}`}
+                    to={`/company/offers/${offer.id}`}
                     className="premium-btn btn-light inline-flex items-center gap-1 mt-2"
                   >
                     Shiko ofertën
