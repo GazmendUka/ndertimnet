@@ -326,3 +326,35 @@ class OfferEarlyChatUnlockSerializer(serializers.Serializer):
         # TODO: koppla payment senare
 
         return unlock
+
+# ======================================================
+# CHAT MESSAGE SERIALIZER
+# ======================================================
+
+from .models import OfferMessage
+
+
+class OfferMessageSerializer(serializers.ModelSerializer):
+
+    sender_name = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OfferMessage
+        fields = [
+            "id",
+            "sender_type",
+            "sender_name",
+            "message",
+            "created_at",
+        ]
+
+    def get_sender_name(self, obj):
+
+        if obj.sender_type == "company" and obj.sender_company:
+            return obj.sender_company.company_name
+
+        if obj.sender_type == "customer" and obj.sender_customer:
+            user = obj.sender_customer.user
+            return f"{user.first_name} {user.last_name}".strip() or user.email
+
+        return "Unknown"

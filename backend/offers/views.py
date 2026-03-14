@@ -23,6 +23,7 @@ from .serializers import (
     OfferDecisionSerializer,
     OfferEarlyChatUnlockSerializer,
     OfferVersionSerializer,
+    OfferMessageSerializer,
 )
 
 
@@ -339,3 +340,67 @@ class OfferViewSet(viewsets.ModelViewSet):
         qs = OfferVersion.objects.filter(offer=offer).order_by("-version_number")
         serializer = OfferVersionSerializer(qs, many=True)
         return Response(serializer.data, status=200)
+    
+    # --------------------------------------------------
+    # CHAT MESSAGES
+    # GET /api/offers/{id}/messages/
+    # POST /api/offers/{id}/messages/
+    # --------------------------------------------------
+
+    @action(detail=True, methods=["get", "post"], url_path="messages")
+    def messages(self, request, pk=None):
+
+        offer = self.get_object()
+        user = request.user
+
+        # -----------------------------
+        # GET → list messages
+        # -----------------------------
+        if request.method == "GET":
+
+            qs = offer.messages.select_related(
+                "sender_company",
+                "sender_customer"
+            ).order_by("created_at")
+
+            serializer = OfferMessageSerializer(qs, many=True)
+
+            return Response(serializer.data)
+
+
+        # -----------------------------
+        # POST → send message
+        # -----------------------------
+        message_text = request.data.get("message")
+
+        if not message_text:
+            return Response(
+                {"detail": "Message is required"},
+                status=400
+            )
+
+        if user.role == "company":
+
+            message = offer.messages.create(
+                sender_type="company",
+                sender_company=user.company_profile,
+                message=message_text
+            )
+
+        elif user.role == "customer":
+
+            message = offer.messages.create(
+                sender_type="customer",
+                sender_customer=user.customer_profile,
+                message=message_text
+            )
+
+        else:
+            return Response(
+                {"detail": "Invalid sender"},
+                status=403
+            )
+
+        serializer = OfferMessageSerializer(message)
+
+        return Response(serializer.data, status=201)
