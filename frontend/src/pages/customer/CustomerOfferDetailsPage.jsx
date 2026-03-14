@@ -113,6 +113,14 @@ export default function CustomerOfferDetailsPage() {
   const [error, setError] = useState("");
 
   const [messages, setMessages] = useState([]);
+  const fetchMessages = async () => {
+    try {
+      const res = await api.get(`offers/${id}/messages/`);
+      setMessages(res.data || []);
+    } catch (err) {
+      console.error("Chat load error:", err);
+    }
+  };
   const [messageInput, setMessageInput] = useState("");
 
   const API_URL = process.env.REACT_APP_API_BASE_URL || "";
@@ -156,10 +164,31 @@ export default function CustomerOfferDetailsPage() {
   useEffect(() => {
 
     if (access && id) {
+
       fetchOffer();
+      fetchMessages();
+
     }
 
   }, [access, id]);
+
+  // ==========================================================
+  // Auto refresh chat
+  // ==========================================================
+
+  useEffect(() => {
+
+    if (!id) return;
+
+    const interval = setInterval(() => {
+
+      fetchMessages();
+
+    }, 5000);
+
+    return () => clearInterval(interval);
+
+  }, [id]);
 
 
   // ==========================================================
@@ -233,21 +262,27 @@ export default function CustomerOfferDetailsPage() {
   // Chat send (MVP)
   // ==========================================================
 
-  const handleSendMessage = () => {
+  const handleSendMessage = async () => {
 
     if (!messageInput.trim()) return;
 
-    setMessages(prev => [
-      ...prev,
-      {
-        id: Date.now(),
-        sender: "customer",
-        text: messageInput.trim(),
-        createdAt: new Date().toISOString()
-      }
-    ]);
+    try {
 
-    setMessageInput("");
+      const res = await api.post(`offers/${id}/messages/`, {
+        message: messageInput.trim()
+      });
+
+      setMessages(prev => [...prev, res.data]);
+
+      setMessageInput("");
+
+    } catch (err) {
+
+      console.error("Send message error:", err);
+
+      alert("Mesazhi nuk u dërgua.");
+
+    }
 
   };
 
@@ -448,22 +483,26 @@ export default function CustomerOfferDetailsPage() {
             </h2>
 
             <div className="space-y-3 mb-4">
-
               {messages.map(msg => (
 
                 <div
                   key={msg.id}
-                  className={`p-3 rounded-lg max-w-md ${
-                    msg.sender === "customer"
+                  className={`p-3 rounded-lg max-w-md text-sm ${
+                    msg.sender_type === "customer"
                       ? "bg-black text-white ml-auto"
-                      : "bg-gray-100"
+                      : "bg-gray-100 text-gray-800"
                   }`}
                 >
-                  {msg.text}
+
+                  <div className="font-semibold text-xs mb-1 opacity-70">
+                    {msg.sender_name}
+                  </div>
+
+                  {msg.message}
+
                 </div>
 
               ))}
-
             </div>
 
             <div className="flex gap-2">
@@ -472,10 +511,12 @@ export default function CustomerOfferDetailsPage() {
                 type="text"
                 value={messageInput}
                 onChange={(e) => setMessageInput(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") handleSendMessage();
+                }}
                 placeholder="Shkruani mesazhin..."
                 className="premium-input flex-1"
               />
-
               <button
                 onClick={handleSendMessage}
                 className="premium-btn btn-dark"
