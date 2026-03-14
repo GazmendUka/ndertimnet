@@ -121,14 +121,14 @@ export default function CompanyJobDetails() {
   const handleViewOrCreateOffer = () => {
     // Om offert finns → visa details
     if (offerInfo?.id) {
-      navigate(`/offers/${offerInfo.id}`);
+      navigate(`/company/offers/${offerInfo.id}`);
       return;
     }
 
-    // Annars → gå till wizard (OfferEdit auto-creates via POST /offers/)
+    // Annars → gå till wizard
     navigate(`/company/jobrequests/${id}/offer/edit`);
   };
-
+  
   const handleUnlockLead = async () => {
     try {
       setUnlocking(true);
