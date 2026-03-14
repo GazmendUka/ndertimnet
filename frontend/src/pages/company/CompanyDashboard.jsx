@@ -222,13 +222,12 @@ function LatestOffers({ offers, loading }) {
   const navigate = useNavigate();
   function handleRowClick(e, offerId) {
 
-    // allow open in new tab
     if (e.metaKey || e.ctrlKey || e.button === 1) {
-      window.open(`/offers/${offerId}`, "_blank");
+      window.open(`/company/offers/${offerId}`, "_blank");
       return;
     }
 
-    navigate(`/offers/${offerId}`);
+    navigate(`/company/offers/${offerId}`);
   }
   const latest = offers
     .slice()
@@ -283,7 +282,7 @@ function LatestOffers({ offers, loading }) {
                     </Td>
                     <Td className="text-right">
                       <Link
-                        to={`/offers/${offer.id}`}
+                        to={`/company/offers/${offer.id}`}
                         onClick={(e) => e.stopPropagation()}
                         className="text-xs font-medium text-gray-700 hover:text-gray-900"
                       >
