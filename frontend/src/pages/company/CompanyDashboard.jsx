@@ -273,7 +273,7 @@ function LatestOffers({ offers, loading }) {
                 return (
                   <tr
                     key={offer.id}
-                    className="premium-row cursor-pointer hover:bg-gray-50 hover:shadow-sm transition-colors"
+                    className="premium-row cursor-pointer hover:bg-gray-50 hover:shadow-sm transition-colors select-none"
                     onClick={(e) => handleRowClick(e, offer.id)}
                   >
                     <Td>{job?.title || "—"}</Td>
