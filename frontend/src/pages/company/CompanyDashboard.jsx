@@ -4,7 +4,7 @@
 // ===========================================
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
@@ -219,6 +219,17 @@ function Stat({ label, value, icon }) {
    LATEST OFFERS TABLE
 --------------------------------------------------- */
 function LatestOffers({ offers, loading }) {
+  const navigate = useNavigate();
+  function handleRowClick(e, offerId) {
+
+    // allow open in new tab
+    if (e.metaKey || e.ctrlKey || e.button === 1) {
+      window.open(`/offers/${offerId}`, "_blank");
+      return;
+    }
+
+    navigate(`/offers/${offerId}`);
+  }
   const latest = offers
     .slice()
     .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
@@ -260,7 +271,11 @@ function LatestOffers({ offers, loading }) {
                 const job = offer?.job_request || {};
 
                 return (
-                  <tr key={offer.id} className="premium-row">
+                  <tr
+                    key={offer.id}
+                    className="premium-row cursor-pointer hover:bg-gray-50 hover:shadow-sm transition-colors"
+                    onClick={(e) => handleRowClick(e, offer.id)}
+                  >
                     <Td>{job?.title || "—"}</Td>
                     <Td>{job?.city_detail?.name || "—"}</Td>
                     <Td>
@@ -269,6 +284,7 @@ function LatestOffers({ offers, loading }) {
                     <Td className="text-right">
                       <Link
                         to={`/offers/${offer.id}`}
+                        onClick={(e) => e.stopPropagation()}
                         className="text-xs font-medium text-gray-700 hover:text-gray-900"
                       >
                         Shiko →
