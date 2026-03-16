@@ -34,20 +34,69 @@ const clearStorage = () => {
 // ============================================================
 
 export const AuthProvider = ({ children }) => {
-
   const [user, setUser] = useState(null);
   const [access, setAccess] = useState(null);
   const [refresh, setRefresh] = useState(null);
   const [loading, setLoading] = useState(true);
 
   // ============================================================
+  // 🚪 LOGOUT
+  // ============================================================
+
+  const logout = () => {
+    clearStorage();
+    setUser(null);
+    setAccess(null);
+    setRefresh(null);
+    setLoading(false);
+
+    window.location.href = "/";
+  };
+
+  // ============================================================
+  // 👤 Fetch logged in user
+  // ============================================================
+
+  const fetchCurrentUser = async (forcedToken = null) => {
+    try {
+      const res = await api.get(
+        "accounts/me/",
+        forcedToken
+          ? {
+              headers: {
+                Authorization: `Bearer ${forcedToken}`,
+              },
+            }
+          : undefined
+      );
+
+      const usr = res.data?.data || res.data;
+
+      setUser(usr);
+
+      const storage = getStorage();
+      storage.setItem("user", JSON.stringify(usr));
+
+      return usr;
+    } catch (err) {
+      const status = err.response?.status;
+
+      console.warn("fetchCurrentUser failed:", status);
+
+      if (status === 401) {
+        logout();
+      }
+
+      throw err;
+    }
+  };
+
+  // ============================================================
   // 🔧 Init auth (runs once on app start)
   // ============================================================
 
   useEffect(() => {
-
     const initAuth = async () => {
-
       const token = getAccessToken();
       const refreshToken = getRefreshToken();
 
@@ -71,61 +120,16 @@ export const AuthProvider = ({ children }) => {
     };
 
     initAuth();
-
   }, []);
-
-  // ============================================================
-  // 👤 Fetch logged in user
-  // ============================================================
-
-  const fetchCurrentUser = async (forcedToken = null) => {
-
-    try {
-
-      const res = await api.get(
-        "accounts/me/",
-        forcedToken
-          ? {
-              headers: {
-                Authorization: `Bearer ${forcedToken}`,
-              },
-            }
-          : undefined
-      );
-
-      const usr = res.data?.data || res.data;
-
-      setUser(usr);
-
-      const storage = getStorage();
-      storage.setItem("user", JSON.stringify(usr));
-
-      return usr;
-
-    } catch (err) {
-
-      const status = err.response?.status;
-
-      console.warn("fetchCurrentUser failed:", status);
-
-      if (status === 401) {
-        logout();
-      }
-
-      throw err;
-    }
-  };
 
   // ============================================================
   // 🔑 LOGIN
   // ============================================================
 
   const login = async (email, password, rememberMe = true) => {
-
     setLoading(true);
 
     try {
-
       const res = await api.post(
         "accounts/login/",
         {
@@ -136,8 +140,7 @@ export const AuthProvider = ({ children }) => {
         { skipAuth: true }
       );
 
-      const data = res.data.data;
-
+      const data = res.data?.data || res.data;
       const storage = rememberMe ? localStorage : sessionStorage;
 
       storage.setItem("access", data.access);
@@ -145,40 +148,22 @@ export const AuthProvider = ({ children }) => {
 
       setAccess(data.access);
       setRefresh(data.refresh);
-
       setUser(data.user);
+
+      if (data.user) {
+        storage.setItem("user", JSON.stringify(data.user));
+      }
 
       try {
         await fetchCurrentUser(data.access);
       } catch {}
 
       return data.user;
-
     } catch (err) {
-
-      throw new Error(
-        err.response?.data?.message || "Gabim gjatë hyrjes"
-      );
-
+      throw new Error(err.response?.data?.message || "Gabim gjatë hyrjes");
     } finally {
-
       setLoading(false);
-
     }
-  };
-
-  // ============================================================
-  // 🚪 LOGOUT
-  // ============================================================
-
-  const logout = () => {
-    clearStorage();
-    setUser(null);
-    setAccess(null);
-    setRefresh(null);
-    setLoading(false);
-
-     window.location.href = "/";
   };
 
   // ============================================================
@@ -218,7 +203,6 @@ export const AuthProvider = ({ children }) => {
   // ============================================================
 
   const refreshMe = async () => {
-
     const token = getAccessToken();
 
     if (!token) return;
@@ -237,7 +221,6 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider
       value={{
-
         // core
         user,
         access,
