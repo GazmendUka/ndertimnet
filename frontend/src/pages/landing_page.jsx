@@ -33,6 +33,9 @@ export default function LandingPage() {
           content="Publiko projektin tënd dhe merr oferta nga kompani ndërtimi dhe renovimi të verifikuara në Kosovë dhe Shqipëri."
         />
 
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link rel="canonical" href="https://ndertimnet.com/" /> 
+
         <meta property="og:type" content="website" />
 
         <meta
@@ -229,7 +232,7 @@ export default function LandingPage() {
         </section>
 
         {/* ================= FEATURED COMPANIES ================= */}
-
+        {/*
         <section className="py-24 bg-white">
 
           <div className="max-w-7xl mx-auto px-6">
@@ -280,7 +283,7 @@ export default function LandingPage() {
           </div>
 
         </section>
-
+        */}
         {/* ================= WHY NDERTIMNET ================= */}
 
         <section className="py-24 bg-gray-50">
