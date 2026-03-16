@@ -177,6 +177,8 @@ export const AuthProvider = ({ children }) => {
     setAccess(null);
     setRefresh(null);
     setLoading(false);
+
+     window.location.href = "/";
   };
 
   // ============================================================
