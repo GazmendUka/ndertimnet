@@ -1,6 +1,6 @@
 // ===========================================
 // src/pages/LandingPage.jsx
-// Ndertimnet – Landing Page v3.1 (SEO + Premium UX)
+// Ndertimnet – Landing Page v3.2 (MAX SEO)
 // ===========================================
 
 import { Link } from "react-router-dom";
@@ -23,25 +23,36 @@ export default function LandingPage() {
       <Helmet>
         <html lang="sq" />
 
+        {/* PRIMARY SEO */}
         <title>
-          Ndertimnet – Ndërtim dhe renovim në Kosovë dhe Shqipëri
+          Kompani ndërtimi dhe renovimi në Kosovë dhe Shqipëri | Ndertimnet
         </title>
 
         <meta
           name="description"
-          content="Gjej kompani ndërtimi dhe renovimi në Kosovë dhe Shqipëri. Publiko projektin dhe merr oferta nga profesionistë të verifikuar."
+          content="Gjej kompani ndërtimi dhe renovimi në Kosovë dhe Shqipëri. Publiko projektin dhe merr oferta nga ndërtues të verifikuar në Prishtinë, Tiranë dhe më shumë."
+        />
+
+        <meta name="robots" content="index, follow" />
+
+        <meta
+          name="keywords"
+          content="kompani ndërtimi, renovim banese, ndërtim Kosovë, ndërtim Shqipëri, elektricist, hidraulik, renovim apartamenti"
         />
 
         <meta name="viewport" content="width=device-width, initial-scale=1" />
 
         <link rel="canonical" href="https://ndertimnet.com/" />
 
-        {/* Open Graph */}
+        {/* OPEN GRAPH */}
         <meta property="og:type" content="website" />
-        <meta property="og:title" content="Ndertimnet – Ndërtim dhe renovim" />
+        <meta
+          property="og:title"
+          content="Gjej kompani ndërtimi dhe renovimi | Ndertimnet"
+        />
         <meta
           property="og:description"
-          content="Platforma që lidh klientët me kompani ndërtimi dhe renovimi."
+          content="Publiko projektin dhe merr oferta nga kompani ndërtimi të verifikuara."
         />
         <meta
           property="og:image"
@@ -49,16 +60,46 @@ export default function LandingPage() {
         />
         <meta property="og:url" content="https://ndertimnet.com/" />
 
-        {/* Basic structured data */}
+        {/* TWITTER */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="Ndertimnet – Ndërtim dhe renovim" />
+        <meta
+          name="twitter:description"
+          content="Platforma që lidh klientët me kompani ndërtimi dhe renovimi."
+        />
+
+        {/* STRUCTURED DATA */}
         <script type="application/ld+json">
-          {`
-            {
-              "@context": "https://schema.org",
-              "@type": "Organization",
-              "name": "Ndertimnet",
-              "url": "https://ndertimnet.com"
-            }
-          `}
+          {JSON.stringify({
+            "@context": "https://schema.org",
+            "@graph": [
+              {
+                "@type": "Organization",
+                name: "Ndertimnet",
+                url: "https://ndertimnet.com",
+                logo: "https://ndertimnet.com/logo.png",
+              },
+              {
+                "@type": "WebSite",
+                url: "https://ndertimnet.com",
+                potentialAction: {
+                  "@type": "SearchAction",
+                  target:
+                    "https://ndertimnet.com/search?q={search_term_string}",
+                  "query-input": "required name=search_term_string",
+                },
+              },
+              {
+                "@type": "Service",
+                name: "Ndërtim dhe renovim",
+                areaServed: ["Kosovë", "Shqipëri"],
+                provider: {
+                  "@type": "Organization",
+                  name: "Ndertimnet",
+                },
+              },
+            ],
+          })}
         </script>
       </Helmet>
 
@@ -68,10 +109,10 @@ export default function LandingPage() {
         <header className="w-full bg-white border-b">
           <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between">
             <div className="text-2xl font-semibold">Ndertimnet</div>
-            <div className="flex gap-6 text-sm">
+            <nav className="flex gap-6 text-sm">
               <Link to="/login">Kyçu</Link>
               <Link to="/about">Rreth nesh</Link>
-            </div>
+            </nav>
           </div>
         </header>
 
@@ -80,16 +121,23 @@ export default function LandingPage() {
           <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
 
             <div>
+              {/* 🔥 SEO H1 */}
               <h1 className="text-5xl md:text-6xl font-bold leading-tight mb-6">
-                Ndërtim dhe renovim me{" "}
-                <span className="text-orange-500">
-                  kompani të verifikuara
-                </span>
+                Gjej <span className="text-orange-500">kompani ndërtimi</span> dhe renovimi
+                në Kosovë dhe Shqipëri
               </h1>
 
               <p className="text-lg text-gray-600 mb-10 max-w-lg">
                 Publiko projektin tënd dhe merr oferta nga kompani ndërtimi në Kosovë dhe Shqipëri.
               </p>
+
+              {/* 🔗 INTERNAL LINKS */}
+              <div className="flex gap-4 text-sm text-gray-500 mb-6 flex-wrap">
+                <a href="/kategori/ndertim">Ndërtim</a>
+                <a href="/kategori/renovim">Renovim</a>
+                <a href="/kategori/elektricist">Elektricist</a>
+                <a href="/kategori/hidraulik">Hidraulik</a>
+              </div>
 
               <div className="flex gap-4 mb-6">
                 <Link
@@ -121,17 +169,17 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ================= TRUST STRIP ================= */}
+        {/* ================= TRUST ================= */}
         <section className="border-t border-b py-6 bg-gray-50 text-sm text-center">
           <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-6">
             <div>✔ Kompani të verifikuara</div>
             <div>✔ Projekte reale</div>
-            <div>✔ Kosovë & Shqipëri</div>
+            <div>✔ Kosovë dhe Shqipëri</div>
             <div>✔ Platformë e sigurt</div>
           </div>
         </section>
 
-        {/* ================= HOW IT WORKS ================= */}
+        {/* ================= HOW ================= */}
         <section id="how-it-works" className="py-32">
           <div className="max-w-6xl mx-auto text-center px-6">
 
@@ -142,30 +190,21 @@ export default function LandingPage() {
             <div className="grid md:grid-cols-3 gap-16">
 
               <div>
-                <div className="text-3xl mb-4">1</div>
-                <h3 className="font-semibold mb-2">
-                  Publiko projektin
-                </h3>
+                <h3 className="font-semibold mb-2">Publiko projektin</h3>
                 <p className="text-gray-600">
                   Përshkruaj projektin tënd të ndërtimit ose renovimit.
                 </p>
               </div>
 
               <div>
-                <div className="text-3xl mb-4">2</div>
-                <h3 className="font-semibold mb-2">
-                  Merr oferta
-                </h3>
+                <h3 className="font-semibold mb-2">Merr oferta</h3>
                 <p className="text-gray-600">
                   Kompanitë ndërtimore kontaktojnë me ofertat e tyre.
                 </p>
               </div>
 
               <div>
-                <div className="text-3xl mb-4">3</div>
-                <h3 className="font-semibold mb-2">
-                  Zgjidh kompaninë
-                </h3>
+                <h3 className="font-semibold mb-2">Zgjidh kompaninë</h3>
                 <p className="text-gray-600">
                   Krahaso dhe zgjedh ofertën më të mirë.
                 </p>
@@ -175,7 +214,7 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {/* ================= CATEGORIES ================= */}
+        {/* ================= SERVICES ================= */}
         <section className="py-32 bg-gray-50">
           <div className="max-w-7xl mx-auto px-6 text-center">
 
@@ -242,15 +281,19 @@ export default function LandingPage() {
           <div className="max-w-4xl mx-auto px-6 text-gray-600 leading-relaxed">
 
             <h2 className="text-2xl font-bold mb-6 text-gray-900">
-              Ndërtim dhe renovim në Kosovë dhe Shqipëri
+              Kompani ndërtimi dhe renovimi në Kosovë dhe Shqipëri
             </h2>
 
             <p className="mb-4">
-              Ndertimnet është platformë moderne që lidh klientët me kompani ndërtimi dhe renovimi në Kosovë dhe Shqipëri. Nëse kërkoni kompani ndërtimi, renovim banese, instalime elektrike apo hidraulike, Ndertimnet ju ndihmon të gjeni profesionistët më të mirë.
+              Ndertimnet është platformë që ju ndihmon të gjeni kompani ndërtimi dhe profesionistë për renovim banese në Kosovë dhe Shqipëri.
+            </p>
+
+            <p className="mb-4">
+              Publikoni projektin dhe merrni oferta nga ndërtues të verifikuar në Prishtinë, Tiranë dhe qytete të tjera.
             </p>
 
             <p>
-              Publikoni projektin tuaj dhe merrni oferta nga kompani ndërtimi në Prishtinë, Tiranë dhe qytete tjera. Krahaso ofertat dhe zgjedh zgjidhjen më të mirë për projektin tuaj.
+              Krahaso ofertat dhe zgjedh zgjidhjen më të mirë për projektin tuaj.
             </p>
 
           </div>
