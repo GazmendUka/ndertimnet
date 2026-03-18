@@ -34,12 +34,11 @@ export default function LandingPage() {
         />
 
         <meta name="robots" content="index, follow" />
-
-        <meta
-          name="keywords"
-          content="kompani ndërtimi, renovim banese, ndërtim Kosovë, ndërtim Shqipëri, elektricist, hidraulik, renovim apartamenti"
-        />
-
+        <meta property="og:locale" content="sq_AL" />
+        <meta property="og:site_name" content="Ndertimnet" />
+        <meta name="twitter:site" content="@ndertimnet" />
+        <meta property="og:image:alt" content="Ndertimnet platform për ndërtim dhe renovim" />
+        <meta name="twitter:image" content="https://ndertimnet.com/og-image.jpg" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
 
         <link rel="canonical" href="https://ndertimnet.com/" />
@@ -133,10 +132,10 @@ export default function LandingPage() {
 
               {/* 🔗 INTERNAL LINKS */}
               <div className="flex gap-4 text-sm text-gray-500 mb-6 flex-wrap">
-                <a href="/kategori/ndertim">Ndërtim</a>
-                <a href="/kategori/renovim">Renovim</a>
-                <a href="/kategori/elektricist">Elektricist</a>
-                <a href="/kategori/hidraulik">Hidraulik</a>
+                <Link to="/kategori/ndertim">Ndërtim</Link>
+                <Link to="/kategori/renovim">Renovim</Link>
+                <Link to="/kategori/elektricist">Elektricist</Link>
+                <Link to="/kategori/hidraulik">Hidraulik</Link>
               </div>
 
               <div className="flex gap-4 mb-6">
@@ -214,8 +213,54 @@ export default function LandingPage() {
           </div>
         </section>
 
+
+        {/* ================== CITIES ================== */}  
+        <section className="py-24 bg-gray-50">
+          <div className="max-w-6xl mx-auto px-6 text-center">
+
+            <h2 className="text-3xl font-bold mb-12">
+              Kompani ndërtimi në qytetet kryesore
+            </h2>
+
+            <div className="grid md:grid-cols-3 gap-6">
+
+              <Link to="/ndertim/prishtine" aria-label="Kompani ndërtimi në Prishtinë" className="bg-white p-6 rounded-xl border hover:shadow-md transition">
+                <div className="font-semibold text-lg">Prishtinë</div>
+                <div className="text-sm text-gray-500 mt-1">Kompani ndërtimi</div>
+              </Link>
+
+              <Link to="/ndertim/tirane" aria-label="Kompani ndërtimi në Tiranë" className="bg-white p-6 rounded-xl border hover:shadow-md transition">
+                <div className="font-semibold text-lg">Tiranë</div>
+                <div className="text-sm text-gray-500 mt-1">Kompani ndërtimi</div>
+              </Link>
+
+              <Link to="/ndertim/prizren" aria-label="Kompani ndërtimi në Prizren" className="bg-white p-6 rounded-xl border hover:shadow-md transition">
+                <div className="font-semibold text-lg">Prizren</div>
+                <div className="text-sm text-gray-500 mt-1">Kompani ndërtimi</div>
+              </Link>
+
+              <Link to="/ndertim/durres" aria-label="Kompani ndërtimi në Durrës" className="bg-white p-6 rounded-xl border hover:shadow-md transition">
+                <div className="font-semibold text-lg">Durrës</div>
+                <div className="text-sm text-gray-500 mt-1">Kompani ndërtimi</div>
+              </Link>
+
+              <Link to="/ndertim/mitrovice" aria-label="Kompani ndërtimi në Mitrovicë" className="bg-white p-6 rounded-xl border hover:shadow-md transition">
+                <div className="font-semibold text-lg">Mitrovicë</div>
+                <div className="text-sm text-gray-500 mt-1">Kompani ndërtimi</div>
+              </Link>
+
+              <Link to="/ndertim/vlore" aria-label="Kompani ndërtimi në Vlorë" className="bg-white p-6 rounded-xl border hover:shadow-md transition">
+                <div className="font-semibold text-lg">Vlorë</div>
+                <div className="text-sm text-gray-500 mt-1">Kompani ndërtimi</div>
+              </Link>
+
+            </div>
+
+          </div>
+        </section>
+
         {/* ================= SERVICES ================= */}
-        <section className="py-32 bg-gray-50">
+        <section className="py-32 bg-white">
           <div className="max-w-7xl mx-auto px-6 text-center">
 
             <h2 className="text-3xl font-bold mb-16">
@@ -236,7 +281,7 @@ export default function LandingPage() {
         </section>
 
         {/* ================= WHY ================= */}
-        <section className="py-32">
+        <section className="py-32 bg-gray-50">
           <div className="max-w-7xl mx-auto px-6 text-center">
 
             <h2 className="text-3xl font-bold mb-16">
