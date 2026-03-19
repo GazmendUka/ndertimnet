@@ -161,8 +161,31 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="bg-gray-100 rounded-2xl p-10 h-[420px] flex items-center justify-center text-gray-400">
-              Marketing / Featured Companies
+            <div className="grid grid-cols-2 gap-4">
+              <img
+                src="https://images.unsplash.com/photo-1503387762-592deb58ef4e"
+                className="rounded-xl h-48 w-full object-cover"
+                alt="Construction project"
+              />
+
+              <img
+                src="https://images.unsplash.com/photo-1504307651254-35680f356dfd"
+                className="rounded-xl h-48 w-full object-cover"
+                alt="Renovation"
+              />
+
+              <img
+                src="https://images.unsplash.com/photo-1581093458791-9d15482442f2"
+                className="rounded-xl h-48 w-full object-cover"
+                alt="Interior renovation"
+              />
+
+              <img
+                src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c"
+                className="rounded-xl h-48 w-full object-cover"
+                alt="Modern house"
+              />
+
             </div>
 
           </div>
