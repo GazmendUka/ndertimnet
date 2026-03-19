@@ -1,6 +1,8 @@
 // src/routes/PublicRoutes.jsx
 
 import { Route } from "react-router-dom";
+import AboutPage from "../pages/about";
+
 
 import Login from "../auth/Login";
 import RegisterChoice from "../auth/RegisterChoice";
@@ -33,7 +35,7 @@ export default function PublicRoutes() {
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
-
+      <Route path="/about" element={<AboutPage />} />
       <Route path="/ndertim/prishtine" element={<NdertimPrishtine />} />
       <Route path="/ndertim/tirane" element={<NdertimTirane />} /> 
       <Route path="/ndertim/prizren" element={<NdertimPrizren />} /> 
