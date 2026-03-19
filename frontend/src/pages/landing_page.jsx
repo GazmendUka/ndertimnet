@@ -116,7 +116,7 @@ export default function LandingPage() {
         </header>
 
         {/* ================= HERO ================= */}
-        <section className="bg-white py-32">
+        <section className="bg-white py-24 md:py-32">
           <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
 
             <div>
@@ -164,25 +164,25 @@ export default function LandingPage() {
             <div className="grid grid-cols-2 gap-4">
               <img
                 src="https://images.unsplash.com/photo-1503387762-592deb58ef4e"
-                className="rounded-xl h-48 w-full object-cover"
+                className="rounded-xl h-48 w-full object-cover shadow-sm hover:shadow-lg hover:scale-105 transition duration-300"
                 alt="Construction project"
               />
 
               <img
                 src="https://images.unsplash.com/photo-1504307651254-35680f356dfd"
-                className="rounded-xl h-48 w-full object-cover"
+                className="rounded-xl h-48 w-full object-cover shadow-sm hover:shadow-lg hover:scale-105 transition duration-300"
                 alt="Renovation"
               />
 
               <img
                 src="https://images.unsplash.com/photo-1581093458791-9d15482442f2"
-                className="rounded-xl h-48 w-full object-cover"
+                className="rounded-xl h-48 w-full object-cover shadow-sm hover:shadow-lg hover:scale-105 transition duration-300"
                 alt="Interior renovation"
               />
 
               <img
                 src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c"
-                className="rounded-xl h-48 w-full object-cover"
+                className="rounded-xl h-48 w-full object-cover shadow-sm hover:shadow-lg hover:scale-105 transition duration-300"
                 alt="Modern house"
               />
 
