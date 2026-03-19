@@ -162,26 +162,31 @@ export default function LandingPage() {
             </div>
 
             <div className="grid grid-cols-2 gap-4">
+
+              {/* HERO BIG IMAGE */}
               <img
-                src="https://images.unsplash.com/photo-1503387762-592deb58ef4e"
-                className="rounded-xl h-48 w-full object-cover shadow-sm hover:shadow-lg hover:scale-105 transition duration-300"
-                alt="Construction project"
+                src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=1200&q=80"
+                className="rounded-xl h-48 w-full object-cover col-span-2 shadow-sm hover:shadow-lg hover:scale-105 transition duration-300"
+                alt="Construction site"
               />
 
+              {/* IMAGE 2 */}
               <img
-                src="https://images.unsplash.com/photo-1504307651254-35680f356dfd"
+                src="https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=800&q=80"
                 className="rounded-xl h-48 w-full object-cover shadow-sm hover:shadow-lg hover:scale-105 transition duration-300"
-                alt="Renovation"
+                alt="Construction workers"
               />
 
+              {/* IMAGE 3 */}
               <img
-                src="https://images.unsplash.com/photo-1581093458791-9d15482442f2"
+                src="https://images.unsplash.com/photo-1581578731548-c64695cc6952?auto=format&fit=crop&w=800&q=80"
                 className="rounded-xl h-48 w-full object-cover shadow-sm hover:shadow-lg hover:scale-105 transition duration-300"
                 alt="Interior renovation"
               />
 
+              {/* IMAGE 4 */}
               <img
-                src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c"
+                src="https://images.unsplash.com/photo-1600585154340-be6161a56a0c?auto=format&fit=crop&w=800&q=80"
                 className="rounded-xl h-48 w-full object-cover shadow-sm hover:shadow-lg hover:scale-105 transition duration-300"
                 alt="Modern house"
               />
