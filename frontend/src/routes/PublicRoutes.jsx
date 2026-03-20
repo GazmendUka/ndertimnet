@@ -42,7 +42,7 @@ export default function PublicRoutes() {
       <Route path="/ndertim/mitrovice" element={<NdertimMitrovice />} /> 
       <Route path="/ndertim/durres" element={<NdertimDurres />} />  
       <Route path="/ndertim/vlore" element={<NdertimVlore />} /> 
-
+      <Route path="/contact" element={<ContactPage />} />
     </>
   );
 }

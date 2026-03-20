@@ -734,7 +734,14 @@ export default function AboutPage() {
                   <p className="mt-4 max-w-2xl text-lg leading-8 text-slate-300">
                     Nëse je klient, publiko projektin tënd dhe merr oferta. Nëse
                     je kompani, krijo prezencën tënde dhe lidhu me mundësi të
-                    reja biznesi.
+                    reja biznesi. Nëse ke ende pyetje ose mendime shiqo faqën 
+                    <Link
+                      to="/contact"
+                      className="inline-flex items-center gap-2 text-blue-600 font-medium hover:underline"
+                    >
+                      kontakt
+                    </Link>
+                    .
                   </p>
                 </div>
 
