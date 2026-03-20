@@ -3,7 +3,7 @@
 import { Route } from "react-router-dom";
 import AboutPage from "../pages/about";
 import ContactPage from "../pages/ContactPage";
-
+import PublicLayout from "../components/layouts/PublicLayout"; // <- Är det rätt nu?
 
 import Login from "../auth/Login";
 import RegisterChoice from "../auth/RegisterChoice";
@@ -27,8 +27,17 @@ import NdertimVlore from "../pages/seo/NdertimVlore";
 export default function PublicRoutes() {
   return (
     <>
+      {/* PUBLIC LAYOUT */}
+      <Route element={<PublicLayout />}>
+
+        <Route path="/about" element={<AboutPage />} />
+        <Route path="/contact" element={<ContactPage />} />
+
+      </Route>
+
+      {/* RESTEN */}
       <Route path="/" element={<AuthRedirect />} />
-      <Route path="/login" element={<PublicOnlyRoute> <Login /> </PublicOnlyRoute>} />
+      <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
       <Route path="/register" element={<RegisterChoice />} />
       <Route path="/register/company" element={<RegisterCompany />} />
       <Route path="/register/customer" element={<RegisterCustomer />} />
@@ -36,14 +45,15 @@ export default function PublicRoutes() {
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
-      <Route path="/about" element={<AboutPage />} />
+
+      {/* SEO */}
       <Route path="/ndertim/prishtine" element={<NdertimPrishtine />} />
       <Route path="/ndertim/tirane" element={<NdertimTirane />} /> 
       <Route path="/ndertim/prizren" element={<NdertimPrizren />} /> 
       <Route path="/ndertim/mitrovice" element={<NdertimMitrovice />} /> 
       <Route path="/ndertim/durres" element={<NdertimDurres />} />  
       <Route path="/ndertim/vlore" element={<NdertimVlore />} /> 
-      <Route path="/contact" element={<ContactPage />} />
+
     </>
   );
 }

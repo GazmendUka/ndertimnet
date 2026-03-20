@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   CheckCircle2,
 } from "lucide-react";
+import PublicLayout from "../layouts/PublicLayout";
 
 export default function ContactPage() {
   const [form, setForm] = useState({
