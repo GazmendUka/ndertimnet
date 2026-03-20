@@ -104,17 +104,6 @@ export default function LandingPage() {
 
       <div className="w-full text-gray-900">
 
-        {/* ================= HEADER ================= */}
-        <header className="w-full bg-white border-b">
-          <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between">
-            <div className="text-2xl font-semibold">Ndertimnet</div>
-            <nav className="flex gap-6 text-sm">
-              <Link to="/login">Kyçu</Link>
-              <Link to="/about">Rreth nesh</Link>
-            </nav>
-          </div>
-        </header>
-
         {/* ================= HERO ================= */}
         <section className="bg-white py-24 md:py-32">
           <div className="max-w-7xl mx-auto px-6 grid md:grid-cols-2 gap-16 items-center">
@@ -365,11 +354,6 @@ export default function LandingPage() {
           </div>
 
         </section>
-
-        {/* ================= FOOTER ================= */}
-        <footer className="py-10 text-center text-sm text-gray-500">
-          © 2026 Ndertimnet
-        </footer>
 
       </div>
     </>
