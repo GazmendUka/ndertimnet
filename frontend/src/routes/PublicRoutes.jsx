@@ -30,6 +30,7 @@ export default function PublicRoutes() {
       {/* PUBLIC LAYOUT */}
       <Route element={<PublicLayout />}>
 
+        <Route path="/" element={<AuthRedirect />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
 
