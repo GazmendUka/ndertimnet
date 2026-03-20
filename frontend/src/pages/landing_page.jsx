@@ -120,7 +120,7 @@ export default function LandingPage() {
               </p>
 
               {/* 🔗 INTERNAL LINKS */}
-              <div className="flex gap-4 text-sm text-gray-500 mb-6 flex-wrap">
+              <div className="flex gap-6 text-sm text-gray-500 mb-6 flex-wrap">
                 <Link to="/kategori/ndertim">Ndërtim</Link>
                 <Link to="/kategori/renovim">Renovim</Link>
                 <Link to="/kategori/elektricist">Elektricist</Link>
