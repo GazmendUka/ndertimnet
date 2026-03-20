@@ -3,7 +3,7 @@
 import { Route } from "react-router-dom";
 import AboutPage from "../pages/about";
 import ContactPage from "../pages/ContactPage";
-import PublicLayout from "../components/layouts/PublicLayout"; // <- Är det rätt nu?
+import PublicLayout from "../components/layout/PublicLayout"; 
 
 import Login from "../auth/Login";
 import RegisterChoice from "../auth/RegisterChoice";
