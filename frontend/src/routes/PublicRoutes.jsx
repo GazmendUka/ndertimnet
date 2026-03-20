@@ -2,6 +2,7 @@
 
 import { Route } from "react-router-dom";
 import AboutPage from "../pages/about";
+import ContactPage from "../pages/ContactPage";
 
 
 import Login from "../auth/Login";
