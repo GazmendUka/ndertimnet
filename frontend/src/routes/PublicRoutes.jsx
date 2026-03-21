@@ -3,7 +3,7 @@
 import { Route } from "react-router-dom";
 import AboutPage from "../pages/about";
 import ContactPage from "../pages/ContactPage";
-import PublicLayout from "../components/layout/PublicLayout"; 
+import PublicLayout from "../components/layout/PublicLayout";
 
 import Login from "../auth/Login";
 import RegisterChoice from "../auth/RegisterChoice";
@@ -15,7 +15,6 @@ import AuthRedirect from "../auth/AuthRedirect";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import ResetPassword from "../pages/auth/ResetPassword";
 import PublicOnlyRoute from "../auth/PublicOnlyRoute";
-
 
 import NdertimPrishtine from "../pages/seo/NdertimPrishtine";
 import NdertimTirane from "../pages/seo/NdertimTirane";
@@ -29,16 +28,27 @@ export default function PublicRoutes() {
     <>
       {/* PUBLIC LAYOUT */}
       <Route element={<PublicLayout />}>
-
         <Route path="/" element={<AuthRedirect />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
 
+        <Route path="/ndertim/prishtine" element={<NdertimPrishtine />} />
+        <Route path="/ndertim/tirane" element={<NdertimTirane />} />
+        <Route path="/ndertim/prizren" element={<NdertimPrizren />} />
+        <Route path="/ndertim/mitrovice" element={<NdertimMitrovice />} />
+        <Route path="/ndertim/durres" element={<NdertimDurres />} />
+        <Route path="/ndertim/vlore" element={<NdertimVlore />} />
       </Route>
 
       {/* RESTEN */}
-      <Route path="/" element={<AuthRedirect />} />
-      <Route path="/login" element={<PublicOnlyRoute><Login /></PublicOnlyRoute>} />
+      <Route
+        path="/login"
+        element={
+          <PublicOnlyRoute>
+            <Login />
+          </PublicOnlyRoute>
+        }
+      />
       <Route path="/register" element={<RegisterChoice />} />
       <Route path="/register/company" element={<RegisterCompany />} />
       <Route path="/register/customer" element={<RegisterCustomer />} />
@@ -46,15 +56,6 @@ export default function PublicRoutes() {
       <Route path="/verify-email" element={<VerifyEmail />} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:uid/:token" element={<ResetPassword />} />
-
-      {/* SEO */}
-      <Route path="/ndertim/prishtine" element={<NdertimPrishtine />} />
-      <Route path="/ndertim/tirane" element={<NdertimTirane />} /> 
-      <Route path="/ndertim/prizren" element={<NdertimPrizren />} /> 
-      <Route path="/ndertim/mitrovice" element={<NdertimMitrovice />} /> 
-      <Route path="/ndertim/durres" element={<NdertimDurres />} />  
-      <Route path="/ndertim/vlore" element={<NdertimVlore />} /> 
-
     </>
   );
 }

@@ -1,7 +1,4 @@
-// ===========================================
 // src/layouts/PublicLayout.jsx
-// Global layout för alla public pages
-// ===========================================
 
 import { Link, Outlet } from "react-router-dom";
 
@@ -44,8 +41,82 @@ export default function PublicLayout() {
       </main>
 
       {/* ================= FOOTER ================= */}
-      <footer className="border-t py-10 text-center text-sm text-gray-500">
-        © 2026 Ndertimnet
+      <footer className="border-t mt-20 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-6 py-12 grid md:grid-cols-3 gap-10 text-sm">
+
+          {/* BRAND */}
+          <div>
+            <h3 className="font-semibold text-gray-900 mb-3">
+              Ndertimnet
+            </h3>
+            <p className="text-gray-600">
+              Platformë për të gjetur kompani ndërtimi dhe profesionistë për
+              çdo projekt ndërtimi dhe renovimi në Kosovë dhe Shqipëri.
+            </p>
+          </div>
+
+          {/* CITIES */}
+          <div>
+            <h3 className="font-semibold text-gray-900 mb-3">
+              Qytetet
+            </h3>
+            <div className="flex flex-col gap-2 text-gray-600">
+
+              <Link to="/ndertim/prishtine" className="hover:underline">
+                Prishtinë
+              </Link>
+
+              <Link to="/ndertim/tirane" className="hover:underline">
+                Tiranë
+              </Link>
+
+              <Link to="/ndertim/durres" className="hover:underline">
+                Durrës
+              </Link>
+
+              <Link to="/ndertim/vlore" className="hover:underline">
+                Vlorë
+              </Link>
+
+              <Link to="/ndertim/prizren" className="hover:underline">
+                Prizren
+              </Link>
+
+              <Link to="/ndertim/mitrovice" className="hover:underline">
+                Mitrovicë
+              </Link>
+
+            </div>
+          </div>
+
+          {/* SERVICES */}
+          <div>
+            <h3 className="font-semibold text-gray-900 mb-3">
+              Shërbimet
+            </h3>
+            <div className="flex flex-col gap-2 text-gray-600">
+
+              <Link to="/renovim-banese" className="hover:underline">
+                Renovim banese
+              </Link>
+
+              <Link to="/kategori/elektricist" className="hover:underline">
+                Elektricist
+              </Link>
+
+              <Link to="/kategori/hidraulik" className="hover:underline">
+                Hidraulik
+              </Link>
+
+            </div>
+          </div>
+
+        </div>
+
+        {/* BOTTOM */}
+        <div className="border-t text-center py-6 text-xs text-gray-500">
+          © 2026 Ndertimnet. Të gjitha të drejtat e rezervuara.
+        </div>
       </footer>
 
     </div>
