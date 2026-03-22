@@ -23,6 +23,9 @@ import NdertimMitrovice from "../pages/seo/NdertimMitrovice";
 import NdertimDurres from "../pages/seo/NdertimDurres";
 import NdertimVlore from "../pages/seo/NdertimVlore";
 
+import RenovimKuzhinePage from "../pages/seo/services/RenovimKuzhinePage";
+import ElektricistPage from "../pages/seo/services/ElektricistPage";
+
 export default function PublicRoutes() {
   return (
     <>
@@ -38,6 +41,9 @@ export default function PublicRoutes() {
         <Route path="/ndertim/mitrovice" element={<NdertimMitrovice />} />
         <Route path="/ndertim/durres" element={<NdertimDurres />} />
         <Route path="/ndertim/vlore" element={<NdertimVlore />} />
+
+        <Route path="/renovim-kuzhine" element={<RenovimKuzhinePage />} />
+        <Route path="/elektricist" element={<ElektricistPage />} />
       </Route>
 
       {/* RESTEN */}
