@@ -25,6 +25,7 @@ import NdertimVlore from "../pages/seo/NdertimVlore";
 
 import RenovimKuzhinePage from "../pages/seo/services/RenovimKuzhinePage";
 import ElektricistPage from "../pages/seo/services/ElektricistPage";
+import RenovimBanjoPage from "../pages/seo/services/RenovimBanjoPage";
 
 export default function PublicRoutes() {
   return (
@@ -44,6 +45,7 @@ export default function PublicRoutes() {
 
         <Route path="/renovim-kuzhine" element={<RenovimKuzhinePage />} />
         <Route path="/elektricist" element={<ElektricistPage />} />
+        <Route path="/renovim-banjo" element={<RenovimBanjoPage />} />
       </Route>
 
       {/* RESTEN */}
