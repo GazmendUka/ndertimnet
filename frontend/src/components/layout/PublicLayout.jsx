@@ -1,4 +1,4 @@
-// src/layouts/PublicLayout.jsx
+// src/components/layouts/PublicLayout.jsx
 
 import { Link, Outlet } from "react-router-dom";
 
