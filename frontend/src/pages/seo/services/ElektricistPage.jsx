@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import { Zap } from "lucide-react";
 
-import PublicLayout from "../../layouts/PublicLayout";
+import PublicLayout from "../../layout/PublicLayout";
 
 export default function ElektricistPage() {
   return (

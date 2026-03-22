@@ -15,7 +15,7 @@ import {
   HelpCircle,
 } from "lucide-react";
 
-import PublicLayout from "../../layouts/PublicLayout";
+import PublicLayout from "../../layout/PublicLayout";
 
 export default function RenovimBanjoPage() {
   return (
