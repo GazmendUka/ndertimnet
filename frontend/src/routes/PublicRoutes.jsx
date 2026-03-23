@@ -25,12 +25,13 @@ import NdertimVlore from "../pages/seo/NdertimVlore";
 
 import RenovimKuzhinePage from "../pages/seo/services/RenovimKuzhinePage";  // <-- FIXA
 import ElektricistPage from "../pages/seo/services/ElektricistPage";        // <-- FIXA
-import RenovimBanjoPage from "../pages/seo/services/RenovimBanjoPage";      // <-- FIXA
+import RenovimBanjoPage from "../pages/seo/services/RenovimBanjoPage";      // <-- FIXA. 
 
 import Ndertime from "../pages/seo/services/Ndertime";
 import Renovime from "../pages/seo/services/Renovime";
 import Fasada from "../pages/seo/services/Fasada";
 import Cati from "../pages/seo/services/Cati";
+import Pllakashtrues from "../pages/seo/services/Pllakashtrues";
 
 export default function PublicRoutes() {
   return (
@@ -56,6 +57,7 @@ export default function PublicRoutes() {
         <Route path="/renovime" element={<Renovime />} />
         <Route path="/fasada" element={<Fasada />} />
         <Route path="/cati" element={<Cati />} />
+        <Route path="/pllakashtrues" element={<Pllakashtrues />} />
       </Route>
 
       {/* RESTEN */}
