@@ -28,6 +28,7 @@ import ElektricistPage from "../pages/seo/services/ElektricistPage";        // <
 import RenovimBanjoPage from "../pages/seo/services/RenovimBanjoPage";      // <-- FIXA
 
 import Ndertime from "../pages/seo/services/Ndertime";
+import Ndertime from "../pages/seo/services/Renovime";
 
 export default function PublicRoutes() {
   return (
@@ -50,6 +51,7 @@ export default function PublicRoutes() {
         <Route path="/renovim-banjo" element={<RenovimBanjoPage />} />
 
         <Route path="/ndertime" element={<Ndertime />} />
+        <Route path="/renovime" element={<Renovime />} />
       </Route>
 
       {/* RESTEN */}
