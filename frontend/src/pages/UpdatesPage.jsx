@@ -10,18 +10,18 @@ export default function UpdatesPage() {
   // ================= DATA =================
   const inProgress = [
     {
-      title: "Chat midis klientit dhe kompanisë",
+      title: "Përmirësime sigurie për faqet publike",
       date: "Prill 2026",
-      isNew: true,
+      isNew: false,
     },
     {
-      title: "Përmirësime në sistemin e ofertave",
+      title: "përmirësime sigurie për faqet e kyçura",
       date: "Prill 2026",
-      isNew: true,
+      isNew: false,
     },
     {
-      title: "Optimizim i dashboard për kompani",
-      date: "Maj 2026",
+      title: "Optimizimi i shpejtësisë së faqes së internetit",
+      date: "Prill 2026",
       isNew: false,
     },
   ];
@@ -29,24 +29,24 @@ export default function UpdatesPage() {
   const planned = [
     {
       title: "Profile të avancuara për kompani",
-      date: "Qershor 2026",
+      date: "Maj 2026",
       isNew: false,
     },
     {
       title: "Sistem vlerësimi dhe review",
-      date: "Qershor 2026",
+      date: "Maj 2026",
       isNew: false,
     },
     {
-      title: "Njoftime në kohë reale",
-      date: "Korrik 2026",
+      title: "Përmirësimi i panelit të kompanisë",
+      date: "Maj 2026",
       isNew: false,
     },
   ];
 
   const done = [
     {
-      title: "Landing page e re me fokus SEO",
+      title: "Landing page e re me fokus në ty si përdoreus",
       date: "Mars 2026",
       isNew: true,
     },
