@@ -121,10 +121,30 @@ export default function LandingPage() {
 
               {/* 🔗 INTERNAL LINKS */}
               <div className="flex gap-6 text-sm text-gray-500 mb-4 flex-wrap">
-                <Link to="/kategori/ndertim">Ndërtim</Link>
-                <Link to="/kategori/renovim">Renovim</Link>
-                <Link to="/kategori/elektricist">Elektricist</Link>
-                <Link to="/kategori/hidraulik">Hidraulik</Link>
+                <Link to="/ndertime" className="hover:text-orange-500">
+                  Ndërtim
+                </Link>
+
+                <Link to="/renovime" className="hover:text-orange-500">
+                  Renovime
+                </Link>
+
+                <Link to="/renovim-banjo" className="hover:text-orange-500">
+                  Renovim banjo
+                </Link>
+
+                <Link to="/renovim-kuzhine" className="hover:text-orange-500">
+                  Renovim kuzhine
+                </Link>
+
+                <Link to="/elektricist" className="hover:text-orange-500">
+                  Elektricist
+                </Link>
+
+                <Link to="/lyerje" className="hover:text-orange-500">
+                  Lyerje
+                </Link>
+
               </div>
 
               <div className="flex gap-4 mb-6">
@@ -279,12 +299,25 @@ export default function LandingPage() {
 
             <div className="grid md:grid-cols-4 gap-8">
 
-              {[Hammer, Wrench, Home, Building].map((Icon, i) => (
-                <div key={i} className="bg-white p-8 rounded-xl border hover:shadow-md transition">
-                  <Icon className="mx-auto mb-4" />
-                  <p>Shërbim ndërtimi</p>
-                </div>
-              ))}
+              <Link to="/ndertime" className="bg-white p-8 rounded-xl border hover:shadow-md transition">
+                <Hammer className="mx-auto mb-4" />
+                <p>Ndërtim</p>
+              </Link>
+
+              <Link to="/renovime" className="bg-white p-8 rounded-xl border hover:shadow-md transition">
+                <Wrench className="mx-auto mb-4" />
+                <p>Renovime</p>
+              </Link>
+
+              <Link to="/renovim-banjo" className="bg-white p-8 rounded-xl border hover:shadow-md transition">
+                <Home className="mx-auto mb-4" />
+                <p>Renovim banjo</p>
+              </Link>
+
+              <Link to="/elektricist" className="bg-white p-8 rounded-xl border hover:shadow-md transition">
+                <Building className="mx-auto mb-4" />
+                <p>Elektricist</p>
+              </Link>
 
             </div>
           </div>
@@ -350,6 +383,50 @@ export default function LandingPage() {
             <p>
               Krahaso ofertat dhe zgjedh zgjidhjen më të mirë për projektin tuaj.
             </p>
+
+            <div className="max-w-4xl mx-auto px-6 text-gray-600 leading-relaxed">
+              
+              <h2 className="text-2xl font-bold mb-6 text-gray-900">
+                Kompani ndërtimi dhe renovimi në Kosovë dhe Shqipëri
+              </h2>
+
+              <p className="mb-4">
+                Ndertimnet është platformë që ju ndihmon të gjeni kompani ndërtimi dhe profesionistë për renovim banese në Kosovë dhe Shqipëri.
+              </p>
+
+              <p className="mb-4">
+                Publikoni projektin dhe merrni oferta nga ndërtues të verifikuar në Prishtinë, Tiranë dhe qytete të tjera.
+              </p>
+
+              <p>
+                Krahaso ofertat dhe zgjedh zgjidhjen më të mirë për projektin tuaj.
+              </p>
+
+              {/* 🔥 SEO INTERNAL LINKS */}
+              <div className="mt-6 flex flex-wrap gap-4 text-sm">
+
+                <Link to="/renovim-banjo" className="text-orange-500 hover:underline">
+                  Renovim banjo
+                </Link>
+
+                <Link to="/renovim-kuzhine" className="text-orange-500 hover:underline">
+                  Renovim kuzhine
+                </Link>
+
+                <Link to="/pllakashtrues" className="text-orange-500 hover:underline">
+                  Pllakashtrues
+                </Link>
+
+                <Link to="/dysheme" className="text-orange-500 hover:underline">
+                  Dysheme
+                </Link>
+
+                <Link to="/fasada" className="text-orange-500 hover:underline">
+                  Fasada
+                </Link>
+              </div>
+
+            </div>
 
           </div>
 
