@@ -55,12 +55,11 @@ export default function ElektricistPage() {
               </p>
 
               <div className="mt-8 flex gap-4">
-                <Link to="/register/customer" className="btn-primary">
+                <Link
+                  to="/register/customer"
+                  className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
+                >
                   Publiko projektin
-                </Link>
-
-                <Link to="/companies" className="btn-secondary">
-                  Gjej kompani
                 </Link>
               </div>
             </div>
@@ -230,12 +229,11 @@ export default function ElektricistPage() {
             </h2>
 
             <div className="mt-6 flex gap-4">
-              <Link to="/register/customer" className="btn-white">
+              <Link
+                to="/register/customer"
+                className="inline-flex items-center justify-center rounded-xl bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
+              >
                 Publiko projektin
-              </Link>
-
-              <Link to="/companies" className="btn-outline">
-                Gjej kompani
               </Link>
             </div>
           </div>
