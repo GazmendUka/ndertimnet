@@ -32,6 +32,7 @@ import Renovime from "../pages/seo/services/Renovime";
 import Fasada from "../pages/seo/services/Fasada";
 import Cati from "../pages/seo/services/Cati";
 import Pllakashtrues from "../pages/seo/services/Pllakashtrues";
+import Dysheme from "../pages/seo/services/Dysheme";
 
 export default function PublicRoutes() {
   return (
@@ -58,6 +59,7 @@ export default function PublicRoutes() {
         <Route path="/fasada" element={<Fasada />} />
         <Route path="/cati" element={<Cati />} />
         <Route path="/pllakashtrues" element={<Pllakashtrues />} />
+        <Route path="/dysheme" element={<Dysheme />} />
       </Route>
 
       {/* RESTEN */}
