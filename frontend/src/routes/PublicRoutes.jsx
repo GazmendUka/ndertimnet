@@ -25,7 +25,7 @@ import NdertimVlore from "../pages/seo/NdertimVlore";
 
 import RenovimKuzhinePage from "../pages/seo/services/RenovimKuzhinePage";  // <-- FIXA
 import ElektricistPage from "../pages/seo/services/ElektricistPage";        // <-- FIXA
-import RenovimBanjoPage from "../pages/seo/services/RenovimBanjoPage";      // <-- FIXA. 
+import RenovimBanjo from "../pages/seo/services/RenovimBanjo";      // <-- FIXA. 
 
 import Ndertime from "../pages/seo/services/Ndertime";
 import Renovime from "../pages/seo/services/Renovime";
@@ -52,7 +52,7 @@ export default function PublicRoutes() {
 
         <Route path="/renovim-kuzhine" element={<RenovimKuzhinePage />} />   
         <Route path="/elektricist" element={<ElektricistPage />} />
-        <Route path="/renovim-banjo" element={<RenovimBanjoPage />} />
+        <Route path="/renovim-banjo" element={<RenovimBanjo />} />
 
         <Route path="/ndertime" element={<Ndertime />} />
         <Route path="/renovime" element={<Renovime />} />
