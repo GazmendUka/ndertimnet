@@ -33,6 +33,7 @@ import Fasada from "../pages/seo/services/Fasada";
 import Cati from "../pages/seo/services/Cati";
 import Pllakashtrues from "../pages/seo/services/Pllakashtrues";
 import Dysheme from "../pages/seo/services/Dysheme";
+import Lyerje from "../pages/seo/services/Lyerje";
 
 export default function PublicRoutes() {
   return (
@@ -60,6 +61,7 @@ export default function PublicRoutes() {
         <Route path="/cati" element={<Cati />} />
         <Route path="/pllakashtrues" element={<Pllakashtrues />} />
         <Route path="/dysheme" element={<Dysheme />} />
+        <Route path="/lyerje" element={<Lyerje />} />
       </Route>
 
       {/* RESTEN */}
