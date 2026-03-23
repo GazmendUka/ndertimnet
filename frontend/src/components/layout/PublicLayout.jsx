@@ -94,18 +94,47 @@ export default function PublicLayout() {
             <h3 className="font-semibold text-gray-900 mb-3">
               Shërbimet
             </h3>
+
             <div className="flex flex-col gap-2 text-gray-600">
 
-              <Link to="/renovim-banese" className="hover:underline">
-                Renovim banese
+              <Link to="/ndertime" className="hover:underline">
+                Ndërtim
               </Link>
 
-              <Link to="/kategori/elektricist" className="hover:underline">
+              <Link to="/renovime" className="hover:underline">
+                Renovime
+              </Link>
+
+              <Link to="/renovim-banjo" className="hover:underline">
+                Renovim banjo
+              </Link>
+
+              <Link to="/renovim-kuzhine" className="hover:underline">
+                Renovim kuzhine
+              </Link>
+
+              <Link to="/elektricist" className="hover:underline">
                 Elektricist
               </Link>
 
-              <Link to="/kategori/hidraulik" className="hover:underline">
-                Hidraulik
+              <Link to="/lyerje" className="hover:underline">
+                Lyerje
+              </Link>
+
+              <Link to="/fasada" className="hover:underline">
+                Fasada
+              </Link>
+
+              <Link to="/cati" className="hover:underline">
+                Çati
+              </Link>
+
+              <Link to="/pllakashtrues" className="hover:underline">
+                Pllakashtrues
+              </Link>
+
+              <Link to="/dysheme" className="hover:underline">
+                Dysheme
               </Link>
 
             </div>
