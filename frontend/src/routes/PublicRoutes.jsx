@@ -28,7 +28,7 @@ import ElektricistPage from "../pages/seo/services/ElektricistPage";        // <
 import RenovimBanjoPage from "../pages/seo/services/RenovimBanjoPage";      // <-- FIXA
 
 import Ndertime from "../pages/seo/services/Ndertime";
-import Ndertime from "../pages/seo/services/Renovime";
+import Renovime from "../pages/seo/services/Renovime";
 
 export default function PublicRoutes() {
   return (
