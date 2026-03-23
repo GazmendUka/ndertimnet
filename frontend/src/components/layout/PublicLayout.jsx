@@ -17,6 +17,10 @@ export default function PublicLayout() {
 
           {/* NAV */}
           <nav className="flex items-center gap-6 text-sm">
+            <Link to="/updates" className="hover:opacity-70">
+              Updates
+            </Link>
+            
             <Link to="/about" className="hover:opacity-70">
               Rreth nesh
             </Link>

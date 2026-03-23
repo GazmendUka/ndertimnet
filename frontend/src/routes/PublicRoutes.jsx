@@ -3,6 +3,7 @@
 import { Route } from "react-router-dom";
 import AboutPage from "../pages/about";
 import ContactPage from "../pages/ContactPage";
+import UpdatesPage from "../pages/UpdatesPage";
 import PublicLayout from "../components/layout/PublicLayout";
 
 import Login from "../auth/Login";
@@ -29,7 +30,6 @@ import RenovimKuzhine from "../pages/seo/services/RenovimKuzhine";
 import RenovimBanjo from "../pages/seo/services/RenovimBanjo";
 import Renovime from "../pages/seo/services/Renovime";
 import Ndertime from "../pages/seo/services/Ndertime";
-
 import Elektricist from "../pages/seo/services/Elektricist";
 import Lyerje from "../pages/seo/services/Lyerje";
 import Fasada from "../pages/seo/services/Fasada";
@@ -47,6 +47,7 @@ export default function PublicRoutes() {
         <Route path="/" element={<AuthRedirect />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
+        <Route path="/updates" element={<UpdatesPage />} />
 
         {/* ================= CITY PAGES ================= */}
         <Route path="/ndertim/prishtine" element={<NdertimPrishtine />} />
