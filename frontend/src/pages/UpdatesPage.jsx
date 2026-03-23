@@ -1,11 +1,89 @@
 // ===========================================
 // src/pages/UpdatesPage.jsx
-// Ndertimnet – Updates / Roadmap Page (v1)
+// Ndertimnet – Updates / Roadmap Page (v1.1)
 // ===========================================
 
 import { Helmet } from "react-helmet";
 
 export default function UpdatesPage() {
+
+  // ================= DATA =================
+  const inProgress = [
+    {
+      title: "Chat midis klientit dhe kompanisë",
+      date: "Prill 2026",
+      isNew: true,
+    },
+    {
+      title: "Përmirësime në sistemin e ofertave",
+      date: "Prill 2026",
+      isNew: true,
+    },
+    {
+      title: "Optimizim i dashboard për kompani",
+      date: "Maj 2026",
+      isNew: false,
+    },
+  ];
+
+  const planned = [
+    {
+      title: "Profile të avancuara për kompani",
+      date: "Qershor 2026",
+      isNew: false,
+    },
+    {
+      title: "Sistem vlerësimi dhe review",
+      date: "Qershor 2026",
+      isNew: false,
+    },
+    {
+      title: "Njoftime në kohë reale",
+      date: "Korrik 2026",
+      isNew: false,
+    },
+  ];
+
+  const done = [
+    {
+      title: "Landing page e re me fokus SEO",
+      date: "Mars 2026",
+      isNew: true,
+    },
+    {
+      title: "Faqet për qytete (Prishtinë, Tiranë, etj.)",
+      date: "Mars 2026",
+      isNew: true,
+    },
+    {
+      title: "Përmirësime në login dhe autentikim",
+      date: "Mars 2026",
+      isNew: false,
+    },
+  ];
+
+  // ================= COMPONENT =================
+  const Item = ({ item, variant = "light" }) => (
+    <div
+      className={`p-4 rounded-xl border flex items-center justify-between ${
+        variant === "light" ? "bg-gray-50" : "bg-white"
+      }`}
+    >
+      <div>
+        <p className="font-medium">{item.title}</p>
+        <p className="text-sm text-gray-500 mt-1">
+          Planifikuar: {item.date}
+        </p>
+      </div>
+
+      {item.isNew && (
+        <span className="text-xs font-semibold px-3 py-1 rounded-full bg-black text-white">
+          NEW
+        </span>
+      )}
+    </div>
+  );
+
   return (
     <>
       {/* ================= SEO ================= */}
@@ -46,17 +124,8 @@ export default function UpdatesPage() {
           </h2>
 
           <div className="space-y-4">
-            {[
-              "Chat midis klientit dhe kompanisë",
-              "Përmirësime në sistemin e ofertave",
-              "Optimizim i dashboard për kompani",
-            ].map((item, i) => (
-              <div
-                key={i}
-                className="p-4 rounded-xl border bg-gray-50"
-              >
-                {item}
-              </div>
+            {inProgress.map((item, i) => (
+              <Item key={i} item={item} />
             ))}
           </div>
         </section>
@@ -68,17 +137,8 @@ export default function UpdatesPage() {
           </h2>
 
           <div className="space-y-4">
-            {[
-              "Profile të avancuara për kompani",
-              "Sistem vlerësimi dhe review",
-              "Njoftime në kohë reale",
-            ].map((item, i) => (
-              <div
-                key={i}
-                className="p-4 rounded-xl border bg-white"
-              >
-                {item}
-              </div>
+            {planned.map((item, i) => (
+              <Item key={i} item={item} variant="white" />
             ))}
           </div>
         </section>
@@ -90,17 +150,8 @@ export default function UpdatesPage() {
           </h2>
 
           <div className="space-y-4">
-            {[
-              "Landing page e re me fokus SEO",
-              "Faqet për qytete (Prishtinë, Tiranë, etj.)",
-              "Përmirësime në login dhe autentikim",
-            ].map((item, i) => (
-              <div
-                key={i}
-                className="p-4 rounded-xl border bg-gray-50"
-              >
-                {item}
-              </div>
+            {done.map((item, i) => (
+              <Item key={i} item={item} />
             ))}
           </div>
         </section>
