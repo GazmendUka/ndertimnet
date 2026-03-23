@@ -29,6 +29,7 @@ import RenovimBanjoPage from "../pages/seo/services/RenovimBanjoPage";      // <
 
 import Ndertime from "../pages/seo/services/Ndertime";
 import Renovime from "../pages/seo/services/Renovime";
+import Fasada from "../pages/seo/services/Fasada";
 
 export default function PublicRoutes() {
   return (
@@ -52,6 +53,7 @@ export default function PublicRoutes() {
 
         <Route path="/ndertime" element={<Ndertime />} />
         <Route path="/renovime" element={<Renovime />} />
+        <Route path="/fasada" element={<Fasada />} />
       </Route>
 
       {/* RESTEN */}
