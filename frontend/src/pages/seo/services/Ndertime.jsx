@@ -1,37 +1,37 @@
-// src/pages/seo/services/RenovimKuzhinePage.jsx
+//src/pages/seo/services/Ndertime.jsx
 
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import {
-  ChefHat,
+  Building2,
   CheckCircle2,
-  Sparkles,
-  Wrench,
+  Hammer,
+  ShieldCheck,
   ArrowRight,
   HelpCircle,
 } from "lucide-react";
 
-export default function RenovimKuzhinePage() {
+export default function NdertimePage() {
   return (
     <>
       <Helmet>
         <html lang="sq" />
 
-        <title>Renovim kuzhine në Shqipëri dhe Kosovë | Ndertimnet</title>
+        <title>Ndërtim në Shqipëri dhe Kosovë | Ndertimnet</title>
 
         <meta
           name="description"
-          content="Gjej kompani për renovim kuzhine. Modernizo kuzhinën me profesionistë për mobilim, instalime dhe dizajn funksional."
+          content="Gjej kompani ndërtimi për shtëpi dhe objekte. Publiko projektin dhe lidhu me profesionistë për ndërtim nga zero."
         />
 
         <meta
           name="keywords"
-          content="renovim kuzhine, kuzhine moderne, mobilim kuzhine, instalime kuzhine, dizajn kuzhine"
+          content="ndërtim, kompani ndërtimi, ndërtim shtëpie, ndërtim objektesh, ndërtim Shqipëri, ndërtim Kosovë"
         />
 
         <meta name="robots" content="index, follow" />
 
-        <link rel="canonical" href="https://ndertimnet.com/renovim-kuzhine" />
+        <link rel="canonical" href="https://ndertimnet.com/ndertime" />
       </Helmet>
 
       <main className="bg-white text-slate-900">
@@ -41,18 +41,18 @@ export default function RenovimKuzhinePage() {
           <div className="max-w-7xl mx-auto px-6 py-16">
             <div className="max-w-3xl">
               <div className="inline-flex items-center gap-2 text-sm text-slate-600">
-                <ChefHat className="h-4 w-4" />
-                Renovim profesional i kuzhinës
+                <Building2 className="h-4 w-4" />
+                Shërbime profesionale ndërtimi
               </div>
 
               <h1 className="mt-6 text-4xl font-bold tracking-tight">
-                Renovim kuzhine moderne dhe funksionale
+                Ndërtim nga themeli deri në përfundim
               </h1>
 
               <p className="mt-6 text-lg text-slate-600">
-                Kuzhina është zemra e shtëpisë. Një renovim i mirë përmirëson
-                jo vetëm pamjen, por edhe funksionalitetin dhe komoditetin në
-                përditshmëri.
+                Ndërtimi është baza e çdo projekti. Nga një ide fillestare
+                deri te realizimi final, çdo hap kërkon planifikim të saktë
+                dhe profesionistë të besueshëm.
               </p>
 
               <div className="mt-8 flex gap-4">
@@ -70,19 +70,19 @@ export default function RenovimKuzhinePage() {
         {/* INTRO */}
         <section className="max-w-5xl mx-auto px-6 py-16">
           <h2 className="text-3xl font-bold">
-            Çfarë përfshin renovimi i kuzhinës?
+            Çfarë përfshin ndërtimi?
           </h2>
 
           <p className="mt-6 text-lg leading-8 text-slate-700">
-            Renovimi i kuzhinës përfshin transformimin e një hapësire ekzistuese
-            në një ambient modern, praktik dhe estetik. Ky proces mund të
-            përfshijë mobilim të ri, instalime elektrike dhe hidraulike,
-            sipërfaqe pune dhe organizim më efikas të hapësirës.
+            Ndërtimi përfshin realizimin e një objekti nga zero – nga
+            themelet, struktura, instalimet, deri te përfundimet finale.
+            Ky proces kërkon koordinim të shumë profesioneve dhe një plan
+            të qartë pune.
           </p>
 
           <p className="mt-6 text-lg leading-8 text-slate-700">
-            Një kuzhinë e projektuar mirë jo vetëm që rrit vlerën e pronës, por
-            gjithashtu përmirëson mënyrën se si përdoret hapësira çdo ditë.
+            Qoftë për shtëpi, ndërtesa banimi apo objekte komerciale,
+            ndërtimi i mirë garanton siguri, qëndrueshmëri dhe vlerë afatgjatë.
           </p>
         </section>
 
@@ -90,17 +90,17 @@ export default function RenovimKuzhinePage() {
         <section className="bg-slate-50 border-y">
           <div className="max-w-7xl mx-auto px-6 py-16">
             <h2 className="text-3xl font-bold">
-              Çfarë përfshin zakonisht renovimi
+              Çfarë përfshin një projekt ndërtimi
             </h2>
 
             <div className="mt-10 grid md:grid-cols-2 gap-6">
               {[
-                "Mobilim dhe dollapë kuzhine",
-                "Instalime elektrike dhe ndriçim",
-                "Instalime hidraulike",
-                "Vendosje pllakash",
-                "Sipërfaqe pune (countertop)",
-                "Organizim i hapësirës",
+                "Punime themeli dhe strukture",
+                "Ndërtim muresh dhe betonime",
+                "Instalime elektrike dhe hidraulike",
+                "Izolim dhe fasadë",
+                "Punime të brendshme",
+                "Përfundime finale",
               ].map((item) => (
                 <div
                   key={item}
@@ -119,26 +119,48 @@ export default function RenovimKuzhinePage() {
           <div className="grid lg:grid-cols-2 gap-10">
             <div>
               <h2 className="text-3xl font-bold">
-                Kur duhet të renovosh kuzhinën?
+                Kur ke nevojë për shërbime ndërtimi?
               </h2>
 
               <p className="mt-6 text-lg text-slate-700">
-                Renovimi i kuzhinës është i nevojshëm kur hapësira bëhet e
-                vjetëruar, jo funksionale ose nuk i përshtatet më nevojave të tua.
+                Ndërtimi është i nevojshëm kur dëshiron të krijosh një
+                objekt të ri ose të zhvillosh një pronë nga fillimi.
               </p>
             </div>
 
             <div className="bg-slate-50 p-6 rounded-2xl">
               {[
-                "Mobilim i vjetër",
-                "Hapësirë jo funksionale",
-                "Instalime të amortizuara",
-                "Dëshirë për stil modern",
-                "Rritje e vlerës së pronës",
+                "Ndërtim shtëpie të re",
+                "Objekt banimi",
+                "Ndërtesa komerciale",
+                "Zgjerim i pronës",
+                "Projekt investimi",
               ].map((item) => (
                 <div key={item} className="flex gap-3 mt-3">
                   <CheckCircle2 className="h-5 w-5" />
                   <span>{item}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* WHY NDERTIMNET */}
+        <section className="border-y">
+          <div className="max-w-7xl mx-auto px-6 py-16">
+            <h2 className="text-3xl font-bold">
+              Pse të përdorësh Ndertimnet?
+            </h2>
+
+            <div className="grid md:grid-cols-3 gap-6 mt-10">
+              {[
+                "Gjej kompani ndërtimi të besueshme",
+                "Krahaso oferta dhe zgjidh më të mirën",
+                "Kursen kohë dhe përpjekje",
+              ].map((item) => (
+                <div key={item} className="p-6 bg-slate-50 rounded-xl">
+                  <ShieldCheck className="h-6 w-6 mb-2" />
+                  <p>{item}</p>
                 </div>
               ))}
             </div>
@@ -151,9 +173,9 @@ export default function RenovimKuzhinePage() {
 
           <div className="flex flex-wrap gap-4">
             {[
-              "/ndertime",
               "/renovime",
               "/renovim-banjo",
+              "/renovim-kuzhine",
               "/elektricist",
               "/lyerje",
               "/fasada",
@@ -179,19 +201,19 @@ export default function RenovimKuzhinePage() {
             <div className="mt-10 space-y-6">
               <div>
                 <h4 className="font-semibold">
-                  Sa kushton renovimi i kuzhinës?
+                  Sa kushton ndërtimi?
                 </h4>
                 <p className="text-slate-600">
-                  Çmimi varet nga madhësia, materialet dhe kompleksiteti.
+                  Çmimi varet nga madhësia dhe kompleksiteti i projektit.
                 </p>
               </div>
 
               <div>
                 <h4 className="font-semibold">
-                  Sa zgjat renovimi?
+                  Sa zgjat ndërtimi?
                 </h4>
                 <p className="text-slate-600">
-                  Zakonisht nga disa ditë deri në disa javë.
+                  Zakonisht disa muaj deri në një vit, në varësi të projektit.
                 </p>
               </div>
             </div>
@@ -202,7 +224,7 @@ export default function RenovimKuzhinePage() {
         <section className="bg-slate-900 text-white">
           <div className="max-w-7xl mx-auto px-6 py-16">
             <h2 className="text-3xl font-bold">
-              Gati për të renovuar kuzhinën?
+              Gati për të nisur ndërtimin?
             </h2>
 
             <div className="mt-6 flex gap-4">

@@ -23,9 +23,11 @@ import NdertimMitrovice from "../pages/seo/NdertimMitrovice";
 import NdertimDurres from "../pages/seo/NdertimDurres";
 import NdertimVlore from "../pages/seo/NdertimVlore";
 
-import RenovimKuzhinePage from "../pages/seo/services/RenovimKuzhinePage";
-import ElektricistPage from "../pages/seo/services/ElektricistPage";
-import RenovimBanjoPage from "../pages/seo/services/RenovimBanjoPage";
+import RenovimKuzhinePage from "../pages/seo/services/RenovimKuzhinePage";  // <-- FIXA
+import ElektricistPage from "../pages/seo/services/ElektricistPage";        // <-- FIXA
+import RenovimBanjoPage from "../pages/seo/services/RenovimBanjoPage";      // <-- FIXA
+
+import Ndertime from "../pages/seo/services/Ndertime";
 
 export default function PublicRoutes() {
   return (
@@ -43,9 +45,11 @@ export default function PublicRoutes() {
         <Route path="/ndertim/durres" element={<NdertimDurres />} />
         <Route path="/ndertim/vlore" element={<NdertimVlore />} />
 
-        <Route path="/renovim-kuzhine" element={<RenovimKuzhinePage />} />
+        <Route path="/renovim-kuzhine" element={<RenovimKuzhinePage />} />   
         <Route path="/elektricist" element={<ElektricistPage />} />
         <Route path="/renovim-banjo" element={<RenovimBanjoPage />} />
+
+        <Route path="/ndertime" element={<Ndertime />} />
       </Route>
 
       {/* RESTEN */}
