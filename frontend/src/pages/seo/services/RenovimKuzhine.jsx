@@ -1,36 +1,37 @@
+// src/pages/seo/services/RenovimKuzhine.jsx
+
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import {
-  Zap,
+  ChefHat,
   CheckCircle2,
-  ShieldCheck,
+  Sparkles,
   Wrench,
-  Lightbulb,
   ArrowRight,
   HelpCircle,
 } from "lucide-react";
 
-export default function ElektricistPage() {
+export default function RenovimKuzhinePage() {
   return (
     <>
       <Helmet>
         <html lang="sq" />
 
-        <title>Elektricist në Shqipëri dhe Kosovë | Ndertimnet</title>
+        <title>Renovim kuzhine në Shqipëri dhe Kosovë | Ndertimnet</title>
 
         <meta
           name="description"
-          content="Gjej elektricist për instalime dhe riparime elektrike. Publiko projektin dhe lidhu me profesionistë për punime elektrike në shtëpi dhe objekte."
+          content="Gjej kompani për renovim kuzhine. Modernizo kuzhinën me profesionistë për mobilim, instalime dhe dizajn funksional."
         />
 
         <meta
           name="keywords"
-          content="elektricist, instalime elektrike, riparime elektrike, energji elektrike, ndriçim, elektrik Shqipëri, elektrik Kosovë"
+          content="renovim kuzhine, kuzhine moderne, mobilim kuzhine, instalime kuzhine, dizajn kuzhine"
         />
 
         <meta name="robots" content="index, follow" />
 
-        <link rel="canonical" href="https://ndertimnet.com/elektricist" />
+        <link rel="canonical" href="https://ndertimnet.com/renovim-kuzhine" />
       </Helmet>
 
       <main className="bg-white text-slate-900">
@@ -40,18 +41,18 @@ export default function ElektricistPage() {
           <div className="max-w-7xl mx-auto px-6 py-16">
             <div className="max-w-3xl">
               <div className="inline-flex items-center gap-2 text-sm text-slate-600">
-                <Zap className="h-4 w-4" />
-                Shërbime profesionale elektrike
+                <ChefHat className="h-4 w-4" />
+                Renovim profesional i kuzhinës
               </div>
 
               <h1 className="mt-6 text-4xl font-bold tracking-tight">
-                Elektricist për instalime dhe riparime
+                Renovim kuzhine moderne dhe funksionale
               </h1>
 
               <p className="mt-6 text-lg text-slate-600">
-                Instalimet elektrike janë ndër elementët më kritikë të çdo
-                ndërtese. Një sistem i sigurt dhe i realizuar mirë garanton
-                funksionim korrekt, kursim energjie dhe siguri për banorët.
+                Kuzhina është zemra e shtëpisë. Një renovim i mirë përmirëson
+                jo vetëm pamjen, por edhe funksionalitetin dhe komoditetin në
+                përditshmëri.
               </p>
 
               <div className="mt-8 flex gap-4">
@@ -69,21 +70,19 @@ export default function ElektricistPage() {
         {/* INTRO */}
         <section className="max-w-5xl mx-auto px-6 py-16">
           <h2 className="text-3xl font-bold">
-            Çfarë përfshin puna e elektricistit?
+            Çfarë përfshin renovimi i kuzhinës?
           </h2>
 
           <p className="mt-6 text-lg leading-8 text-slate-700">
-            Elektricisti merret me instalimin, mirëmbajtjen dhe riparimin e
-            sistemeve elektrike në shtëpi, banesa dhe objekte komerciale.
-            Punimet përfshijnë gjithçka nga instalimet bazë deri te sistemet
-            komplekse të ndriçimit dhe energjisë.
+            Renovimi i kuzhinës përfshin transformimin e një hapësire ekzistuese
+            në një ambient modern, praktik dhe estetik. Ky proces mund të
+            përfshijë mobilim të ri, instalime elektrike dhe hidraulike,
+            sipërfaqe pune dhe organizim më efikas të hapësirës.
           </p>
 
           <p className="mt-6 text-lg leading-8 text-slate-700">
-            Një instalim i bërë siç duhet jo vetëm që rrit sigurinë, por edhe
-            përmirëson efikasitetin energjetik dhe funksionalitetin e
-            hapësirës. Për këtë arsye, zgjedhja e profesionistëve të duhur është
-            thelbësore.
+            Një kuzhinë e projektuar mirë jo vetëm që rrit vlerën e pronës, por
+            gjithashtu përmirëson mënyrën se si përdoret hapësira çdo ditë.
           </p>
         </section>
 
@@ -91,17 +90,17 @@ export default function ElektricistPage() {
         <section className="bg-slate-50 border-y">
           <div className="max-w-7xl mx-auto px-6 py-16">
             <h2 className="text-3xl font-bold">
-              Çfarë përfshijnë shërbimet elektrike
+              Çfarë përfshin zakonisht renovimi
             </h2>
 
             <div className="mt-10 grid md:grid-cols-2 gap-6">
               {[
-                "Instalime elektrike të reja",
-                "Riparime dhe mirëmbajtje",
-                "Vendosje ndriçimi",
-                "Panele elektrike dhe sigurime",
-                "Instalime për pajisje shtëpiake",
-                "Zgjidhje për efikasitet energjetik",
+                "Mobilim dhe dollapë kuzhine",
+                "Instalime elektrike dhe ndriçim",
+                "Instalime hidraulike",
+                "Vendosje pllakash",
+                "Sipërfaqe pune (countertop)",
+                "Organizim i hapësirës",
               ].map((item) => (
                 <div
                   key={item}
@@ -120,48 +119,26 @@ export default function ElektricistPage() {
           <div className="grid lg:grid-cols-2 gap-10">
             <div>
               <h2 className="text-3xl font-bold">
-                Kur ke nevojë për elektricist?
+                Kur duhet të renovosh kuzhinën?
               </h2>
 
               <p className="mt-6 text-lg text-slate-700">
-                Nevoja për një elektricist lind në shumë situata – nga problemet
-                e thjeshta deri te projektet e mëdha të ndërtimit apo renovimit.
+                Renovimi i kuzhinës është i nevojshëm kur hapësira bëhet e
+                vjetëruar, jo funksionale ose nuk i përshtatet më nevojave të tua.
               </p>
             </div>
 
             <div className="bg-slate-50 p-6 rounded-2xl">
               {[
-                "Ndërprerje të shpeshta të energjisë",
-                "Instalime të vjetra",
-                "Ndërtim ose renovim",
-                "Ndriçim i ri",
-                "Siguri elektrike",
+                "Mobilim i vjetër",
+                "Hapësirë jo funksionale",
+                "Instalime të amortizuara",
+                "Dëshirë për stil modern",
+                "Rritje e vlerës së pronës",
               ].map((item) => (
                 <div key={item} className="flex gap-3 mt-3">
                   <CheckCircle2 className="h-5 w-5" />
                   <span>{item}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* WHY NDERTIMNET */}
-        <section className="border-y">
-          <div className="max-w-7xl mx-auto px-6 py-16">
-            <h2 className="text-3xl font-bold">
-              Pse të përdorësh Ndertimnet?
-            </h2>
-
-            <div className="grid md:grid-cols-3 gap-6 mt-10">
-              {[
-                "Krahaso kompani dhe oferta",
-                "Gjej profesionistë të besueshëm",
-                "Kursen kohë dhe përpjekje",
-              ].map((item) => (
-                <div key={item} className="p-6 bg-slate-50 rounded-xl">
-                  <ShieldCheck className="h-6 w-6 mb-2" />
-                  <p>{item}</p>
                 </div>
               ))}
             </div>
@@ -178,8 +155,9 @@ export default function ElektricistPage() {
               "/renovime",
               "/renovim-banjo",
               "/renovim-kuzhine",
-              "/lyerje",
+              "/elektricist",
               "/fasada",
+              "/lyrje",
               "/cati",
               "/pllakashtrues",
               "/dysheme",
@@ -202,19 +180,19 @@ export default function ElektricistPage() {
             <div className="mt-10 space-y-6">
               <div>
                 <h4 className="font-semibold">
-                  Sa kushton një elektricist?
+                  Sa kushton renovimi i kuzhinës?
                 </h4>
                 <p className="text-slate-600">
-                  Çmimi varet nga lloji i punës dhe kompleksiteti.
+                  Çmimi varet nga madhësia, materialet dhe kompleksiteti.
                 </p>
               </div>
 
               <div>
                 <h4 className="font-semibold">
-                  A janë instalimet e vjetra të rrezikshme?
+                  Sa zgjat renovimi?
                 </h4>
                 <p className="text-slate-600">
-                  Po, instalimet e vjetra mund të jenë të pasigurta.
+                  Zakonisht nga disa ditë deri në disa javë.
                 </p>
               </div>
             </div>
@@ -225,7 +203,7 @@ export default function ElektricistPage() {
         <section className="bg-slate-900 text-white">
           <div className="max-w-7xl mx-auto px-6 py-16">
             <h2 className="text-3xl font-bold">
-              Gati për projektin tënd elektrik?
+              Gati për të renovuar kuzhinën?
             </h2>
 
             <div className="mt-6 flex gap-4">

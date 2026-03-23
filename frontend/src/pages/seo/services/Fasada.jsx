@@ -176,6 +176,8 @@ export default function Fasada() {
               "/renovim-banjo",
               "/renovim-kuzhine",
               "/elektricist",
+              "/fasada",
+              "/lyrje",
               "/cati",
               "/pllakashtrues",
               "/dysheme",

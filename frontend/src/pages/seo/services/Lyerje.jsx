@@ -177,6 +177,7 @@ export default function Lyerje() {
               "/renovim-kuzhine",
               "/elektricist",
               "/fasada",
+              "/lyrje",
               "/cati",
               "/pllakashtrues",
               "/dysheme",

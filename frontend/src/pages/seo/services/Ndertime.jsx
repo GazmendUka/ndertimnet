@@ -173,12 +173,13 @@ export default function NdertimePage() {
 
           <div className="flex flex-wrap gap-4">
             {[
+              "/ndertime",
               "/renovime",
               "/renovim-banjo",
               "/renovim-kuzhine",
               "/elektricist",
-              "/lyerje",
               "/fasada",
+              "/lyrje",
               "/cati",
               "/pllakashtrues",
               "/dysheme",

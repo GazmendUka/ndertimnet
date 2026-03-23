@@ -172,10 +172,12 @@ export default function Renovime() {
           <div className="flex flex-wrap gap-4">
             {[
               "/ndertime",
+              "/renovime",
               "/renovim-banjo",
               "/renovim-kuzhine",
               "/elektricist",
               "/fasada",
+              "/lyrje",
               "/cati",
               "/pllakashtrues",
               "/dysheme",

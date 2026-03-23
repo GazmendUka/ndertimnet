@@ -178,6 +178,8 @@ export default function Cati() {
               "/renovim-kuzhine",
               "/elektricist",
               "/fasada",
+              "/lyrje",
+              "/cati",
               "/pllakashtrues",
               "/dysheme",
             ].map((path) => (

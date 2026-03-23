@@ -174,9 +174,11 @@ export default function RenovimBanjo() {
             {[
               "/ndertime",
               "/renovime",
+              "/renovim-banjo",
               "/renovim-kuzhine",
               "/elektricist",
               "/fasada",
+              "/lyrje",
               "/cati",
               "/pllakashtrues",
               "/dysheme",

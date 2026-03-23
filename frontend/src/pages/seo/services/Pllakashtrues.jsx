@@ -176,7 +176,9 @@ export default function Pllakashtrues() {
               "/renovim-kuzhine",
               "/elektricist",
               "/fasada",
+              "/lyrje",
               "/cati",
+              "/pllakashtrues",
               "/dysheme",
             ].map((path) => (
               <Link key={path} to={path} className="text-blue-600">
