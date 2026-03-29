@@ -1,6 +1,6 @@
 // src/routes/CompanyRoutes.jsx
 
-import { Route } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 
 import PrivateRoute from "../components/PrivateRoute";
 import Layout from "../components/layout/Layout";
@@ -15,32 +15,32 @@ import OfferDetails from "../pages/company/OfferDetails";
 
 export default function CompanyRoutes() {
   return (
-    <>
-      <Route element={<OnboardingGuard />}>
-        <Route element={<PrivateRoute roles={["company"]} />}>
-          <Route element={<Layout />}>
+    <PrivateRoute roles={["company"]}>
+      <OnboardingGuard>
+        <Layout>
+          <Routes>
 
-            <Route path="/dashboard/company" element={<CompanyDashboard />} />
+            {/* ✅ DASHBOARD */}
+            <Route path="/" element={<CompanyDashboard />} />
 
-            <Route path="/profile/company" element={<CompanyProfile />} />
+            {/* PROFILE */}
+            <Route path="profile" element={<CompanyProfile />} />
 
+            {/* LEADS */}
+            <Route path="leads/mine" element={<MyLeads />} />
+            <Route path="leads/:id" element={<LeadDetailsPage />} />
+
+            {/* OFFERS */}
             <Route
-              path="/company/jobrequests/:jobId/offer/edit"
+              path="jobrequests/:jobId/offer/edit"
               element={<OfferEdit />}
             />
 
-            <Route path="/leads/mine" element={<MyLeads />} />
+            <Route path="offers/:id" element={<OfferDetails />} />
 
-            <Route path="/leads/:id" element={<LeadDetailsPage />} />
-
-            <Route
-              path="/company/offers/:id"
-              element={<OfferDetails />}
-            />
-
-          </Route>
-        </Route>
-      </Route>
-    </>
+          </Routes>
+        </Layout>
+      </OnboardingGuard>
+    </PrivateRoute>
   );
 }

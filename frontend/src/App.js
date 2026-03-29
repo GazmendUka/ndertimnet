@@ -4,7 +4,6 @@ import { AuthProvider } from "./auth/AuthContext";
 import ErrorBoundary from "./components/ErrorBoundary";
 
 import PublicRoutes from "./routes/PublicRoutes";
-import SharedRoutes from "./routes/SharedRoutes";
 import CustomerRoutes from "./routes/CustomerRoutes";
 import CompanyRoutes from "./routes/CompanyRoutes";
 
@@ -14,13 +13,21 @@ function App() {
       <ErrorBoundary>
         <Router>
           <Routes>
-            
-            {PublicRoutes()}
-            {SharedRoutes()}
-            {CustomerRoutes()}
-            {CompanyRoutes()}
 
-            <Route path="*" element={<div style={{ padding: 40 }}>Page not found</div>} />
+            {/* PUBLIC */}
+            {PublicRoutes()}
+
+            {/* CUSTOMER */}
+            <Route path="/customer/*" element={<CustomerRoutes />} />
+
+            {/* COMPANY */}
+            <Route path="/company/*" element={<CompanyRoutes />} />
+
+            {/* FALLBACK */}
+            <Route
+              path="*"
+              element={<div style={{ padding: 40 }}>Page not found</div>}
+            />
 
           </Routes>
         </Router>
