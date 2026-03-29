@@ -12,25 +12,22 @@ import CustomerOfferDetailsPage from "../pages/customer/CustomerOfferDetailsPage
 
 export default function CustomerRoutes() {
   return (
-    <PrivateRoute roles={["customer"]}>
-      <OnboardingGuard>
-        <Layout>
-          <Routes>
-            {/* ✅ DASHBOARD */}
-            <Route index element={<CustomerDashboard />} />
+    <Routes>
+      <Route element={<PrivateRoute roles={["customer"]} />}>
+        <Route element={<OnboardingGuard />}>
+          <Route element={<Layout />}>
 
-            {/* PROFILE */}
+            <Route index element={<CustomerDashboard />} />
             <Route path="profile" element={<CustomerProfile />} />
 
-            {/* JOB REQUESTS */}
             <Route path="jobrequests/create" element={<JobRequestCreate />} />
             <Route path="jobrequests/:id/edit" element={<JobRequestEdit />} />
 
-            {/* OFFERS */}
             <Route path="offers/:id" element={<CustomerOfferDetailsPage />} />
-          </Routes>
-        </Layout>
-      </OnboardingGuard>
-    </PrivateRoute>
+
+          </Route>
+        </Route>
+      </Route>
+    </Routes>
   );
 }

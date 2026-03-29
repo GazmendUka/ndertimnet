@@ -15,32 +15,23 @@ import OfferDetails from "../pages/company/OfferDetails";
 
 export default function CompanyRoutes() {
   return (
-    <PrivateRoute roles={["company"]}>
-      <OnboardingGuard>
-        <Layout>
-          <Routes>
+    <Routes>
+      <Route element={<PrivateRoute roles={["company"]} />}>
+        <Route element={<OnboardingGuard />}>
+          <Route element={<Layout />}>
 
-            {/* ✅ DASHBOARD */}
             <Route index element={<CompanyDashboard />} />
-
-            {/* PROFILE */}
             <Route path="profile" element={<CompanyProfile />} />
 
-            {/* LEADS */}
             <Route path="leads/mine" element={<MyLeads />} />
             <Route path="leads/:id" element={<LeadDetailsPage />} />
 
-            {/* OFFERS */}
-            <Route
-              path="jobrequests/:jobId/offer/edit"
-              element={<OfferEdit />}
-            />
-
+            <Route path="jobrequests/:jobId/offer/edit" element={<OfferEdit />} />
             <Route path="offers/:id" element={<OfferDetails />} />
 
-          </Routes>
-        </Layout>
-      </OnboardingGuard>
-    </PrivateRoute>
+          </Route>
+        </Route>
+      </Route>
+    </Routes>
   );
 }

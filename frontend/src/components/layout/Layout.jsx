@@ -1,3 +1,5 @@
+// src/components/layout
+
 import React, { useState, useRef, useEffect } from "react";
 import Sidebar from "./Sidebar";
 import MobileNav from "./MobileNav";
