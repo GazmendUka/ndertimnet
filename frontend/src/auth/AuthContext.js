@@ -1,10 +1,12 @@
+// frontend/src/auth/AuthContext.jsx
+
 import { createContext, useContext, useState, useEffect } from "react";
 import api from "../api/axios";
 
 const AuthContext = createContext();
 
 // ------------------------------------------------------------
-// 🔧 Helper functions for storage
+// 🔧 Storage helpers
 // ------------------------------------------------------------
 
 const getAccessToken = () =>
@@ -54,7 +56,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   // ============================================================
-  // 👤 Fetch logged in user
+  // 👤 Fetch current user
   // ============================================================
 
   const fetchCurrentUser = async (forcedToken = null) => {
@@ -92,7 +94,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   // ============================================================
-  // 🔧 Init auth (runs once on app start)
+  // 🔧 Init auth (on app load)
   // ============================================================
 
   useEffect(() => {
@@ -100,7 +102,6 @@ export const AuthProvider = ({ children }) => {
       const token = getAccessToken();
       const refreshToken = getRefreshToken();
 
-      // ❌ No tokens
       if (!token || !refreshToken) {
         setLoading(false);
         return;
@@ -148,19 +149,13 @@ export const AuthProvider = ({ children }) => {
 
       setAccess(data.access);
       setRefresh(data.refresh);
-      setUser(data.user);
 
-      if (data.user) {
-        storage.setItem("user", JSON.stringify(data.user));
-      }
-
-      try {
-        await fetchCurrentUser(data.access);
-      } catch {}
+      // ✅ ENDA source of truth
+      await fetchCurrentUser(data.access);
 
       return data.user;
     } catch (err) {
-      throw new Error(err.response?.data?.message || "Gabim gjatë hyrjes");
+      throw err; // viktigt för korrekt error handling i UI
     } finally {
       setLoading(false);
     }
@@ -175,7 +170,7 @@ export const AuthProvider = ({ children }) => {
   const isProfileComplete = !!user?.profile_completed;
 
   // ============================================================
-  // 🧭 ONBOARDING STEP LOGIC
+  // 🧭 ONBOARDING STEP
   // ============================================================
 
   let onboardingStep = 0;
@@ -199,12 +194,11 @@ export const AuthProvider = ({ children }) => {
   const hasFullAccess = onboardingStep === 3;
 
   // ============================================================
-  // 🔄 Refresh user helper
+  // 🔄 Refresh user
   // ============================================================
 
   const refreshMe = async () => {
     const token = getAccessToken();
-
     if (!token) return;
 
     try {
@@ -227,7 +221,7 @@ export const AuthProvider = ({ children }) => {
         refresh,
         loading,
 
-        // auth actions
+        // actions
         login,
         logout,
         fetchCurrentUser,
@@ -244,10 +238,9 @@ export const AuthProvider = ({ children }) => {
         canEditProfile,
         hasFullAccess,
 
-        // roles
+        // roles (ENDAST dessa)
         isCompany: user?.role === "company",
         isCustomer: user?.role === "customer",
-        isAdmin: user?.role === "admin",
       }}
     >
       {children}

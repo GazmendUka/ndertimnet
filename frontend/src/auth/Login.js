@@ -32,19 +32,14 @@ const Login = () => {
         return;
       }
 
-      if (user.role === "customer") {
-        navigate("/dashboard/customer");
-      } else if (user.role === "company") {
-        navigate("/dashboard/company");
-      } else {
-        navigate("/");
-      }
+      // ✅ Enda redirecten – låt AuthRedirect ta över
+      navigate("/");
 
     } catch (err) {
       console.error("Login error:", err);
 
       setError(
-        err.response?.data?.message ||
+        err?.response?.data?.message ||
         err.message ||
         "Diçka shkoi keq gjatë kyçjes."
       );
@@ -55,7 +50,6 @@ const Login = () => {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
-
       <div className="w-full max-w-md">
 
         {/* BACK LINK */}
@@ -163,34 +157,27 @@ const Login = () => {
               disabled={loading}
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
             >
-
               {loading && (
                 <Loader2 size={20} className="animate-spin" />
               )}
 
               {loading ? "Duke u kyçur..." : "Hyni"}
-
             </button>
 
           </form>
 
           <p className="text-center text-gray-600 mt-6">
-
             Nuk keni llogari?{" "}
-
             <Link
               to="/register"
               className="text-blue-600 font-semibold hover:underline"
             >
               Regjistrohu
             </Link>
-
           </p>
 
         </div>
-
       </div>
-
     </div>
   );
 };

@@ -9,7 +9,9 @@ const AuthRedirect = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <span className="text-gray-600 text-lg">Duke u ngarkuar...</span>
+        <span className="text-gray-600 text-lg">
+          Duke u ngarkuar...
+        </span>
       </div>
     );
   }
@@ -19,17 +21,17 @@ const AuthRedirect = () => {
     return <LandingPage />;
   }
 
-  // 🔀 INLOGGAD → DASHBOARD BASERAT PÅ ROLL
-  if (user?.role === "customer") {
-    return <Navigate to="/dashboard/customer" replace />;
+  // 🔀 INLOGGAD → RÄTT DASHBOARD
+  if (user.role === "customer") {
+    return <Navigate to="/customer" replace />;
   }
 
-  if (user?.role === "company") {
-    return <Navigate to="/dashboard/company" replace />;
+  if (user.role === "company") {
+    return <Navigate to="/company" replace />;
   }
 
-  // 🛟 Fallback
-  return <Navigate to="/login" replace />;
+  // 🛟 fallback
+  return <Navigate to="/" replace />;
 };
 
 export default AuthRedirect;
