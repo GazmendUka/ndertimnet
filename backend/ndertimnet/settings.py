@@ -114,12 +114,12 @@ INSTALLED_APPS = [
 # MIDDLEWARE
 # ======================================================
 MIDDLEWARE = [
+    # CORS must be high
+    "corsheaders.middleware.CorsMiddleware",
+
     "django.middleware.security.SecurityMiddleware",
     # Static files in production
     "whitenoise.middleware.WhiteNoiseMiddleware",
-
-    # CORS must be high
-    "corsheaders.middleware.CorsMiddleware",
 
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
@@ -285,6 +285,15 @@ CORS_ALLOW_HEADERS = [
     "origin",
     "user-agent",
     "x-csrftoken",
+]
+
+CORS_ALLOW_METHODS = [
+    "GET",
+    "POST",
+    "PUT",
+    "PATCH",
+    "DELETE",
+    "OPTIONS",
 ]
 
 
