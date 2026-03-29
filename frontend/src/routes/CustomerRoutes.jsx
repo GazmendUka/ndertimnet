@@ -1,3 +1,5 @@
+// src/routes/CustomerRoutes
+
 import { Routes, Route } from "react-router-dom";
 
 import PrivateRoute from "../components/PrivateRoute";
@@ -18,7 +20,7 @@ export default function CustomerRoutes() {
           <Route element={<Layout />}>
 
             <Route index element={<CustomerDashboard />} />
-            <Route path="profile" element={<CustomerProfile />} />
+            <Route path="profile" element={<div>PROFILE WORKS</div>} />
 
             <Route path="jobrequests/create" element={<JobRequestCreate />} />
             <Route path="jobrequests/:id/edit" element={<JobRequestEdit />} />
