@@ -18,10 +18,10 @@ function App() {
             {PublicRoutes()}
 
             {/* CUSTOMER */}
-            <Route index element={<CustomerDashboard />} />
+            <Route path="/customer/*" element={<CustomerRoutes />} />
 
             {/* COMPANY */}
-            <Route index element={<CompanyDashboard />} />
+            <Route path="/company/*" element={<CompanyRoutes />} />
 
             {/* FALLBACK */}
             <Route

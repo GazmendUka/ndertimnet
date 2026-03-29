@@ -21,7 +21,7 @@ export default function CompanyRoutes() {
           <Routes>
 
             {/* ✅ DASHBOARD */}
-            <Route path="/" element={<CompanyDashboard />} />
+            <Route index element={<CompanyDashboard />} />
 
             {/* PROFILE */}
             <Route path="profile" element={<CompanyProfile />} />

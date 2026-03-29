@@ -17,7 +17,7 @@ export default function CustomerRoutes() {
         <Layout>
           <Routes>
             {/* ✅ DASHBOARD */}
-            <Route path="/" element={<CustomerDashboard />} />
+            <Route index element={<CustomerDashboard />} />
 
             {/* PROFILE */}
             <Route path="profile" element={<CustomerProfile />} />
