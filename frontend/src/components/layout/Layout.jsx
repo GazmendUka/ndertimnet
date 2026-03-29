@@ -152,8 +152,8 @@ export default function Layout() {
 
                       navigate(
                         user?.role === "company"
-                          ? "/profile/company"
-                          : "/profile/customer"
+                          ? "/company/profile"
+                          : "/customer/profile"
                       );
 
                       setDropdownOpen(false);
