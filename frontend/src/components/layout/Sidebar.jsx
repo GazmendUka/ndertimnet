@@ -86,9 +86,9 @@ export default function Sidebar() {
         {/* CUSTOMER MENU */}
         {isCustomer && (
           <>
-            <SidebarLink to="/dashboard/customer" icon={<Home size={18} />} text="Dashboard" />
-            <SidebarLink to="/jobrequests" icon={<FileText size={18} />} text="Kërkesat e mia" />
-            <SidebarLink to="/profile/customer" icon={<User size={18} />} text="Profili" />
+            <SidebarLink to="/customer" icon={<Home size={18} />} text="Dashboard" />
+            <SidebarLink to="/customer/jobrequests/create" icon={<FileText size={18} />} text="Kërkesat e mia" />
+            <SidebarLink to="/customer/profile" icon={<User size={18} />} text="Profili" />
           </>
         )}
 
