@@ -172,7 +172,7 @@ export default function CustomerProfile() {
           required
         />
 
-        <button className="w-full bg-blue-600 text-white p-2 rounded">
+        <button className="w-full bg-gray-900 text-white hover:bg-gray-800 p-2 rounded">
           Ruaj ndryshimet
         </button>
       </form>
@@ -195,7 +195,7 @@ export default function CustomerProfile() {
             setPassword("");
             setShowDeactivate(true);
           }}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+          className="px-4 py-2 bg-white text-red-600 border border-red-200 hover:bg-red-50 rounded-lg hover:bg-red-700"
         >
           Çaktivizo llogarinë
         </button>
