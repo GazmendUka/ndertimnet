@@ -181,7 +181,7 @@ export default function CustomerProfile() {
       {/* ========================================= */}
 
       <div className="mt-12 border-t pt-8">
-        <h3 className="text-lg font-semibold text-red-600 mb-2">
+        <h3 className="text-lg font-semibold mb-2">
           Çaktivizo llogarinë
         </h3>
 
@@ -200,13 +200,6 @@ export default function CustomerProfile() {
           Çaktivizo llogarinë
         </button>
       </div>
-      
-
-
-
-
-
-
 
       {showDeactivate && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
@@ -246,10 +239,6 @@ export default function CustomerProfile() {
           </div>
         </div>
       )}
-
-
-
-
       
     </div>
   );

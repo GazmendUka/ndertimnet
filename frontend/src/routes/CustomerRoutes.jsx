@@ -11,6 +11,7 @@ import CustomerProfile from "../pages/profile/CustomerProfile";
 import JobRequestCreate from "../pages/jobrequests/JobRequestCreate";
 import JobRequestEdit from "../pages/jobrequests/JobRequestEdit";
 import CustomerOfferDetailsPage from "../pages/customer/CustomerOfferDetailsPage";
+import JobRequestList from "../pages/jobrequests/JobRequestList";
 
 export default function CustomerRoutes() {
   return (
@@ -22,8 +23,10 @@ export default function CustomerRoutes() {
             <Route index element={<CustomerDashboard />} />
             <Route path="profile" element={<CustomerProfile />} />
 
+            <Route path="jobrequests" element={<JobRequestList />} />
             <Route path="jobrequests/create" element={<JobRequestCreate />} />
             <Route path="jobrequests/:id/edit" element={<JobRequestEdit />} />
+
 
             <Route path="offers/:id" element={<CustomerOfferDetailsPage />} />
 
