@@ -27,7 +27,7 @@ export default function CustomerRoutes() {
             <Route path="jobrequests/create" element={<JobRequestCreate />} />
             <Route path="jobrequests/:id/edit" element={<JobRequestEdit />} />
 
-
+            <Route path="jobrequests/:id" element={<RoleBasedJobRequestDetail />} />
             <Route path="offers/:id" element={<CustomerOfferDetailsPage />} />
 
           </Route>
