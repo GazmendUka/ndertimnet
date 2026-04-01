@@ -8,10 +8,13 @@ import OnboardingGuard from "./OnboardingGuard";
 
 import CustomerDashboard from "../pages/customer/CustomerDashboard";
 import CustomerProfile from "../pages/profile/CustomerProfile";
+import CustomerOfferDetailsPage from "../pages/customer/CustomerOfferDetailsPage";
+
+import JobRequestList from "../pages/jobrequests/JobRequestList";
 import JobRequestCreate from "../pages/jobrequests/JobRequestCreate";
 import JobRequestEdit from "../pages/jobrequests/JobRequestEdit";
-import CustomerOfferDetailsPage from "../pages/customer/CustomerOfferDetailsPage";
-import JobRequestList from "../pages/jobrequests/JobRequestList";
+
+import RoleBasedJobRequestDetail from "../pages/jobrequests/RoleBasedJobRequestDetail";
 
 export default function CustomerRoutes() {
   return (
