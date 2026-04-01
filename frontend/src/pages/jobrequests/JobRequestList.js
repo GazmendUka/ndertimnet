@@ -220,14 +220,14 @@ export default function JobRequestList() {
 
                     {isCompany ? (
                       <Link
-                        to={`/jobrequests/${req.id}`}
+                        to={`/company/jobrequests/${req.id}`}
                         className="premium-btn btn-dark inline-flex items-center"
                       >
                         <Briefcase size={16} /> Dërgo ofertë
                       </Link>
                     ) : (
                       <Link
-                        to={`/jobrequests/${req.id}`}
+                        to={`/customer/jobrequests/${req.id}`}
                         className="premium-btn btn-light inline-flex items-center"
                       >
                         Shiko detajet
