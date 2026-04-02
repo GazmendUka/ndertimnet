@@ -115,6 +115,12 @@ export default function JobRequestList() {
 
   const displayRequests = uiLocked ? placeholderRequests : requests;
 
+  const dashboardPath = isCustomer
+  ? "/customer"
+  : isCompany
+  ? "/company"
+  : "/";
+
   // ============================================================
   // UI
   // ============================================================
@@ -123,15 +129,7 @@ export default function JobRequestList() {
 
       {/* Back */}
       <button
-        onClick={() =>
-          navigate(
-            isCustomer
-              ? "/dashboard/customer"
-              : isCompany
-              ? "/dashboard/company"
-              : "/"
-          )
-        }
+        onClick={() => navigate(dashboardPath)}
         className="premium-btn btn-light mb-6 inline-flex items-center"
       >
         <ArrowLeft size={18} />
