@@ -107,6 +107,7 @@ export default function CustomerOfferDetailsPage() {
   const [offer, setOffer] = useState(null);
   const [company, setCompany] = useState(null);
   const [version, setVersion] = useState(null);
+  const [noOfferYet, setNoOfferYet] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [decisionLoading, setDecisionLoading] = useState("");
@@ -118,12 +119,14 @@ export default function CustomerOfferDetailsPage() {
       const res = await api.get(`offers/${id}/messages/`);
       setMessages(res.data || []);
     } catch (err) {
-      console.error("Chat load error:", err);
+      if (err.response?.status !== 404) {
+        console.error("Chat load error:", err);
+      }
     }
   };
   const [messageInput, setMessageInput] = useState("");
 
-  const API_URL = process.env.REACT_APP_API_BASE_URL || "";
+  // const API_URL = process.env.REACT_APP_API_BASE_URL || "";
 
 
   // ==========================================================
@@ -131,64 +134,66 @@ export default function CustomerOfferDetailsPage() {
   // ==========================================================
 
   const fetchOffer = async () => {
-
     try {
-
       setLoading(true);
+      setError("");
+      setNoOfferYet(false);
+      setOffer(null);
+      setCompany(null);
+      setVersion(null);
 
       const res = await api.get(`offers/${id}/`);
       const data = res?.data;
 
       if (!data) {
-        setError("Oferta nuk u gjet.");
+        setNoOfferYet(true);
+        setMessages([]); 
         return;
       }
 
       setOffer(data);
       setCompany(data.company || null);
       setVersion(data.current_version || null);
-
     } catch (err) {
-
       console.error(err);
+
+      if (err.response?.status === 404) {
+        setNoOfferYet(true);
+        setMessages([]);
+        return;
+      }
+
       setError("Nuk mund të ngarkohet oferta.");
-
     } finally {
-
       setLoading(false);
-
     }
-
   };
 
   useEffect(() => {
-
     if (access && id) {
-
       fetchOffer();
-      fetchMessages();
-
     }
-
   }, [access, id]);
+
+  useEffect(() => {
+    if (access && id && offer && !noOfferYet) {
+      fetchMessages();
+    }
+  }, [access, id, offer, noOfferYet]);
 
   // ==========================================================
   // Auto refresh chat
   // ==========================================================
 
   useEffect(() => {
-
-    if (!id) return;
+    if (!id || noOfferYet) return;
 
     const interval = setInterval(() => {
-
       fetchMessages();
-
     }, 5000);
 
     return () => clearInterval(interval);
-
-  }, [id]);
+  }, [id, noOfferYet]);
 
 
   // ==========================================================
@@ -365,12 +370,61 @@ export default function CustomerOfferDetailsPage() {
     );
   }
 
+  if (noOfferYet) {
+    return (
+      <div className="premium-container mt-6">
+        <div className="premium-card p-8 max-w-3xl">
+          <button
+            onClick={() => navigate(-1)}
+            className="premium-btn btn-light inline-flex items-center gap-2 mb-6"
+          >
+            <ArrowLeft size={18} />
+            Kthehu
+          </button>
+
+          <h1 className="text-2xl font-semibold text-zinc-900">
+            Ende nuk ka ofertë
+          </h1>
+
+          <p className="mt-3 text-sm leading-7 text-zinc-600 max-w-2xl">
+            Për këtë kërkesë nuk është dërguar ende asnjë ofertë.
+            Nëse një kompani e dërgon ofertën më vonë, ajo do të shfaqet këtu.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+
   if (error) {
     return <div className="p-6 text-red-600">{error}</div>;
   }
 
   if (!offer || !version) {
-    return <div className="p-6">Oferta nuk u gjet.</div>;
+    return (
+      <div className="premium-container mt-6">
+        <div className="premium-card p-8 max-w-3xl">
+          <button
+            onClick={() => navigate(-1)}
+            className="premium-btn btn-light inline-flex items-center gap-2 mb-6"
+          >
+            <ArrowLeft size={18} />
+            Kthehu
+          </button>
+
+          <h1 className="text-2xl font-semibold text-zinc-900">
+            Ende nuk ka ofertë
+          </h1>
+
+          <p className="mt-3 text-sm leading-7 text-zinc-600 max-w-2xl">
+            Për këtë kërkesë nuk është dërguar ende asnjë ofertë.
+          </p>
+          <p className="mt-6 text-xs text-zinc-400">
+            Kompanitë mund të dërgojnë ofertë pasi të shqyrtojnë kërkesën tuaj.
+          </p>
+        </div>
+      </div>
+    );
   }
 
 
