@@ -73,6 +73,35 @@ class OfferViewSet(viewsets.ModelViewSet):
             qs = qs.filter(job_request_id=job_request_id)
 
         return qs
+    
+    def retrieve(self, request, *args, **kwargs):
+        offer_id = kwargs.get("pk")
+        user = request.user
+
+        # CUSTOMER
+        if getattr(user, "role", None) == "customer":
+            offer = get_object_or_404(
+                Offer.objects.select_related("current_version", "job_request"),
+                id=offer_id,
+                job_request__customer=user.customer_profile
+            )
+
+        # COMPANY
+        elif getattr(user, "role", None) == "company":
+            offer = get_object_or_404(
+                Offer.objects.select_related("current_version", "job_request"),
+                id=offer_id,
+                company=user.company_profile
+            )
+
+        else:
+            return Response({"detail": "Not allowed"}, status=403)
+
+        serializer = self.get_serializer(offer)
+        return Response(serializer.data)
+
+
+    
     # --------------------------------------------------
     # LIST – My offers
     # GET /api/offers/mine/
