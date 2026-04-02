@@ -212,12 +212,14 @@ export default function CustomerJobDetails() {
   // ============================================================
   // UI
   // ============================================================
+  const jobRequestsPath = "/customer/jobrequests";
+  const dashboardPath = "/customer";
   return (
     <div className="premium-container">
       {/* HEADER NAV */}
       <div className="flex justify-between items-center mb-6">
         <button
-          onClick={() => navigate("/jobrequests")}
+          onClick={() => navigate(jobRequestsPath)}
           className="premium-btn btn-light inline-flex items-center"
         >
           <ArrowLeft size={18} />
@@ -225,7 +227,7 @@ export default function CustomerJobDetails() {
         </button>
 
         <button
-          onClick={() => navigate("/dashboard/customer")}
+          onClick={() => navigate(dashboardPath)}
           className="premium-btn btn-light inline-flex items-center"
         >
           🏠 Dashboard
@@ -332,7 +334,7 @@ export default function CustomerJobDetails() {
               Mos shikoni vetëm çmimin — lexoni detajet dhe cilësinë e
               ofertës.
             </p>
-            <Link to="/jobrequests" className="premium-btn btn-light">
+            <Link to={jobRequestsPath} className="premium-btn btn-light">
               Shiko kërkesat e tjera
             </Link>
           </div>
