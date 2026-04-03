@@ -150,7 +150,7 @@ function SidebarLink({ to, icon, text, badge }) {
       </div>
 
       {/* BADGE */}
-      {badge && badge > 0 && (
+      {Number(badge) > 0 && (
         <span
           className="
             text-xs font-semibold
