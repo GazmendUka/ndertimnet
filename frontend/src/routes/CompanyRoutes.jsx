@@ -1,7 +1,7 @@
 // src/routes/CompanyRoutes.jsx
 
 import { Routes, Route } from "react-router-dom";
-
+import JobRequestList from "../pages/jobrequests/JobRequestList";
 import PrivateRoute from "../components/PrivateRoute";
 import Layout from "../components/layout/Layout";
 import OnboardingGuard from "./OnboardingGuard";
@@ -25,7 +25,7 @@ export default function CompanyRoutes() {
 
             <Route path="leads/mine" element={<MyLeads />} />
             <Route path="leads/:id" element={<LeadDetailsPage />} />
-
+            <Route path="jobrequests" element={<JobRequestList />} />
             <Route path="jobrequests/:jobId/offer/edit" element={<OfferEdit />} />
             <Route path="offers/:id" element={<OfferDetails />} />
 

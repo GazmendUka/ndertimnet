@@ -86,27 +86,19 @@ export default function Sidebar() {
         {/* CUSTOMER MENU */}
         {isCustomer && (
           <>
-            <SidebarLink to="/customer" icon={<Home size={18} />} text="Dashboard" />
+            <SidebarLink to="/customer"             icon={<Home size={18} />} text="Dashboard" />
             <SidebarLink to="/customer/jobrequests" icon={<FileText size={18} />} text="Kërkesat e mia" />
-            <SidebarLink to="/customer/profile" icon={<User size={18} />} text="Profili" />
+            <SidebarLink to="/customer/profile"     icon={<User size={18} />} text="Profili" />
           </>
         )}
 
         {/* COMPANY MENU */}
         {isCompany && (
           <>
-            <SidebarLink to="/dashboard/company" icon={<Home size={18} />} text="Dashboard" />
-            <SidebarLink to="/jobrequests" icon={<Briefcase size={18} />} text="Kërkesat e punës" />
-
-            {/* OFERTAT E MIA + BADGE */}
-            <SidebarLink
-              to="/leads/mine"
-              icon={<FileText size={18} />}
-              text="Ofertat e mia"
-              badge={newLeadsCount}
-            />
-
-            <SidebarLink to="/profile/company" icon={<User size={18} />} text="Profili" />
+            <SidebarLink to="/company"              icon={<Home size={18} />} text="Dashboard" />
+            <SidebarLink to="/company/jobrequests"  icon={<Briefcase size={18} />} text="Kërkesat e punës" />
+            <SidebarLink to="/company/leads/mine"   icon={<FileText size={18} />} text="Ofertat e mia" badge={newLeadsCount}/>
+            <SidebarLink to="/company/profile"      icon={<User size={18} />} text="Profili" />
           </>
         )}
       </nav>
@@ -133,7 +125,9 @@ export default function Sidebar() {
 // ============================================================
 function SidebarLink({ to, icon, text, badge }) {
   const location = useLocation();
-  const active = location.pathname === to;
+  const active =
+    location.pathname === to ||
+    location.pathname.startsWith(to + "/");
 
   return (
     <Link
@@ -155,7 +149,7 @@ function SidebarLink({ to, icon, text, badge }) {
       </div>
 
       {/* BADGE */}
-      {badge > 0 && (
+      {badge && badge > 0 && (
         <span
           className="
             text-xs font-semibold
