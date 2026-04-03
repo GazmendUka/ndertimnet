@@ -12,10 +12,6 @@ export default function JobRequestList() {
   const { user, access, isCompany, isCustomer } = useAuth();
   const navigate = useNavigate();
 
-  console.log("ACCESS:", access);
-  console.log("ROLE:", user?.role);
-  console.log("isCustomer:", isCustomer);
-
   const [company, setCompany] = useState(null);
   const [companyLoading, setCompanyLoading] = useState(true);
 
@@ -98,6 +94,10 @@ export default function JobRequestList() {
           : list;
 
         setRequests(filtered);
+        if (!uiLocked) {
+          localStorage.setItem("lastVisitJobRequests", new Date().toISOString());
+        }
+
       } catch (err) {
         console.error("Error fetching jobrequests:", err);
       }

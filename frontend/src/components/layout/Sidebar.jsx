@@ -12,43 +12,44 @@ export default function Sidebar() {
   const { user, logout, isCompany, isCustomer, access } = useAuth();
   const navigate = useNavigate();
 
-  const [newLeadsCount, setNewLeadsCount] = useState(0);
+  const [newJobsCount, setNewJobsCount] = useState(0);
 
   // ============================================================
   // LOAD NEW LEADS COUNT (ONLY FOR COMPANY)
   // ============================================================
+
   useEffect(() => {
     if (!isCompany || !access) return;
 
-    async function fetchNewLeads() {
+    async function fetchNewJobs() {
       try {
-        const res = await api.get("leads/leadmatches/?status=pending", {
+        const res = await api.get("jobrequests/", {
           headers: { Authorization: `Bearer ${access}` }
         });
 
         const list = res.data.results || res.data || [];
         const safeList = Array.isArray(list) ? list : [];
 
-        const lastVisit = localStorage.getItem("lastVisitMyLeads");
+        const lastVisit = localStorage.getItem("lastVisitJobRequests");
 
         if (!lastVisit) {
-          setNewLeadsCount(0);
+          setNewJobsCount(0);
           return;
         }
 
         const count = safeList.filter(
-          (lead) => new Date(lead.created_at) > new Date(lastVisit)
+          (job) => new Date(job.created_at) > new Date(lastVisit)
         ).length;
 
-        setNewLeadsCount(count);
+        setNewJobsCount(count);
       } catch (err) {
-        console.error("Error loading leads in sidebar:", err);
+        console.error("Error loading jobrequests in sidebar:", err);
       }
     }
 
-
-    fetchNewLeads();
+    fetchNewJobs();
   }, [isCompany, access]);
+
 
   // ============================================================
   // LOGOUT
@@ -96,8 +97,8 @@ export default function Sidebar() {
         {isCompany && (
           <>
             <SidebarLink to="/company"              icon={<Home size={18} />} text="Dashboard" />
-            <SidebarLink to="/company/jobrequests"  icon={<Briefcase size={18} />} text="Kërkesat e punës" />
-            <SidebarLink to="/company/leads/mine"   icon={<FileText size={18} />} text="Ofertat e mia" badge={newLeadsCount}/>
+            <SidebarLink to="/company/jobrequests"  icon={<Briefcase size={18} />} text="Kërkesat e punës" badge={newJobsCount} />
+            <SidebarLink to="/company/leads/mine"   icon={<FileText size={18} />} text="Ofertat e mia" />
             <SidebarLink to="/company/profile"      icon={<User size={18} />} text="Profili" />
           </>
         )}
