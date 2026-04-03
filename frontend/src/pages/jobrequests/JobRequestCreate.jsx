@@ -351,7 +351,7 @@ export default function JobRequestCreate() {
         if (!ok) throw new Error("Save failed");
 
         const job = await jobRequestDraftService.submitDraft(draft.id);
-        navigate(`/jobrequests/${job.id}`);
+        navigate(`/customer/jobrequests/${job.id}`);
       } catch (err) {
         console.error("Final submit failed:", err);
 
@@ -361,7 +361,7 @@ export default function JobRequestCreate() {
         }
 
         setError(
-          "Kunde inte slutföra ärendet. Kontrollera uppgifterna och försök igen."
+          "Çështja nuk mund të përfundojë. Ju lutemi kontrolloni detajet dhe provoni përsëri."
         );
       } finally {
         setSubmitting(false);
