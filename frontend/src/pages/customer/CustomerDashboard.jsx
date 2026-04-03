@@ -12,6 +12,9 @@ import { FileText, PlusCircle, CheckCircle2, Clock4 } from "lucide-react";
 import StatCard from "../../components/ui/StatCard";
 import StatusBadge from "../../components/ui/StatusBadge";
 
+const jobRequestsPath = "/customer/jobrequests";
+const createJobPath = "/customer/jobrequests/create";
+
 export default function CustomerDashboard() {
   const { user, access, isCustomer } = useAuth();
 
@@ -19,6 +22,8 @@ export default function CustomerDashboard() {
   const [stats, setStats] = useState({ total: "—", active: "—", closed: "—" });
   const [latestJobs, setLatestJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+
+
 
   // ============================================================
   // LOAD JOB REQUESTS – only the logged-in customer's jobs
@@ -119,7 +124,7 @@ function Header({ user }) {
       </p>
 
       <div className="mt-6">
-        <Link to="/jobrequests/create" className="premium-btn btn-dark">
+        <Link to={createJobPath} className="premium-btn btn-dark">
           <PlusCircle size={18} />
           Krijo kërkesë të re
         </Link>
@@ -153,10 +158,7 @@ function LatestRequests({ latestJobs, loading }) {
           Kërkesat e fundit
         </h2>
 
-        <Link
-          to="/jobrequests"
-          className="text-xs font-medium text-gray-500 hover:text-gray-900"
-        >
+        <Link to={jobRequestsPath} className="text-xs font-medium text-gray-500 hover:text-gray-900">
           Shiko të gjitha
         </Link>
       </div>
@@ -193,7 +195,7 @@ function RequestsTable({ latestJobs }) {
           {latestJobs.map((job) => (
             <tr
               key={job.id}
-              onClick={() => navigate(`/jobrequests/${job.id}`)}
+              onClick={() => navigate(`/customer/jobrequests/${job.id}`)}
               className="premium-row cursor-pointer hover:bg-gray-50 transition"
             >
               <Td>{job.title || "—"}</Td>
@@ -204,7 +206,7 @@ function RequestsTable({ latestJobs }) {
               <Td className="text-right">
                 <Link
                   onClick={(e) => e.stopPropagation()}
-                  to={`/jobrequests/${job.id}`}
+                  to={`/customer/jobrequests/${job.id}`}
                   className="text-xs font-medium text-gray-700 hover:text-gray-900"
                 >
                   Shiko
@@ -238,7 +240,7 @@ function RightSidebar() {
         <p className="text-sm text-gray-200 mb-4">
           Sa më shumë detaje shtoni, aq më të sakta do të jenë ofertat.
         </p>
-        <Link to="/jobrequests/create" className="premium-btn btn-light">
+        <Link to={createJobPath} className="premium-btn btn-light">
           <PlusCircle size={16} />
           Krijo kërkesë të re
         </Link>
