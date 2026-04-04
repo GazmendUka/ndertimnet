@@ -20,6 +20,7 @@ export default function JobRequestCreate() {
   const [cities, setCities] = useState([]);
   const [professions, setProfessions] = useState([]);
   const [lookupsLoading, setLookupsLoading] = useState(true);
+  const [country, setCountry] = useState("XK"); // default Kosovo
 
   // ------------------------------------------------------------
   // Backend draft
@@ -131,9 +132,24 @@ export default function JobRequestCreate() {
   // ------------------------------------------------------------
   // Step 5 – Consent state
   // ------------------------------------------------------------
-  
+  const isValidPersonalNumber = (value, country) => {
+    if (!value) return false;
+
+    const cleaned = value.replace(/\s/g, "").toUpperCase();
+
+    if (country === "XK") {
+      return /^\d{13}$/.test(cleaned);
+    }
+
+    if (country === "AL") {
+      return /^[A-Z]\d{9}$/.test(cleaned);
+    }
+
+    return false;
+  };
+
   const isStep5Valid =
-    consentData.personal_number.trim() !== "" &&
+    isValidPersonalNumber(consentData.personal_number, country) &&
     consentData.consent_publish === true &&
     consentData.consent_identity === true;
 
@@ -344,6 +360,7 @@ export default function JobRequestCreate() {
       try {
         await customerConsentService.submitConsent({
           personal_number: consentData.personal_number,
+          country: country,
           consent: true,
         });
 
@@ -356,7 +373,7 @@ export default function JobRequestCreate() {
         console.error("Final submit failed:", err);
 
         if (isEmailNotVerifiedError(err)) {
-          toast.error("Verifiera din email för att kunna publicera.");
+          toast.error("Verifikoni email-in tuaj për të publikuar.");
           return;
         }
 
@@ -592,16 +609,34 @@ const Step5 = (
       Pëlqimi & identiteti
     </h2>
 
-
-
     {/* Numri personal */}
+    <div>
+      <label className="block mb-1 font-medium">
+        Shteti *
+      </label>
+
+      <select
+        value={country}
+        onChange={(e) => setCountry(e.target.value)}
+        className="premium-input"
+        disabled={saving || submitting}
+      >
+        <option value="XK">Kosovë</option>
+        <option value="AL">Shqipëri</option>
+      </select>
+    </div>
+
     <div>
       <label className="block mb-1 font-medium">
         Numri personal *
       </label>
       <input
         type="text"
-        placeholder="YYYYMMDD-XXXX"
+        placeholder={
+          country === "XK"
+            ? "DDMMYYYYRRRRC"
+            : "A123456789"
+        }
         value={consentData.personal_number}
         onChange={(e) =>
           setConsentData((prev) => ({
