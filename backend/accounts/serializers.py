@@ -287,23 +287,51 @@ class CustomerProfileSerializer(serializers.ModelSerializer):
 class CustomerConsentSerializer(serializers.ModelSerializer):
     consent = serializers.BooleanField(write_only=True)
     personal_number = serializers.CharField(write_only=True)
+    country = serializers.CharField(write_only=True)
 
     class Meta:
         model = Customer
         fields = [
             "personal_number",
+            "country",
             "consent",
         ]
 
-    def validate_personal_number(self, value):
-        # Ta bort allt som inte är siffror (bindestreck, mellanslag etc.)
-        cleaned = re.sub(r"\D", "", value)
+    def validate(self, data):
+        pn = data.get("personal_number")
+        country = data.get("country")
 
-        # Svenskt personnummer = 12 siffror (YYYYMMDDXXXX)
-        if len(cleaned) != 12:
-            raise serializers.ValidationError("Ogiltigt personnummer")
+        if not pn:
+            raise serializers.ValidationError({
+                "personal_number": "Numri personal është i detyrueshëm."
+            })
 
-        return cleaned
+        if not country:
+            raise serializers.ValidationError({
+                "country": "Shteti është i detyrueshëm."
+            })
+
+        pn = pn.strip().replace(" ", "").upper()
+
+        if country == "XK":
+            if not re.match(r"^\d{13}$", pn):
+                raise serializers.ValidationError({
+                    "personal_number": "Numri personal duhet të ketë 13 shifra."
+                })
+
+        elif country == "AL":
+            if not re.match(r"^[A-Z]\d{9}$", pn):
+                raise serializers.ValidationError({
+                    "personal_number": "Numri personal nuk është valid."
+                })
+
+        else:
+            raise serializers.ValidationError({
+                "country": "Shteti nuk është valid."
+            })
+
+        data["personal_number"] = pn
+        return data
 
     def validate_consent(self, value):
         if value is not True:
@@ -314,6 +342,8 @@ class CustomerConsentSerializer(serializers.ModelSerializer):
         request = self.context["request"]
 
         instance.personal_number = validated_data["personal_number"]
+        instance.country = validated_data.get("country")  # uncomment later if field exists
+
         instance.consent_job_publish = True
         instance.consent_job_publish_at = timezone.now()
         instance.consent_job_publish_ip = request.META.get("REMOTE_ADDR")
