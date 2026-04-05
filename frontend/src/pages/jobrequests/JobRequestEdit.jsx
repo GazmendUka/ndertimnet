@@ -16,6 +16,7 @@ export default function JobRequestEdit() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
+  const jobRequestsPath = "/customer/jobrequests";
 
     // ----------------------------------------------------
     // Fetch job + professions
@@ -72,7 +73,7 @@ export default function JobRequestEdit() {
       await api.patch(`/jobrequests/${id}/`, payload);
 
       // Redirect tillbaka till mina annonser
-      navigate(`/jobrequests/${id}`);
+      navigate(`${jobRequestsPath}/${id}`);
     } catch (err) {
       const message =
         err.response?.data?.detail ||
