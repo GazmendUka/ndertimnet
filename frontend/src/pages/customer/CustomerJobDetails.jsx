@@ -246,7 +246,7 @@ export default function CustomerJobDetails() {
         <div className="flex justify-end mb-3">
           {canEdit && (
             <Link
-              to={`/jobrequests/${job.id}/edit`}
+              to={`${jobRequestsPath}/${job.id}/edit`}
               className="premium-btn btn-dark text-xs sm:text-sm"
             >
               ✏️ Përditëso kërkesën
