@@ -61,6 +61,7 @@ class OfferViewSet(viewsets.ModelViewSet):
                 return Offer.objects.none()
 
             qs = qs.filter(job_request__customer=customer)
+            qs = qs.exclude(status=OfferStatus.DRAFT)
 
         else:
             return Offer.objects.none()
@@ -81,7 +82,8 @@ class OfferViewSet(viewsets.ModelViewSet):
         # CUSTOMER
         if getattr(user, "role", None) == "customer":
             offer = get_object_or_404(
-                Offer.objects.select_related("current_version", "job_request"),
+                Offer.objects.select_related("current_version", "job_request")
+                .exclude(status=OfferStatus.DRAFT),
                 id=offer_id,
                 job_request__customer=user.customer_profile
             )
