@@ -85,6 +85,31 @@ export default function CustomerJobDetails() {
     );
   }, [job, acceptedOffer]);
 
+  // ------------------------------------------------------------
+  // Delete Jobrequest (All functionality in backend)
+  // ------------------------------------------------------------
+  const deleteReason = useMemo(() => {
+    if (!job) return "";
+
+    const hasAccepted = offers.some(o => o.status === "accepted");
+    const hasPending = offers.some(o => o.status === "signed");
+
+    if (job.is_completed || job.winner_offer) {
+      return "Kërkesa është përfunduar";
+    }
+
+    if (hasAccepted) {
+      return "Ka një ofertë të pranuar";
+    }
+
+    if (hasPending) {
+      return "Ka oferta në pritje";
+    }
+
+    return "";
+  }, [job, offers]);
+  const canDelete = deleteReason === "";
+
   // ============================================================
   // Load job request (kundens eget jobb)
   // ============================================================
@@ -209,6 +234,44 @@ export default function CustomerJobDetails() {
     }
   }
 
+
+  // ============================================================
+  // Delete jobrequest via backend actions
+  // ============================================================
+  async function handleDeleteJob() {
+    if (!canDelete) return;
+    if (!isEmailVerified) {
+      toast.error("Verifiera din email för att fortsätta.");
+      return;
+    }
+
+    if (!job) return;
+
+    const confirmDelete = window.confirm(
+      "A jeni i sigurt që dëshironi ta fshini këtë kërkesë?\n\nKy veprim nuk mund të kthehet."
+    );
+
+    if (!confirmDelete) return;
+
+    try {
+      await api.delete(`jobrequests/${job.id}/`);
+
+      toast.success("Kërkesa u fshi me sukses.");
+
+      navigate("/customer/jobrequests");
+    } catch (err) {
+      console.error("Delete error:", err);
+
+      const backendMsg =
+        err.response?.data?.detail ||
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        "Gabim gjatë fshirjes së kërkesës.";
+
+      toast.error(backendMsg);
+    }
+  }
+
   // ============================================================
   // UI
   // ============================================================
@@ -243,15 +306,38 @@ export default function CustomerJobDetails() {
           Krijuar më: {formatDate(job.created_at)}
         </p>
 
-        <div className="flex justify-end mb-3">
-          {canEdit && (
-            <Link
-              to={`${jobRequestsPath}/${job.id}/edit`}
-              className="premium-btn btn-dark text-xs sm:text-sm"
+        <div className="flex flex-col items-end mb-3 gap-1">
+
+          <div className="flex gap-2">
+            <button
+              onClick={canDelete ? handleDeleteJob : undefined}
+              aria-disabled={!canDelete}
+              title={!canDelete ? deleteReason : ""}
+              className={`premium-btn text-xs sm:text-sm ${
+                canDelete
+                  ? "bg-red-50 text-red-600 border border-red-200 hover:bg-red-100"
+                  : "bg-gray-50 text-gray-400 border border-gray-200 cursor-not-allowed"
+              }`}
             >
-              ✏️ Përditëso kërkesën
-            </Link>
+              🗑️ Fshij kërkesën
+            </button>
+
+            {canEdit && (
+              <Link
+                to={`${jobRequestsPath}/${job.id}/edit`}
+                className="premium-btn btn-dark text-xs sm:text-sm"
+              >
+                ✏️ Përditëso kërkesën
+              </Link>
+            )}
+          </div>
+
+          {!canDelete && deleteReason && (
+            <p className="text-xs text-gray-500 text-right max-w-xs flex items-center gap-1 justify-end">
+              ⚠️ {deleteReason}
+            </p>
           )}
+
         </div>
 
         <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
