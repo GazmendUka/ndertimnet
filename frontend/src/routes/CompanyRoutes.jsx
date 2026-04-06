@@ -5,7 +5,7 @@ import JobRequestList from "../pages/jobrequests/JobRequestList";
 import PrivateRoute from "../components/PrivateRoute";
 import Layout from "../components/layout/Layout";
 import OnboardingGuard from "./OnboardingGuard";
-import CompanyJobDetails from "../pages/jobrequests/CompanyJobDetails";
+import CompanyJobDetails from "../pages/CompanyJobDetails";
 import CompanyDashboard from "../pages/company/CompanyDashboard";
 import CompanyProfile from "../pages/profile/CompanyProfile";
 import MyLeads from "../pages/company/MyLeads";
