@@ -664,15 +664,31 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         if not customer_profile or job.customer != customer_profile:
             raise PermissionDenied("Kjo kërkesë nuk është e juaja.")
 
+        # 🚫 Permanent block om jobbet redan är avslutat
         if job.is_completed or job.winner_offer_id:
-            raise ValidationError("Kjo kërkesë nuk mund të fshihet sepse është përfunduar.")
+            raise ValidationError(
+                "Kjo kërkesë nuk mund të fshihet sepse është përfunduar."
+            )
+
+        offers_qs = job.offers
+
+        # 🚫 Block om accepterad offert finns
+        if offers_qs.filter(status=OfferStatus.ACCEPTED).exists():
+            raise ValidationError(
+                "Kjo kërkesë nuk mund të fshihet sepse ka një ofertë të pranuar."
+            )
+
+        # 🚫 Block om det finns obesvarade/aktiva offerter
+        if offers_qs.filter(status=OfferStatus.SIGNED).exists():
+            raise ValidationError(
+                "Kjo kërkesë nuk mund të fshihet sepse ka oferta të papërgjigjura. Refuzoni ofertat fillimisht."
+            )
 
         now = timezone.now()
 
         job.is_deleted = True
         job.deleted_at = now
         job.is_active = False
-
         job.save(update_fields=[
             "is_deleted",
             "deleted_at",
@@ -682,10 +698,8 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
 
         JobRequestAudit.objects.create(
             job_request=job,
-            action="job_closed",
-            message="Kërkesa u fshi (soft delete) nga klienti.",
+            action="job_deleted",
+            message="Kërkesa u fshi nga klienti.",
         )
 
         return Response(status=status.HTTP_204_NO_CONTENT)
-    
-
