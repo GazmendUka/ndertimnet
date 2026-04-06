@@ -257,9 +257,18 @@ class OfferViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=["post"])
     def decision(self, request, pk=None):
         offer = self.get_object()
+        user = request.user
 
-        if not IsCompanyStep2().has_permission(request, self):
-            return Response({"detail": "Company profile incomplete."}, status=403)
+        # ✅ ONLY CUSTOMER CAN DECIDE
+        if getattr(user, "role", None) != "customer":
+            return Response({"detail": "Only customers can decide on offers."}, status=403)
+
+        if not hasattr(user, "customer_profile"):
+            return Response({"detail": "Customer profile missing."}, status=403)
+
+        # ✅ säkerställ att offerten tillhör kunden
+        if offer.job_request.customer != user.customer_profile:
+            return Response({"detail": "Not your offer."}, status=403)
 
         serializer = OfferDecisionSerializer(
             data=request.data,
