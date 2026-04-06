@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 export default function CompanyJobDetails() {
-  const { id: jobId } = useParams(); // job_request id
+  const { jobId } = useParams();
   const navigate = useNavigate();
   const { user, isCompany, access } = useAuth();
 
