@@ -118,14 +118,7 @@ export default function CompanyJobDetails() {
   // ------------------------------
   // HANDLERS
   // ------------------------------
-  const handleViewOrCreateOffer = () => {
-    // Om offert finns → visa details
-    if (offerInfo?.id) {
-      navigate(`/company/offers/${offerInfo.id}`);
-      return;
-    }
-
-    // Annars → gå till wizard
+  const handleCreateOffer = () => {
     navigate(`/company/jobrequests/${jobId}/offer/edit`);
   };
   
@@ -276,7 +269,7 @@ export default function CompanyJobDetails() {
                     </p>
 
                     <button
-                      onClick={handleViewOrCreateOffer}
+                      onClick={handleCreateOffer}
                       className="premium-btn btn-dark inline-flex items-center gap-2"
                     >
                       <FileText size={16} />
@@ -290,15 +283,15 @@ export default function CompanyJobDetails() {
             {/* OFFER EXISTS */}
             {!isClosed && offerInfo.exists === true && !loadingOffer && (
               <div className="premium-card p-6 space-y-3">
-                <h3 className="font-semibold text-lg">✅ Oferta ekziston</h3>
-                <p className="text-dim">Mund ta hapni ofertën ose ta redaktoni.</p>
+                <h3 className="font-semibold text-lg">🚀 Gati për ofertë</h3>
+                <p className="text-dim">Tani mund të krijoni ofertën tuaj.</p>
 
                 <button
-                  onClick={handleViewOrCreateOffer}
+                  onClick={handleCreateOffer}
                   className="premium-btn btn-dark inline-flex items-center gap-2"
                 >
                   <FileText size={16} />
-                  Shiko ofertën
+                  Krijo ofertën
                 </button>
               </div>
             )}
