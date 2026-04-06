@@ -5,7 +5,7 @@ import JobRequestList from "../pages/jobrequests/JobRequestList";
 import PrivateRoute from "../components/PrivateRoute";
 import Layout from "../components/layout/Layout";
 import OnboardingGuard from "./OnboardingGuard";
-
+import CompanyJobDetails from "../pages/jobrequests/CompanyJobDetails";
 import CompanyDashboard from "../pages/company/CompanyDashboard";
 import CompanyProfile from "../pages/profile/CompanyProfile";
 import MyLeads from "../pages/company/MyLeads";
@@ -26,6 +26,7 @@ export default function CompanyRoutes() {
             <Route path="leads/mine" element={<MyLeads />} />
             <Route path="leads/:id" element={<LeadDetailsPage />} />
             <Route path="jobrequests" element={<JobRequestList />} />
+            <Route path="jobrequests/:jobId" element={<CompanyJobDetails />} />
             <Route path="jobrequests/:jobId/offer/edit" element={<OfferEdit />} />
             <Route path="offers/:id" element={<OfferDetails />} />
 

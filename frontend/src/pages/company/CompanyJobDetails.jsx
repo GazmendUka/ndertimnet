@@ -23,7 +23,7 @@ import {
 } from "lucide-react";
 
 export default function CompanyJobDetails() {
-  const { id } = useParams(); // job_request id
+  const { id: jobId } = useParams(); // job_request id
   const navigate = useNavigate();
   const { user, isCompany, access } = useAuth();
 
@@ -46,10 +46,10 @@ export default function CompanyJobDetails() {
   // LOAD JOB (SOURCE OF TRUTH)
   // ------------------------------
   const fetchJob = async () => {
-    if (!access) return;
+    if (!access || !jobId) return;
     setLoadingJob(true);
     try {
-      const res = await api.get(`jobrequests/${id}/`);
+      const res = await api.get(`jobrequests/${jobId}/`);
       setJob(res.data);
     } catch (err) {
       console.error(err);
@@ -62,7 +62,7 @@ export default function CompanyJobDetails() {
   useEffect(() => {
     fetchJob();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, access]);
+  }, [jobId, access]);
 
   // ------------------------------
   // CHECK IF OFFER EXISTS
@@ -72,7 +72,7 @@ export default function CompanyJobDetails() {
 
     setLoadingOffer(true);
     try {
-      const res = await api.get(`offers/check-by-job/${id}/`);
+      const res = await api.get(`offers/check-by-job/${jobId}/`);
       setOfferInfo({
         exists: res.data.exists,
         id: res.data.offer_id || null,
@@ -88,7 +88,7 @@ export default function CompanyJobDetails() {
   useEffect(() => {
     checkOffer();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, access]);
+  }, [jobId, access]);
 
   // ------------------------------
   // GUARDS
@@ -126,7 +126,7 @@ export default function CompanyJobDetails() {
     }
 
     // Annars → gå till wizard
-    navigate(`/company/jobrequests/${id}/offer/edit`);
+    navigate(`/company/jobrequests/${jobId}/offer/edit`);
   };
   
   const handleUnlockLead = async () => {
@@ -134,7 +134,7 @@ export default function CompanyJobDetails() {
       setUnlocking(true);
 
       const res = await api.post("/payments/unlock-lead/", {
-        job_request: id,
+        job_request: jobId,
       });
 
       toast.success("Lead u hap me sukses!");
@@ -163,7 +163,7 @@ export default function CompanyJobDetails() {
       {/* TOP NAV */}
       <div className="flex justify-between items-center mb-6">
         <button
-          onClick={() => navigate("/jobrequests")}
+          onClick={() => navigate("/company/jobrequests")}
           className="premium-btn btn-light inline-flex items-center"
         >
           <ArrowLeft size={18} />
@@ -171,7 +171,7 @@ export default function CompanyJobDetails() {
         </button>
 
         <button
-          onClick={() => navigate("/dashboard/company")}
+          onClick={() => navigate("/company")}
           className="premium-btn btn-light inline-flex items-center"
         >
           🏠 Dashboard
