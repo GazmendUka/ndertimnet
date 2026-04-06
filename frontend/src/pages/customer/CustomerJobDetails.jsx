@@ -10,6 +10,7 @@ import { toast } from "react-hot-toast";
 
 import { ArrowLeft, MapPin, Euro, Tag, Users, Clock } from "lucide-react";
 import StatusBadge from "../../components/ui/StatusBadge";
+import DeleteModal from "../../components/ui/DeleteModal";
 
 export default function CustomerJobDetails() {
   const { id } = useParams();
@@ -110,6 +111,9 @@ export default function CustomerJobDetails() {
   }, [job, offers]);
   const canDelete = deleteReason === "";
 
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deleteLoading, setDeleteLoading] = useState(false);
+
   // ============================================================
   // Load job request (kundens eget jobb)
   // ============================================================
@@ -184,7 +188,7 @@ export default function CustomerJobDetails() {
     if (!job) return;
 
     if (!isEmailVerified) {
-      toast.error("Verifiera din email för att fortsätta.");
+      toast.error("Ju lutem verifikoni email-in për të vazhduar.");
       return;
     }
 
@@ -220,7 +224,7 @@ export default function CustomerJobDetails() {
       console.error("Error updating offer:", err);
 
       if (isEmailNotVerifiedError(err)) {
-        toast.error("Verifiera din email för att fortsätta.");
+        toast.error("Ju lutem verifikoni email-in për të vazhduar.");
         return;
       }
       const backendMsg =
@@ -240,18 +244,15 @@ export default function CustomerJobDetails() {
   // ============================================================
   async function handleDeleteJob() {
     if (!canDelete) return;
+
     if (!isEmailVerified) {
-      toast.error("Verifiera din email för att fortsätta.");
+      toast.error("Ju lutem verifikoni email-in për të vazhduar.");
       return;
     }
 
     if (!job) return;
 
-    const confirmDelete = window.confirm(
-      "A jeni i sigurt që dëshironi ta fshini këtë kërkesë?\n\nKy veprim nuk mund të kthehet."
-    );
-
-    if (!confirmDelete) return;
+    setDeleteLoading(true);
 
     try {
       await api.delete(`jobrequests/${job.id}/`);
@@ -260,8 +261,6 @@ export default function CustomerJobDetails() {
 
       navigate("/customer/jobrequests");
     } catch (err) {
-      console.error("Delete error:", err);
-
       const backendMsg =
         err.response?.data?.detail ||
         err.response?.data?.message ||
@@ -269,6 +268,9 @@ export default function CustomerJobDetails() {
         "Gabim gjatë fshirjes së kërkesës.";
 
       toast.error(backendMsg);
+    } finally {
+      setDeleteLoading(false);
+      setShowDeleteModal(false);
     }
   }
 
@@ -310,7 +312,11 @@ export default function CustomerJobDetails() {
 
           <div className="flex gap-2">
             <button
-              onClick={canDelete ? handleDeleteJob : undefined}
+              onClick={() => {
+                if (!canDelete) return;
+                setShowDeleteModal(true);
+              }}
+              disabled={!canDelete || deleteLoading}
               aria-disabled={!canDelete}
               title={!canDelete ? deleteReason : ""}
               className={`premium-btn text-xs sm:text-sm ${
@@ -319,7 +325,7 @@ export default function CustomerJobDetails() {
                   : "bg-gray-50 text-gray-400 border border-gray-200 cursor-not-allowed"
               }`}
             >
-              🗑️ Fshij kërkesën
+              {deleteLoading ? "Duke fshirë..." : "🗑️ Fshij kërkesën"}
             </button>
 
             {canEdit && (
@@ -530,6 +536,21 @@ export default function CustomerJobDetails() {
           </div>
         </div>
       </section>
+      <DeleteModal
+        isOpen={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={handleDeleteJob}
+        loading={deleteLoading}
+        title="Fshij kërkesën"
+        description={
+          <>
+            A jeni i sigurt që dëshironi ta fshini këtë kërkesë?
+            <br />
+            <br />
+            Ky veprim nuk mund të kthehet.
+          </>
+        }
+      />
     </div>
   );
 }
