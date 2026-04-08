@@ -2,6 +2,7 @@
 
 from io import BytesIO
 
+from django.db.models import Q
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 
@@ -49,8 +50,9 @@ class OfferViewSet(viewsets.ModelViewSet):
 
             qs = qs.filter(
                 company=company,
-                job_request__is_active=True,
                 job_request__is_deleted=False,
+            ).filter(
+                Q(job_request__is_active=True) | Q(status=OfferStatus.ACCEPTED)
             )
 
         # -----------------------------
@@ -63,8 +65,9 @@ class OfferViewSet(viewsets.ModelViewSet):
 
             qs = qs.filter(
                 job_request__customer=customer,
-                job_request__is_active=True,
                 job_request__is_deleted=False,
+            ).filter(
+                Q(job_request__is_active=True) | Q(status=OfferStatus.ACCEPTED)
             ).exclude(status=OfferStatus.DRAFT)
 
         else:
@@ -90,30 +93,29 @@ class OfferViewSet(viewsets.ModelViewSet):
         if getattr(user, "role", None) == "customer":
             customer = getattr(user, "customer_profile", None)
             if not customer:
-                return Response({"detail": "Customer profile missing."}, status=403)
+                return Response({"detail": "Profili i klientit mungon."}, status=403)
 
             offer = get_object_or_404(
-                Offer.objects.select_related("current_version", "job_request").exclude(
-                    status=OfferStatus.DRAFT
-                ),
+                Offer.objects.select_related("current_version", "job_request")
+                .exclude(status=OfferStatus.DRAFT)
+                .filter(job_request__is_deleted=False)
+                .filter(Q(job_request__is_active=True) | Q(status=OfferStatus.ACCEPTED)),
                 id=offer_id,
                 job_request__customer=customer,
-                job_request__is_active=True,
-                job_request__is_deleted=False,
             )
 
         # COMPANY
         elif getattr(user, "role", None) == "company":
             company = getattr(user, "company_profile", None)
             if not company:
-                return Response({"detail": "Company profile missing."}, status=403)
+                return Response({"detail": "Profili i kompanisë mungon."}, status=403)
 
             offer = get_object_or_404(
-                Offer.objects.select_related("current_version", "job_request"),
+                Offer.objects.select_related("current_version", "job_request")
+                .filter(job_request__is_deleted=False)
+                .filter(Q(job_request__is_active=True) | Q(status=OfferStatus.ACCEPTED)),
                 id=offer_id,
                 company=company,
-                job_request__is_active=True,
-                job_request__is_deleted=False,
             )
 
         else:
@@ -144,8 +146,10 @@ class OfferViewSet(viewsets.ModelViewSet):
         qs = (
             Offer.objects.filter(
                 company=company,
-                job_request__is_active=True,
                 job_request__is_deleted=False,
+            )
+            .filter(
+                Q(job_request__is_active=True) | Q(status=OfferStatus.ACCEPTED)
             )
             .select_related("current_version", "job_request")
             .order_by("-created_at")
@@ -171,10 +175,13 @@ class OfferViewSet(viewsets.ModelViewSet):
 
         job_request_id = request.data.get("job_request")
         if not job_request_id:
-            return Response({"detail": "Ju lutemi zgjidhni një kërkesë pune përpara se të vazhdoni."}, status=400)
+            return Response(
+                {"detail": "Ju lutemi zgjidhni një kërkesë pune përpara se të vazhdoni."},
+                status=400,
+            )
 
         # JobRequest måste fortfarande vara aktiv
-        get_object_or_404(
+        job = get_object_or_404(
             JobRequest,
             pk=job_request_id,
             is_active=True,
@@ -182,7 +189,7 @@ class OfferViewSet(viewsets.ModelViewSet):
         )
 
         # Lead måste vara upplåst innan offert
-        if not LeadAccess.objects.filter(company=company, job_request_id=job_request_id).exists():
+        if not LeadAccess.objects.filter(company=company, job_request=job).exists():
             return Response(
                 {"detail": "Duhet të hapni punën përpara se të krijoni ofertë."},
                 status=403,
@@ -207,16 +214,19 @@ class OfferViewSet(viewsets.ModelViewSet):
     # --------------------------------------------------
     def partial_update(self, request, pk=None):
         offer = self.get_object()
-        
-        if not offer.job_request.is_active or offer.job_request.is_deleted:
+
+        if offer.job_request.is_deleted or not offer.job_request.is_active:
             return Response(
-                {"detail": "Kjo kërkesë osht q'akivu nga klienti."},
-                status=400
+                {"detail": "Kjo kërkesë nuk është më aktive."},
+                status=400,
             )
 
         # Blockera om accepterad
         if offer.status == OfferStatus.ACCEPTED:
+            return Response(
                 {"detail": "Oferta e pranuar nuk mund të ndryshohet."},
+                status=400,
+            )
 
         cv = offer.current_version
 
@@ -270,9 +280,15 @@ class OfferViewSet(viewsets.ModelViewSet):
     def sign(self, request, pk=None):
         offer = self.get_object()
 
+        if offer.job_request.is_deleted or not offer.job_request.is_active:
+            return Response(
+                {"detail": "Kjo kërkesë nuk është më aktive."},
+                status=400,
+            )
+
         if not IsCompanyStep2().has_permission(request, self):
             return Response(
-                 {"detail": "Profili i kompanisë duhet të jetë i plotësuar përpara nënshkrimit të ofertës."},
+                {"detail": "Profili i kompanisë duhet të jetë i plotësuar përpara nënshkrimit të ofertës."},
                 status=403,
             )
 
@@ -283,7 +299,10 @@ class OfferViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        return Response({"success": True, "message": "Oferta u nënshkrua me sukses."}, status=200)
+        return Response(
+            {"success": True, "message": "Oferta u nënshkrua me sukses."},
+            status=200,
+        )
 
     # --------------------------------------------------
     # DECISION = ACCEPT / REJECT
@@ -295,14 +314,14 @@ class OfferViewSet(viewsets.ModelViewSet):
         user = request.user
 
         if getattr(user, "role", None) != "customer":
-            return Response({"detail": "Only customers can decide on offers."}, status=403)
+            return Response({"detail": "Vetëm klientët mund të vendosin për ofertat."}, status=403)
 
         customer = getattr(user, "customer_profile", None)
         if not customer:
-            return Response({"detail": "Customer profile missing."}, status=403)
+            return Response({"detail": "Profili i klientit mungon."}, status=403)
 
         if offer.job_request.customer != customer:
-            return Response({"detail": "Not your offer."}, status=403)
+            return Response({"detail": "Kjo ofertë nuk është e juaja."}, status=403)
 
         serializer = OfferDecisionSerializer(
             data=request.data,
@@ -360,24 +379,23 @@ class OfferViewSet(viewsets.ModelViewSet):
         user = request.user
 
         if getattr(user, "role", None) != "company":
-            return Response({"detail": "Only companies can access offers."}, status=403)
+            return Response({"detail": "Vetëm kompanitë mund të kenë qasje në oferta."}, status=403)
 
         company = getattr(user, "company_profile", None)
         if not company:
-            return Response({"detail": "Company profile missing."}, status=403)
+            return Response({"detail": "Profili i kompanisë mungon."}, status=403)
 
-        get_object_or_404(
+        job = get_object_or_404(
             JobRequest,
             pk=job_id,
-            is_active=True,
             is_deleted=False,
         )
 
         offer = Offer.objects.filter(
             company=company,
-            job_request_id=job_id,
-            job_request__is_active=True,
-            job_request__is_deleted=False,
+            job_request=job,
+        ).filter(
+            Q(job_request__is_active=True) | Q(status=OfferStatus.ACCEPTED)
         ).only("id").first()
 
         return Response(
@@ -394,16 +412,15 @@ class OfferViewSet(viewsets.ModelViewSet):
         user = request.user
 
         if getattr(user, "role", None) != "company":
-            return Response({"detail": "Only companies can access offers."}, status=403)
+            return Response({"detail": "Vetëm kompanitë mund të kenë qasje në oferta."}, status=403)
 
         company = getattr(user, "company_profile", None)
         if not company:
-            return Response({"detail": "Company profile missing."}, status=403)
+            return Response({"detail": "Profili i kompanisë mungon."}, status=403)
 
         job = get_object_or_404(
             JobRequest,
             pk=job_id,
-            is_active=True,
             is_deleted=False,
         )
 
@@ -412,18 +429,23 @@ class OfferViewSet(viewsets.ModelViewSet):
             .filter(
                 company=company,
                 job_request=job,
-                job_request__is_active=True,
                 job_request__is_deleted=False,
+            )
+            .filter(
+                Q(job_request__is_active=True) | Q(status=OfferStatus.ACCEPTED)
             )
             .first()
         )
 
         # Om offerten inte finns → krävs LeadAccess
         if not offer:
-            if not LeadAccess.objects.filter(company=company, job_request=job).exists():
-                return Response({"detail": "Lead is not unlocked."}, status=403)
+            if not job.is_active:
+                return Response({"detail": "Nuk ekziston asnjë ofertë për këtë kërkesë."}, status=404)
 
-            return Response({"detail": "Offer does not exist for this job request."}, status=404)
+            if not LeadAccess.objects.filter(company=company, job_request=job).exists():
+                return Response({"detail": "Duhet të hapni lead-in përpara se të vazhdoni."}, status=403)
+
+            return Response({"detail": "Nuk ekziston asnjë ofertë për këtë kërkesë."}, status=404)
 
         return Response(OfferSerializer(offer).data, status=200)
 
