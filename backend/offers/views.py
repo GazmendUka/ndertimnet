@@ -28,10 +28,7 @@ from .serializers import (
 
 
 class OfferViewSet(viewsets.ModelViewSet):
-    queryset = (
-        Offer.objects.select_related("current_version", "job_request")
-        .all()
-    )
+    queryset = Offer.objects.select_related("current_version", "job_request").all()
     serializer_class = OfferSerializer
     permission_classes = [IsAuthenticated]
 
@@ -50,7 +47,11 @@ class OfferViewSet(viewsets.ModelViewSet):
             if not company:
                 return Offer.objects.none()
 
-            qs = qs.filter(company=company)
+            qs = qs.filter(
+                company=company,
+                job_request__is_active=True,
+                job_request__is_deleted=False,
+            )
 
         # -----------------------------
         # Customer
@@ -60,8 +61,11 @@ class OfferViewSet(viewsets.ModelViewSet):
             if not customer:
                 return Offer.objects.none()
 
-            qs = qs.filter(job_request__customer=customer)
-            qs = qs.exclude(status=OfferStatus.DRAFT)
+            qs = qs.filter(
+                job_request__customer=customer,
+                job_request__is_active=True,
+                job_request__is_deleted=False,
+            ).exclude(status=OfferStatus.DRAFT)
 
         else:
             return Offer.objects.none()
@@ -74,26 +78,42 @@ class OfferViewSet(viewsets.ModelViewSet):
             qs = qs.filter(job_request_id=job_request_id)
 
         return qs
-    
+
+    # --------------------------------------------------
+    # RETRIEVE
+    # --------------------------------------------------
     def retrieve(self, request, *args, **kwargs):
         offer_id = kwargs.get("pk")
         user = request.user
 
         # CUSTOMER
         if getattr(user, "role", None) == "customer":
+            customer = getattr(user, "customer_profile", None)
+            if not customer:
+                return Response({"detail": "Customer profile missing."}, status=403)
+
             offer = get_object_or_404(
-                Offer.objects.select_related("current_version", "job_request")
-                .exclude(status=OfferStatus.DRAFT),
+                Offer.objects.select_related("current_version", "job_request").exclude(
+                    status=OfferStatus.DRAFT
+                ),
                 id=offer_id,
-                job_request__customer=user.customer_profile
+                job_request__customer=customer,
+                job_request__is_active=True,
+                job_request__is_deleted=False,
             )
 
         # COMPANY
         elif getattr(user, "role", None) == "company":
+            company = getattr(user, "company_profile", None)
+            if not company:
+                return Response({"detail": "Company profile missing."}, status=403)
+
             offer = get_object_or_404(
                 Offer.objects.select_related("current_version", "job_request"),
                 id=offer_id,
-                company=user.company_profile
+                company=company,
+                job_request__is_active=True,
+                job_request__is_deleted=False,
             )
 
         else:
@@ -102,10 +122,8 @@ class OfferViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(offer)
         return Response(serializer.data)
 
-
-    
     # --------------------------------------------------
-    # LIST – My offers
+    # LIST – MY OFFERS
     # GET /api/offers/mine/
     # --------------------------------------------------
     @action(detail=False, methods=["get"])
@@ -124,7 +142,11 @@ class OfferViewSet(viewsets.ModelViewSet):
             return Response([], status=200)
 
         qs = (
-            Offer.objects.filter(company=company)
+            Offer.objects.filter(
+                company=company,
+                job_request__is_active=True,
+                job_request__is_deleted=False,
+            )
             .select_related("current_version", "job_request")
             .order_by("-created_at")
         )
@@ -139,33 +161,40 @@ class OfferViewSet(viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         user = request.user
 
-        # ✅ Hard guard: endast företag
+        # Endast företag
         if getattr(user, "role", None) != "company":
-            return Response({"detail": "Only companies can create offers."}, status=403)
+            return Response({"detail": "Vetëm kompanitë mund të krijojnë oferta."}, status=403)
 
         company = getattr(user, "company_profile", None)
         if not company:
-            return Response({"detail": "Company profile missing."}, status=403)
+            return Response({"detail": "Profili i kompanisë mungon."}, status=403)
 
         job_request_id = request.data.get("job_request")
         if not job_request_id:
-            return Response({"detail": "job_request is required"}, status=400)
+            return Response({"detail": "Ju lutemi zgjidhni një kërkesë pune përpara se të vazhdoni."}, status=400)
 
-        # 🔐 Pay-first: Lead måste vara upplåst innan offert
+        # JobRequest måste fortfarande vara aktiv
+        get_object_or_404(
+            JobRequest,
+            pk=job_request_id,
+            is_active=True,
+            is_deleted=False,
+        )
+
+        # Lead måste vara upplåst innan offert
         if not LeadAccess.objects.filter(company=company, job_request_id=job_request_id).exists():
             return Response(
-                {"detail": "Lead must be unlocked before creating an offer."},
+                {"detail": "Duhet të hapni punën përpara se të krijoni ofertë."},
                 status=403,
             )
 
-        # 🧩 Company profile step 2
+        # Company profile step 2
         if not IsCompanyStep2().has_permission(request, self):
             return Response(
-                {"detail": "Complete company profile before creating an offer."},
+                {"detail": "Plotësoni profilin e kompanisë përpara se të krijoni ofertë."},
                 status=403,
             )
 
-        # Serializer gör resten (unique per job, skapa Offer + OfferVersion)
         serializer = OfferCreateSerializer(data=request.data, context={"request": request})
         serializer.is_valid(raise_exception=True)
         offer = serializer.save()
@@ -178,14 +207,20 @@ class OfferViewSet(viewsets.ModelViewSet):
     # --------------------------------------------------
     def partial_update(self, request, pk=None):
         offer = self.get_object()
+        
+        if not offer.job_request.is_active or offer.job_request.is_deleted:
+            return Response(
+                {"detail": "Kjo kërkesë osht q'akivu nga klienti."},
+                status=400
+            )
 
-        # 1) Blockera om accepterad
+        # Blockera om accepterad
         if offer.status == OfferStatus.ACCEPTED:
-            return Response({"detail": "Accepted offer cannot be edited."}, status=400)
+                {"detail": "Oferta e pranuar nuk mund të ndryshohet."},
 
         cv = offer.current_version
 
-        # 2) Ingen version ännu → skapa v1
+        # Ingen version ännu → skapa v1
         if not cv:
             cv = OfferVersion.objects.create(
                 offer=offer,
@@ -195,14 +230,12 @@ class OfferViewSet(viewsets.ModelViewSet):
             offer.current_version = cv
             offer.save(update_fields=["current_version"])
 
-        # 3) Om signerad → skapa NY version (kräver ny sign)
+        # Om signerad → skapa ny version
         if cv.is_signed:
             new_v = OfferVersion.objects.create(
                 offer=offer,
                 version_number=cv.version_number + 1,
                 created_by=request.user,
-
-                # kopiera gamla värden
                 presentation_text=cv.presentation_text,
                 can_start_from=cv.can_start_from,
                 duration_text=cv.duration_text,
@@ -215,16 +248,18 @@ class OfferViewSet(viewsets.ModelViewSet):
             )
 
             offer.current_version = new_v
-            offer.status = OfferStatus.DRAFT  # ✅ ny version = draft
+            offer.status = OfferStatus.DRAFT
             offer.save(update_fields=["current_version", "status"])
             cv = new_v
 
-        # 4) Uppdatera fält på current version
+        # Uppdatera fält på current version
         for field, value in request.data.items():
             if hasattr(cv, field):
                 setattr(cv, field, value)
 
         cv.save()
+        offer.refresh_from_db()
+
         return Response(OfferSerializer(offer).data)
 
     # --------------------------------------------------
@@ -237,7 +272,7 @@ class OfferViewSet(viewsets.ModelViewSet):
 
         if not IsCompanyStep2().has_permission(request, self):
             return Response(
-                {"detail": "Company profile must be completed before signing offer."},
+                 {"detail": "Profili i kompanisë duhet të jetë i plotësuar përpara nënshkrimit të ofertës."},
                 status=403,
             )
 
@@ -248,7 +283,7 @@ class OfferViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        return Response({"success": True, "message": "Offer signed successfully"}, status=200)
+        return Response({"success": True, "message": "Oferta u nënshkrua me sukses."}, status=200)
 
     # --------------------------------------------------
     # DECISION = ACCEPT / REJECT
@@ -259,15 +294,14 @@ class OfferViewSet(viewsets.ModelViewSet):
         offer = self.get_object()
         user = request.user
 
-        # ✅ ONLY CUSTOMER CAN DECIDE
         if getattr(user, "role", None) != "customer":
             return Response({"detail": "Only customers can decide on offers."}, status=403)
 
-        if not hasattr(user, "customer_profile"):
+        customer = getattr(user, "customer_profile", None)
+        if not customer:
             return Response({"detail": "Customer profile missing."}, status=403)
 
-        # ✅ säkerställ att offerten tillhör kunden
-        if offer.job_request.customer != user.customer_profile:
+        if offer.job_request.customer != customer:
             return Response({"detail": "Not your offer."}, status=403)
 
         serializer = OfferDecisionSerializer(
@@ -305,7 +339,10 @@ class OfferViewSet(viewsets.ModelViewSet):
         offer = self.get_object()
 
         pdf_bytes = build_offer_contract_pdf(offer)
-        filename = f"oferta_{offer.id}_v{offer.current_version.version_number if offer.current_version else 1}.pdf"
+        filename = (
+            f"oferta_{offer.id}_v"
+            f"{offer.current_version.version_number if offer.current_version else 1}.pdf"
+        )
 
         return FileResponse(
             BytesIO(pdf_bytes),
@@ -329,10 +366,24 @@ class OfferViewSet(viewsets.ModelViewSet):
         if not company:
             return Response({"detail": "Company profile missing."}, status=403)
 
-        get_object_or_404(JobRequest, pk=job_id)
+        get_object_or_404(
+            JobRequest,
+            pk=job_id,
+            is_active=True,
+            is_deleted=False,
+        )
 
-        offer = Offer.objects.filter(company=company, job_request_id=job_id).only("id").first()
-        return Response({"exists": bool(offer), "offer_id": offer.id if offer else None}, status=200)
+        offer = Offer.objects.filter(
+            company=company,
+            job_request_id=job_id,
+            job_request__is_active=True,
+            job_request__is_deleted=False,
+        ).only("id").first()
+
+        return Response(
+            {"exists": bool(offer), "offer_id": offer.id if offer else None},
+            status=200,
+        )
 
     # --------------------------------------------------
     # UNIQUE OFFER PER JOB (READ ONLY)
@@ -349,19 +400,25 @@ class OfferViewSet(viewsets.ModelViewSet):
         if not company:
             return Response({"detail": "Company profile missing."}, status=403)
 
-        job = get_object_or_404(JobRequest, pk=job_id)
+        job = get_object_or_404(
+            JobRequest,
+            pk=job_id,
+            is_active=True,
+            is_deleted=False,
+        )
 
         offer = (
-            Offer.objects.select_related(
-                "current_version",
-                "job_request",
-                "company",
+            Offer.objects.select_related("current_version", "job_request", "company")
+            .filter(
+                company=company,
+                job_request=job,
+                job_request__is_active=True,
+                job_request__is_deleted=False,
             )
-            .filter(company=company, job_request=job)
             .first()
         )
 
-        # Om offerten inte finns → krävs LeadAccess (pay-first)
+        # Om offerten inte finns → krävs LeadAccess
         if not offer:
             if not LeadAccess.objects.filter(company=company, job_request=job).exists():
                 return Response({"detail": "Lead is not unlocked."}, status=403)
@@ -380,67 +437,48 @@ class OfferViewSet(viewsets.ModelViewSet):
         qs = OfferVersion.objects.filter(offer=offer).order_by("-version_number")
         serializer = OfferVersionSerializer(qs, many=True)
         return Response(serializer.data, status=200)
-    
+
     # --------------------------------------------------
     # CHAT MESSAGES
     # GET /api/offers/{id}/messages/
     # POST /api/offers/{id}/messages/
     # --------------------------------------------------
-
     @action(detail=True, methods=["get", "post"], url_path="messages")
     def messages(self, request, pk=None):
-
         offer = self.get_object()
         user = request.user
 
-        # -----------------------------
         # GET → list messages
-        # -----------------------------
         if request.method == "GET":
-
             qs = offer.messages.select_related(
                 "sender_company",
-                "sender_customer"
+                "sender_customer",
             ).order_by("created_at")
 
             serializer = OfferMessageSerializer(qs, many=True)
-
             return Response(serializer.data)
 
-
-        # -----------------------------
         # POST → send message
-        # -----------------------------
         message_text = request.data.get("message")
-
         if not message_text:
-            return Response(
-                {"detail": "Message is required"},
-                status=400
-            )
+            return Response({"detail": "Message is required"}, status=400)
 
-        if user.role == "company":
-
+        if getattr(user, "role", None) == "company":
             message = offer.messages.create(
                 sender_type="company",
                 sender_company=user.company_profile,
-                message=message_text
+                message=message_text,
             )
 
-        elif user.role == "customer":
-
+        elif getattr(user, "role", None) == "customer":
             message = offer.messages.create(
                 sender_type="customer",
                 sender_customer=user.customer_profile,
-                message=message_text
+                message=message_text,
             )
 
         else:
-            return Response(
-                {"detail": "Invalid sender"},
-                status=403
-            )
+            return Response({"detail": "Invalid sender"}, status=403)
 
         serializer = OfferMessageSerializer(message)
-
         return Response(serializer.data, status=201)
