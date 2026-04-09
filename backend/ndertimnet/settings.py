@@ -92,6 +92,8 @@ INSTALLED_APPS = [
     "django_filters",
     "corsheaders",
     "rest_framework_simplejwt.token_blacklist",
+    "cloudinary",
+    "cloudinary_storage",
 
     # Project apps
     "leads",
@@ -232,6 +234,8 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# 🔥 CLOUDINARY STORAGE
+DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 
 # ======================================================
 # REST FRAMEWORK CONFIG

@@ -55,6 +55,7 @@ class CompanySerializer(serializers.ModelSerializer):
     profile_step = serializers.SerializerMethodField()
     profile_completion = serializers.SerializerMethodField()
     logo = serializers.ImageField(required=False, allow_null=True)
+    logo_url = serializers.SerializerMethodField()
 
     # 🔹 WRITE: tar emot lista av ID
     professions = serializers.PrimaryKeyRelatedField(
@@ -100,6 +101,7 @@ class CompanySerializer(serializers.ModelSerializer):
             "address",    
             "description",
             "logo",
+            "logo_url",
             "city",
             "cities",           # 🔹 NY
             "cities_detail",    # 🔹 NY
@@ -111,6 +113,11 @@ class CompanySerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
         ]
+
+    def get_logo_url(self, obj):
+        if obj.logo:
+            return obj.logo.url
+        return None    
 
     def get_profile_step(self, obj):
         return get_company_profile_step(obj)
