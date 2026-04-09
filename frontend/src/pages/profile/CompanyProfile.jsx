@@ -5,7 +5,7 @@ import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
 import { Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { getMediaUrl } from "../../utils/media";
+// import { getMediaUrl } from "../../utils/media";
 
 export default function CompanyProfile() {
   const { access, logout, user } = useAuth();
@@ -107,7 +107,7 @@ export default function CompanyProfile() {
             website: "",
             address: "",
             description: "",
-            logo: null,
+            logo_url: null,
             professions_detail: [],
             cities_detail: [],
             profile_step: 0,
@@ -313,10 +313,10 @@ export default function CompanyProfile() {
                   onClick={() => isEditing && logoInputRef.current?.click()}
                   title={isEditing ? "Kliko për ta ndryshuar logon" : undefined}
                 >
-                  {safeCompany.logo ? (
+                  {safeCompany.logo_url ? (
                     <>
                       <img
-                        src={getMediaUrl(safeCompany.logo)}
+                        src={safeCompany.logo_url}
                         alt={safeCompany.company_name || "logo"}
                         className="w-full h-full object-cover"
                         onError={(e) => {
