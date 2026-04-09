@@ -5,6 +5,7 @@ import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
 import { Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { getMediaUrl } from "../../utils/media";
 
 export default function CompanyProfile() {
   const { access, logout, user } = useAuth();
@@ -313,11 +314,23 @@ export default function CompanyProfile() {
                   title={isEditing ? "Kliko për ta ndryshuar logon" : undefined}
                 >
                   {safeCompany.logo ? (
-                    <img
-                      src={safeCompany.logo}
-                      alt={safeCompany.company_name || "logo"}
-                      className="w-full h-full object-cover"
-                    />
+                    <>
+                      <img
+                        src={getMediaUrl(safeCompany.logo)}
+                        alt={safeCompany.company_name || "logo"}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.target.style.display = "none";
+                          e.target.nextSibling.style.display = "flex";
+                        }}
+                      />
+                      <div
+                        className="w-full h-full bg-gray-200 flex items-center justify-center text-xl font-bold text-gray-600"
+                        style={{ display: "none" }}
+                      >
+                        {(safeCompany.company_name?.[0] || "C").toUpperCase()}
+                      </div>
+                    </>
                   ) : (
                     <div className="w-full h-full bg-gray-200 flex items-center justify-center text-xl font-bold text-gray-600">
                       {(safeCompany.company_name?.[0] || "C").toUpperCase()}
