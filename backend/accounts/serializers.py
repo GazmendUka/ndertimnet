@@ -115,9 +115,13 @@ class CompanySerializer(serializers.ModelSerializer):
         ]
 
     def get_logo_url(self, obj):
-        if obj.logo:
+        if not obj.logo:
+            return None
+        try:
             return obj.logo.url
-        return None    
+        except Exception as e:
+            print("LOGO ERROR:", e)
+            return None
 
     def get_profile_step(self, obj):
         return get_company_profile_step(obj)
