@@ -4,6 +4,7 @@ from pathlib import Path
 import os
 from datetime import timedelta
 
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # ======================================================
@@ -29,6 +30,10 @@ def env_list(key: str, default=None, sep=","):
 # ======================================================
 # Environment: development | production
 ENVIRONMENT = os.environ.get("ENVIRONMENT", "development").lower()
+if ENVIRONMENT == "production" and not os.environ.get("SECRET_KEY"):
+    raise Exception("SECRET_KEY must be set in production")
+
+
 
 # Use env in production. Keep dev fallback for local runs.
 SECRET_KEY = os.environ.get(
@@ -48,6 +53,9 @@ DEBUG = env_bool("DEBUG", default=(ENVIRONMENT != "production"))
 # Set ALLOWED_HOSTS on Render to your service domain and later your custom domains.
 default_hosts = ["localhost", "127.0.0.1"]
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", default=default_hosts)
+
+if ENVIRONMENT == "production" and ALLOWED_HOSTS == default_hosts:
+    raise Exception("ALLOWED_HOSTS must be set in production")
 
 # --- Render safety fallback ---
 RENDER_EXTERNAL_HOSTNAME = os.environ.get("RENDER_EXTERNAL_HOSTNAME")

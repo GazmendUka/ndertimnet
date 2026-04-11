@@ -133,20 +133,24 @@ class CompanySerializer(serializers.ModelSerializer):
         professions = validated_data.pop("professions", None)
         cities = validated_data.pop("cities", None)
 
-        # uppdatera vanliga fält
+        # 🔥 hantera logo separat (skydd)
+        if "logo" in validated_data:
+            instance.logo = validated_data.pop("logo")
+
+        # uppdatera övriga fält
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
         instance.save()
 
-        # uppdatera M2M
+        # M2M
         if professions is not None:
             instance.professions.set(professions)
 
         if cities is not None:
             instance.cities.set(cities)
 
-        # 🔥 RE-CALC EFTER M2M
+        # profile step
         instance.profile_step = instance.calculate_profile_step()
         instance.save(update_fields=["profile_step"])
 

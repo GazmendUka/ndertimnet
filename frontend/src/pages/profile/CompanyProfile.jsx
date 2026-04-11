@@ -227,22 +227,28 @@ export default function CompanyProfile() {
         normalizedForm.website = "https://" + normalizedForm.website;
       }
 
-      let payload = normalizedForm;
-      let config = {};
+      const payload = new FormData();
 
+      // 🔹 vanliga fält
+      Object.entries(normalizedForm).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          value.forEach((v) => payload.append(key, v));
+        } else if (value !== null && value !== undefined && value !== "") {
+          payload.append(key, value);
+        }
+      });
+
+      // 🔥 logo (endast om vald)
       if (logoFile) {
-        payload = new FormData();
-
-        Object.entries(normalizedForm).forEach(([key, value]) => {
-          if (Array.isArray(value)) value.forEach((v) => payload.append(key, v));
-          else payload.append(key, value ?? "");
-        });
-
         payload.append("logo", logoFile);
-        config = { headers: { "Content-Type": "multipart/form-data" } };
       }
 
-      const res = await api.patch("/accounts/profile/company/", payload, config);
+      const res = await api.patch("/accounts/profile/company/", payload, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
       const updated = res.data?.data || res.data;
 
       setCompany(updated);
