@@ -150,6 +150,16 @@ class Company(models.Model):
         related_name="companies"
     )
 
+    registration_document = models.FileField(
+        upload_to="company_documents/",
+        null=True,
+        blank=True
+    )
+
+    is_verified = models.BooleanField(default=False)
+
+    verified_at = models.DateTimeField(null=True, blank=True)
+
     profile_step = models.IntegerField(default=0, db_index=True)
 
     is_active = models.BooleanField(default=True)

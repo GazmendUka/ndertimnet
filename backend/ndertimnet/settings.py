@@ -6,6 +6,7 @@ from datetime import timedelta
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
+print("CLOUDINARY_URL:", os.environ.get("CLOUDINARY_URL"))
 
 # ======================================================
 # ENV HELPERS
