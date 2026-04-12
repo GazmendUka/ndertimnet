@@ -130,6 +130,8 @@ class CompanySerializer(serializers.ModelSerializer):
         return get_company_profile_completion(obj)
     
     def update(self, instance, validated_data):
+        print("COMPANY VALIDATED DATA:", validated_data)
+
         professions = validated_data.pop("professions", None)
         cities = validated_data.pop("cities", None)
 

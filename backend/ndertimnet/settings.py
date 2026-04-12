@@ -230,19 +230,22 @@ AUTHENTICATION_BACKENDS = [
 
 
 # ======================================================
-# STATIC & MEDIA
+# STATIC & MEDIA (NEW DJANGO 4.2+ WAY)
 # ======================================================
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# Whitenoise compression + cache
-STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
-
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# 🔥 CLOUDINARY STORAGE
-DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+STORAGES = {
+    "default": {
+        "BACKEND": "cloudinary_storage.storage.MediaCloudinaryStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # ======================================================
 # REST FRAMEWORK CONFIG

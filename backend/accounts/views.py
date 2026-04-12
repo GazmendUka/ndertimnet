@@ -163,12 +163,14 @@ class VerifyEmailView(APIView):
         # - user var inaktiv, eller
         # - company var inaktiv / arkiverad
         reactivated = (not user.is_active)
-        if hasattr(user, "company_profile"):
+
+        try:
             company = user.company_profile
-            if (not company.is_active) or (company.archived_at is not None):
-                reactivated = True
-        else:
+        except Company.DoesNotExist:
             company = None
+
+        if company and ((not company.is_active) or (company.archived_at is not None)):
+            reactivated = True
 
         # 🔄 Reactivate if needed
         if reactivated:
@@ -434,6 +436,9 @@ def company_profile(request):
         serializer = CompanySerializer(company, context={"request": request})
         return success(data=serializer.data)
 
+    # 🔹 PUT / PATCH – uppdatera via serializer (SÄKERT)
+    print("FILES:", request.FILES)
+    print("DATA:", request.data)
     # 🔹 PUT / PATCH – uppdatera via serializer (SÄKERT)
     serializer = CompanySerializer(
         company,

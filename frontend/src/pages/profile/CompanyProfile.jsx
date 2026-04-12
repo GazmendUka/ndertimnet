@@ -243,11 +243,9 @@ export default function CompanyProfile() {
         payload.append("logo", logoFile);
       }
 
-      const res = await api.patch("/accounts/profile/company/", payload, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      console.log("LOGO FILE:", logoFile); // 🔥
+
+      const res = await api.patch("/accounts/profile/company/", payload);
 
       const updated = res.data?.data || res.data;
 
