@@ -51,13 +51,13 @@ class CustomerSerializer(serializers.ModelSerializer):
 
 
 # 🏢 CompanySerializer
+# 🏢 CompanySerializer
 class CompanySerializer(serializers.ModelSerializer):
     profile_step = serializers.SerializerMethodField()
     profile_completion = serializers.SerializerMethodField()
     logo = serializers.ImageField(required=False, allow_null=True)
     logo_url = serializers.SerializerMethodField()
 
-    # 🔹 WRITE: tar emot lista av ID
     professions = serializers.PrimaryKeyRelatedField(
         queryset=Profession.objects.filter(is_active=True),
         many=True,
@@ -65,7 +65,6 @@ class CompanySerializer(serializers.ModelSerializer):
         write_only=True,
     )
 
-    # 🔹 WRITE: tar emot lista av city-ID
     cities = serializers.PrimaryKeyRelatedField(
         queryset=City.objects.all(),
         many=True,
@@ -73,20 +72,17 @@ class CompanySerializer(serializers.ModelSerializer):
         write_only=True,
     )
 
-    # 🔹 READ: returnerar fulla objekt
     professions_detail = ProfessionSerializer(
         source="professions",
         many=True,
         read_only=True
     )
 
-    # 🔹 READ: returnerar fulla city-objekt (serviceområde)
     cities_detail = CitySerializer(
         source="cities",
         many=True,
         read_only=True
     )
-
 
     city = CitySerializer(read_only=True)
 
@@ -97,22 +93,33 @@ class CompanySerializer(serializers.ModelSerializer):
             "company_name",
             "org_number",
             "phone",
-            "website",    
-            "address",    
+            "website",
+            "address",
             "description",
             "logo",
             "logo_url",
             "city",
-            "cities",           # 🔹 NY
-            "cities_detail",    # 🔹 NY
-            "professions",          # WRITE
-            "professions_detail",   # READ
+            "cities",
+            "cities_detail",
+            "professions",
+            "professions_detail",
             "profile_step",
             "profile_completion",
             "is_active",
             "created_at",
             "updated_at",
         ]
+
+    def to_internal_value(self, data):
+        data = data.copy()
+
+        if hasattr(data, "getlist"):
+            if "professions" in data:
+                data.setlist("professions", data.getlist("professions"))
+            if "cities" in data:
+                data.setlist("cities", data.getlist("cities"))
+
+        return super().to_internal_value(data)
 
     def get_logo_url(self, obj):
         if not obj.logo:
@@ -125,34 +132,30 @@ class CompanySerializer(serializers.ModelSerializer):
 
     def get_profile_step(self, obj):
         return get_company_profile_step(obj)
-    
+
     def get_profile_completion(self, obj):
         return get_company_profile_completion(obj)
-    
+
     def update(self, instance, validated_data):
         print("COMPANY VALIDATED DATA:", validated_data)
 
         professions = validated_data.pop("professions", None)
         cities = validated_data.pop("cities", None)
 
-        # 🔥 hantera logo separat (skydd)
         if "logo" in validated_data:
             instance.logo = validated_data.pop("logo")
 
-        # uppdatera övriga fält
         for attr, value in validated_data.items():
             setattr(instance, attr, value)
 
         instance.save()
 
-        # M2M
         if professions is not None:
             instance.professions.set(professions)
 
         if cities is not None:
             instance.cities.set(cities)
 
-        # profile step
         instance.profile_step = instance.calculate_profile_step()
         instance.save(update_fields=["profile_step"])
 
