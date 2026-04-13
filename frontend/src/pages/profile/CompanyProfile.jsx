@@ -226,26 +226,30 @@ export default function CompanyProfile() {
       ) {
         normalizedForm.website = "https://" + normalizedForm.website;
       }
-
+      
+      
       const payload = new FormData();
+      payload.append("company_name", "Test Company");
 
-      // 🔹 vanliga fält
-      Object.entries(normalizedForm).forEach(([key, value]) => {
-        if (Array.isArray(value)) {
-          value.forEach((v) => payload.append(key, v));
-        } else if (value !== null && value !== undefined && value !== "") {
-          payload.append(key, value);
-        }
-      });
+      // Object.entries(normalizedForm).forEach(([key, value]) => {
+      //   if (Array.isArray(value)) {
+      //     value.forEach((v) => payload.append(key, v));
+      //   } else if (value !== null && value !== undefined) {
+      //     payload.append(key, value);
+      //   }
+      // });
 
-      // 🔥 logo (endast om vald)
       if (logoFile) {
         payload.append("logo", logoFile);
       }
 
-      console.log("LOGO FILE:", logoFile); // 🔥
+      console.log("🔥 PAYLOAD:", [...payload.entries()]);
 
-      const res = await api.patch("/accounts/profile/company/", payload);
+      const res = await api.patch("/accounts/profile/company/", payload, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
 
       const updated = res.data?.data || res.data;
 
@@ -254,8 +258,15 @@ export default function CompanyProfile() {
       setForm(null);
       setLogoFile(null);
       setMessage("Profili është përditësua me sukses.");
-    } catch {
-      setError("Gabim gjatë ruajtjes së profilit.");
+
+    } catch (err) {
+      console.log("🔥 ERROR RESPONSE:", err.response);
+      console.log("🔥 ERROR DATA:", err.response?.data);
+
+      setError(
+        JSON.stringify(err.response?.data) ||
+        "Gabim gjatë ruajtjes së profilit."
+      );
     } finally {
       setSaving(false);
     }
