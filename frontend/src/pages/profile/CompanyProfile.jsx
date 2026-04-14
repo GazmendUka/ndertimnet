@@ -226,8 +226,7 @@ export default function CompanyProfile() {
       ) {
         normalizedForm.website = "https://" + normalizedForm.website;
       }
-      
-      
+       
       const payload = new FormData();
       payload.append("company_name", "Test Company");
 
