@@ -210,6 +210,7 @@ export default function CompanyProfile() {
   };
 
   const saveChanges = async () => {
+    console.log("🚨 VERSION 2 CODE RUNNING");
     if (!form) return;
 
     setSaving(true);
@@ -226,29 +227,11 @@ export default function CompanyProfile() {
       ) {
         normalizedForm.website = "https://" + normalizedForm.website;
       }
-       
-      const payload = new FormData();
-      payload.append("company_name", "Test Company");
 
-      // Object.entries(normalizedForm).forEach(([key, value]) => {
-      //   if (Array.isArray(value)) {
-      //     value.forEach((v) => payload.append(key, v));
-      //   } else if (value !== null && value !== undefined) {
-      //     payload.append(key, value);
-      //   }
-      // });
-
-      if (logoFile) {
-        payload.append("logo", logoFile);
-      }
-
-      console.log("🔥 PAYLOAD:", [...payload.entries()]);
-
-      const res = await api.patch("/accounts/profile/company/", payload, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const res = await api.patch(
+        "/accounts/profile/company/",
+        normalizedForm
+      );
 
       const updated = res.data?.data || res.data;
 
@@ -259,7 +242,6 @@ export default function CompanyProfile() {
       setMessage("Profili është përditësua me sukses.");
 
     } catch (err) {
-      console.log("🔥 ERROR RESPONSE:", err.response);
       console.log("🔥 ERROR DATA:", err.response?.data);
 
       setError(
