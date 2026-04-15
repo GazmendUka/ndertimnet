@@ -46,7 +46,6 @@ const clearTokens = () => {
 const refreshApi = axios.create({
   baseURL: BASE_URL,
   headers: {
-    "Content-Type": "application/json",
     Accept: "application/json",
   },
 });
@@ -59,7 +58,6 @@ const refreshApi = axios.create({
 const api = axios.create({
   baseURL: BASE_URL,
   headers: {
-    "Content-Type": "application/json",
     Accept: "application/json",
   },
 });
