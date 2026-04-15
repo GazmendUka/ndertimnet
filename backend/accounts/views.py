@@ -20,6 +20,7 @@ from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.authentication import JWTAuthentication
 from rest_framework_simplejwt.exceptions import TokenError
+from rest_framework.parsers import MultiPartParser, FormParser
 
 from .utils.email_verification import (
     verify_email_token,
@@ -419,6 +420,7 @@ def customer_profile(request):
 @api_view(["GET", "PUT", "PATCH"])
 @authentication_classes([JWTAuthentication])
 @permission_classes([IsAuthenticated])
+@parser_classes([MultiPartParser, FormParser])  # ✅ HIT SKA DEN
 def company_profile(request):
     user = request.user
     if not user.email_verified:
