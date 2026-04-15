@@ -227,42 +227,27 @@ export default function CompanyProfile() {
         normalizedForm.website = "https://" + normalizedForm.website;
       }
 
-      let res;
+      // ============================================
+      // 🟢 LOGO FINNS → FormData
+      // ============================================
+      const payload = new FormData();
 
-      // ============================================
-      // 🟢 FALL 1: LOGO FINNS → FormData
-      // ============================================
+      Object.entries(normalizedForm).forEach(([key, value]) => {
+        if (Array.isArray(value)) {
+          value.forEach((v) => payload.append(key, v)); // 👈 VIKTIGT: INTE key[]
+        } else if (value !== null && value !== undefined) {
+          payload.append(key, value);
+        }
+      });
+
       if (logoFile) {
-        const payload = new FormData();
-
-        Object.entries(normalizedForm).forEach(([key, value]) => {
-          if (Array.isArray(value)) {
-            value.forEach((v) => payload.append(key, v));
-          } else if (value !== null && value !== undefined) {
-            payload.append(key, value);
-          }
-        });
-
         payload.append("logo", logoFile);
-
-        console.log("📦 FORM DATA:", [...payload.entries()]);
-
-        res = await api.patch(
-          "/accounts/profile/company/",
-          payload
-        );
-
-      } else {
-        // ============================================
-        // 🟢 FALL 2: INGEN LOGO → JSON
-        // ============================================
-        console.log("📦 JSON:", normalizedForm);
-
-        res = await api.patch(
-          "/accounts/profile/company/",
-          normalizedForm
-        );
       }
+
+      const res = await api.patch(
+        "/accounts/profile/company/",
+        payload,
+      );
 
       const updated = res.data?.data || res.data;
 
