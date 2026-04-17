@@ -555,18 +555,16 @@ export default function CompanyProfile() {
             )}
           </div>
 
-          <div className={`p-4 rounded-xl border ${
-            hasDocument
-              ? "border-gray-200 bg-gray-50"
-              : "border-red-300 bg-red-50"
-          }`}>
-            <p className={`text-sm font-medium ${
-              hasDocument ? "text-gray-700" : "text-red-600"
-            }`}>
-              {hasDocument
-                ? "Registreringsbevis uppladdat"
-                : "Registreringsbevis saknas"}
-            </p>
+          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50">
+            {hasDocument ? (
+              <p className="text-sm text-gray-700">
+                Certifikata e regjistrimit u ngarkua
+              </p>
+            ) : (
+              <p className="text-sm text-red-600 font-medium">
+                Mungon certifikata e regjistrimit
+              </p>
+            )}
 
             <input
               type="file"
