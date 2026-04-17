@@ -19,6 +19,7 @@ export default function CompanyProfile() {
 
   const [professions, setProfessions] = useState([]);
   const [cities, setCities] = useState([]);
+  const [selectedCountry, setSelectedCountry] = useState("XK");
 
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -148,6 +149,10 @@ export default function CompanyProfile() {
   const professionList = safeCompany.professions_detail || [];
   const cityList = safeCompany.cities_detail || [];
 
+  const filteredCities = cities.filter(
+    (c) => c.country === selectedCountry
+  );
+
   // --------------------------------------------------
   // EDIT HANDLERS
   // --------------------------------------------------
@@ -200,6 +205,7 @@ export default function CompanyProfile() {
     setIsEditing(true);
     setError("");
     setMessage("");
+    setSelectedCountry("XK");
   };
 
   const cancelEdit = () => {
@@ -525,17 +531,49 @@ export default function CompanyProfile() {
             <h2 className="text-sm font-semibold text-gray-900">Zona e shërbimit</h2>
 
             {isEditing ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {cities.map((c) => (
-                  <label key={c.id} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={form?.cities?.includes(c.id) || false}
-                      onChange={() => toggleCity(c.id)}
-                    />
-                    {c.name}
-                  </label>
-                ))}
+                <div className="space-y-4">
+
+                {/* COUNTRY SELECTOR */}
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCountry("XK")}
+                    className={`px-4 py-2 rounded-full text-sm ${
+                      selectedCountry === "XK"
+                        ? "bg-gray-900 text-white"
+                        : "bg-gray-100"
+                    }`}
+                  >
+                    Kosovo
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCountry("AL")}
+                    className={`px-4 py-2 rounded-full text-sm ${
+                      selectedCountry === "AL"
+                        ? "bg-gray-900 text-white"
+                        : "bg-gray-100"
+                    }`}
+                  >
+                    Shqipëri
+                  </button>
+                </div>
+
+                {/* FILTERED CITIES */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  {filteredCities.map((c) => (
+                    <label key={c.id} className="flex items-center gap-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={form?.cities?.includes(c.id) || false}
+                        onChange={() => toggleCity(c.id)}
+                      />
+                      {c.name}
+                    </label>
+                  ))}
+                </div>
+
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
