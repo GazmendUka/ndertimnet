@@ -10,8 +10,8 @@ class CustomerAdmin(admin.ModelAdmin):
     ordering = ("id",)
 
     fieldsets = (
-        ("👤 Informacioni i Klientit", {
-            "fields": ("user", "phone", "address")
+        ("🏢 Informacioni i Kompanisë", {
+            "fields": ("user", "company_name", "org_number", "phone", "registration_document")
         }),
     )
 

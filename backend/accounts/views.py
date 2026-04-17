@@ -443,9 +443,7 @@ def company_profile(request):
         serializer = CompanySerializer(company, context={"request": request})
         return success(data=serializer.data)
 
-    # 🔹 PUT / PATCH – uppdatera via serializer (SÄKERT)
-    print("FILES:", request.FILES)
-    print("DATA:", request.data)
+
     # 🔹 PUT / PATCH – uppdatera via serializer (SÄKERT)
     serializer = CompanySerializer(
         company,

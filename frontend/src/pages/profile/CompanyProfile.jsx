@@ -33,6 +33,7 @@ export default function CompanyProfile() {
   const [deleting, setDeleting] = useState(false);
 
   const isLocked = !user?.email_verified;
+  const [file, setFile] = useState(null);
 
   // --------------------------------------------------
   // DELETE ACCOUNT
@@ -266,6 +267,37 @@ export default function CompanyProfile() {
       );
     } finally {
       setSaving(false);
+    }
+  };
+
+    // ============================================
+    // 🟢 UPLOAD REG.DOCUMENT
+    // ============================================
+
+  const hasDocument = !!company?.registration_document;
+  const handleUpload = async () => {
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append("registration_document", file);
+
+    try {
+      const res = await api.patch(`/accounts/profile/company/`, formData, {
+        headers: {
+          "Content-Type": "multipart/form-data",
+        },
+      });
+
+      const updated = res.data?.data || res.data;
+
+      setCompany(updated);
+      setFile(null);
+      setError("");
+      setMessage("Dokumenti u ngarkua me sukses.");
+    } catch (err) {
+      console.error(err);
+      setMessage("");
+      setError("Dokumenti nuk mund të ngarkohet.");
     }
   };
 
@@ -521,6 +553,35 @@ export default function CompanyProfile() {
                 )}
               </div>
             )}
+          </div>
+
+          <div className={`p-4 rounded-xl border ${
+            hasDocument
+              ? "border-gray-200 bg-gray-50"
+              : "border-red-300 bg-red-50"
+          }`}>
+            <p className={`text-sm font-medium ${
+              hasDocument ? "text-gray-700" : "text-red-600"
+            }`}>
+              {hasDocument
+                ? "Registreringsbevis uppladdat"
+                : "Registreringsbevis saknas"}
+            </p>
+
+            <input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png"
+              onChange={(e) => setFile(e.target.files[0])}
+              className="mt-3"
+            />
+
+            <button
+              onClick={handleUpload}
+              disabled={!file}
+              className="mt-3 px-4 py-2 rounded-lg bg-black text-white disabled:opacity-50"
+            >
+              Dërgo
+            </button>
           </div>
 
           {/* ACTIONS (EDIT MODE) */}

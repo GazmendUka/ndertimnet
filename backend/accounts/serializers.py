@@ -51,7 +51,6 @@ class CustomerSerializer(serializers.ModelSerializer):
 
 
 # 🏢 CompanySerializer
-# 🏢 CompanySerializer
 class CompanySerializer(serializers.ModelSerializer):
     profile_step = serializers.SerializerMethodField()
     profile_completion = serializers.SerializerMethodField()
@@ -108,6 +107,7 @@ class CompanySerializer(serializers.ModelSerializer):
             "is_active",
             "created_at",
             "updated_at",
+            "registration_document",
         ]
 
     def to_internal_value(self, data):
