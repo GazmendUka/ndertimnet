@@ -150,8 +150,12 @@ export default function CompanyProfile() {
   const cityList = safeCompany.cities_detail || [];
 
   const filteredCities = cities.filter(
-    (c) => c.country === selectedCountry
+    (c) => String(c.country).toUpperCase() === selectedCountry
   );
+
+  const selectedCities = form?.cities
+    ? cities.filter((c) => form.cities.includes(c.id))
+    : [];
 
   // --------------------------------------------------
   // EDIT HANDLERS
@@ -531,51 +535,85 @@ export default function CompanyProfile() {
             <h2 className="text-sm font-semibold text-gray-900">Zona e shërbimit</h2>
 
             {isEditing ? (
-                <div className="space-y-4">
+                <div className="space-y-5">
+                  {/* COUNTRY SELECTOR */}
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCountry("XK")}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+                        selectedCountry === "XK"
+                          ? "bg-gray-900 text-white shadow-sm"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      }`}
+                    >
+                      Kosovo
+                    </button>
 
-                {/* COUNTRY SELECTOR */}
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setSelectedCountry("XK")}
-                    className={`px-4 py-2 rounded-full text-sm ${
-                      selectedCountry === "XK"
-                        ? "bg-gray-900 text-white"
-                        : "bg-gray-100"
-                    }`}
-                  >
-                    Kosovo
-                  </button>
+                    <button
+                      type="button"
+                      onClick={() => setSelectedCountry("AL")}
+                      className={`px-4 py-2 rounded-full text-sm font-medium transition ${
+                        selectedCountry === "AL"
+                          ? "bg-gray-900 text-white shadow-sm"
+                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                      }`}
+                    >
+                      Shqipëri
+                    </button>
+                  </div>
 
-                  <button
-                    type="button"
-                    onClick={() => setSelectedCountry("AL")}
-                    className={`px-4 py-2 rounded-full text-sm ${
-                      selectedCountry === "AL"
-                        ? "bg-gray-900 text-white"
-                        : "bg-gray-100"
-                    }`}
-                  >
-                    Shqipëri
-                  </button>
+                  {/* SELECTED CITIES */}
+                  {selectedCities.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-gray-500">
+                        Qytetet e zgjedhura ({selectedCities.length})
+                      </p>
+
+                      <div className="flex flex-wrap gap-2">
+                        {selectedCities.map((c) => (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => toggleCity(c.id)}
+                            className="px-3 py-1.5 rounded-full bg-gray-900 text-white text-sm font-medium hover:bg-black transition"
+                          >
+                            {c.name}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* FILTERED CITIES */}
+                  <div className="space-y-2">
+                    <p className="text-xs text-gray-500">
+                      Zgjidh qytetet ku kompania juaj vepron
+                    </p>
+
+                    <div className="flex flex-wrap gap-2">
+                      {filteredCities.map((c) => {
+                        const isSelected = form?.cities?.includes(c.id);
+
+                        return (
+                          <button
+                            key={c.id}
+                            type="button"
+                            onClick={() => toggleCity(c.id)}
+                            className={`px-3 py-2 rounded-full text-sm font-medium border transition ${
+                              isSelected
+                                ? "bg-gray-900 text-white border-gray-900 shadow-sm"
+                                : "bg-white text-gray-700 border-gray-300 hover:border-gray-500 hover:bg-gray-50"
+                            }`}
+                          >
+                            {c.name}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
-
-                {/* FILTERED CITIES */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  {filteredCities.map((c) => (
-                    <label key={c.id} className="flex items-center gap-2 text-sm">
-                      <input
-                        type="checkbox"
-                        checked={form?.cities?.includes(c.id) || false}
-                        onChange={() => toggleCity(c.id)}
-                      />
-                      {c.name}
-                    </label>
-                  ))}
-                </div>
-
-              </div>
-            ) : (
+              ) : (
               <div className="flex flex-wrap gap-2">
                 {cityList.length ? (
                   cityList.map((c) => (
