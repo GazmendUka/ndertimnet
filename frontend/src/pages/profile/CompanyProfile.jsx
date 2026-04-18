@@ -13,6 +13,7 @@ export default function CompanyProfile() {
 
   const [logoFile, setLogoFile] = useState(null);
   const logoInputRef = useRef(null);
+  const fileInputRef = useRef(null);
 
   const [company, setCompany] = useState(null);
   const [form, setForm] = useState(null);
@@ -35,6 +36,7 @@ export default function CompanyProfile() {
 
   const isLocked = !user?.email_verified;
   const [file, setFile] = useState(null);
+
 
   // --------------------------------------------------
   // DELETE ACCOUNT
@@ -139,7 +141,7 @@ export default function CompanyProfile() {
       website: "",
       address: "",
       description: "",
-      logo: null,
+      logo_url: null,
       professions_detail: [],
       cities_detail: [],
       profile_step: 0,
@@ -302,6 +304,8 @@ export default function CompanyProfile() {
 
       setCompany(updated);
       setFile(null);
+      fileInputRef.current.value = "";
+      
       setError("");
       setMessage("Dokumenti u ngarkua me sukses.");
     } catch (err) {
@@ -330,25 +334,26 @@ export default function CompanyProfile() {
         <div className="premium-section space-y-8">
 
           {/* HEADER */}
-          <div className="space-y-3">
-            <p className="text-label">Profili i kompanisë</p>
+          <div className="space-y-2">
+            <p className="text-xs uppercase tracking-wide text-gray-400">
+              Profili i kompanisë
+            </p>
 
             <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="page-title">
+              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-gray-900">
                 {safeCompany.company_name || "—"}
               </h1>
 
               {user?.email_verified ? (
-                <span className="px-3 py-1 text-xs font-semibold rounded-full bg-green-50 text-green-700 border border-green-200">
+                <span className="px-3 py-1 text-xs font-medium rounded-full bg-green-50 text-green-700 border border-green-200">
                   Email i verifikuar
                 </span>
               ) : (
-                <span className="px-3 py-1 text-xs font-semibold rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                <span className="px-3 py-1 text-xs font-medium rounded-full bg-amber-50 text-amber-700 border border-amber-200">
                   Email i paverifikuar
                 </span>
               )}
             </div>
-
             {isLocked && (
               <p className="text-sm text-amber-700">
                 Email-i nuk është i verifikuar. Profili është i kyçur derisa ta verifikoni.
@@ -357,11 +362,11 @@ export default function CompanyProfile() {
           </div>
 
           {/* CARD: LOGO + DELETE */}
-          <div className="premium-card p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition">
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
             <div className="flex items-center justify-between gap-6">
               <div className="flex items-center gap-4">
                 <div
-                  className={`relative w-20 h-20 rounded-full overflow-hidden border flex items-center justify-center ${
+                  className={`relative w-20 h-20 rounded-2xl overflow-hidden border border-gray-200 shadow-sm flex items-center justify-center ${
                     isEditing ? "cursor-pointer" : ""
                   }`}
                   onClick={() => isEditing && logoInputRef.current?.click()}
@@ -434,7 +439,7 @@ export default function CompanyProfile() {
           </div>
 
           {/* CARD: BASIC INFO */}
-          <div className="premium-card p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition">
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
             <h2 className="text-sm font-semibold text-gray-900">
               Informacion bazë
             </h2>
@@ -496,7 +501,7 @@ export default function CompanyProfile() {
           </div>
 
           {/* CARD: PROFESSIONS */}
-          <div className="premium-card p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition">
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
             <h2 className="text-sm font-semibold text-gray-900">Specialitetet</h2>
 
             {isEditing ? (
@@ -531,20 +536,20 @@ export default function CompanyProfile() {
           </div>
 
           {/* CARD: CITIES */}
-          <div className="premium-card p-6 rounded-2xl border border-gray-200 shadow-sm hover:shadow-md transition">
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
             <h2 className="text-sm font-semibold text-gray-900">Zona e shërbimit</h2>
 
             {isEditing ? (
                 <div className="space-y-5">
                   {/* COUNTRY SELECTOR */}
-                  <div className="flex flex-wrap gap-2">
+                  <div className="inline-flex items-center rounded-full bg-gray-100 p-1 border border-gray-200">
                     <button
                       type="button"
                       onClick={() => setSelectedCountry("XK")}
                       className={`px-4 py-2 rounded-full text-sm font-medium transition ${
                         selectedCountry === "XK"
-                          ? "bg-gray-900 text-white shadow-sm"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          ? "bg-white text-gray-900 shadow-sm"
+                          : "text-gray-500 hover:text-gray-700"
                       }`}
                     >
                       Kosovo
@@ -555,8 +560,8 @@ export default function CompanyProfile() {
                       onClick={() => setSelectedCountry("AL")}
                       className={`px-4 py-2 rounded-full text-sm font-medium transition ${
                         selectedCountry === "AL"
-                          ? "bg-gray-900 text-white shadow-sm"
-                          : "bg-gray-100 text-gray-700 hover:bg-gray-200"
+                          ? "bg-white text-gray-900 shadow-sm"
+                          : "text-gray-500 hover:text-gray-700"
                       }`}
                     >
                       Shqipëri
@@ -576,9 +581,13 @@ export default function CompanyProfile() {
                             key={c.id}
                             type="button"
                             onClick={() => toggleCity(c.id)}
-                            className="px-3 py-1.5 rounded-full bg-gray-900 text-white text-sm font-medium hover:bg-black transition"
+                            className="px-3 py-1.5 rounded-full text-sm font-medium 
+                            bg-gray-900 text-white shadow-sm 
+                            hover:opacity-80 transition-all duration-150 active:scale-[0.95]
+                            flex items-center gap-1"
                           >
                             {c.name}
+                            <span className="text-xs text-white/70 font-semibold">×</span>
                           </button>
                         ))}
                       </div>
@@ -600,10 +609,11 @@ export default function CompanyProfile() {
                             key={c.id}
                             type="button"
                             onClick={() => toggleCity(c.id)}
-                            className={`px-3 py-2 rounded-full text-sm font-medium border transition ${
+                            className={`px-3 py-1.5 rounded-full text-sm font-medium 
+                            transition-transform duration-150 hover:scale-[1.02] active:scale-[0.97] ${
                               isSelected
-                                ? "bg-gray-900 text-white border-gray-900 shadow-sm"
-                                : "bg-white text-gray-700 border-gray-300 hover:border-gray-500 hover:bg-gray-50"
+                                ? "bg-gray-900 text-white shadow-sm"
+                                : "text-gray-700 hover:text-gray-900 hover:bg-gray-100"
                             }`}
                           >
                             {c.name}
@@ -631,32 +641,68 @@ export default function CompanyProfile() {
             )}
           </div>
 
-          <div className="p-4 rounded-xl border border-gray-200 bg-gray-50">
+          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-5">
+          {/* HEADER */}
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">
+                Verifikimi i kompanisë
+              </h2>
+              <p className="text-xs text-gray-500 mt-1">
+                Ngarko certifikatën për të rritur besueshmërinë dhe për të marrë më shumë klientë
+              </p>
+            </div>
+
             {hasDocument ? (
-              <p className="text-sm text-gray-700">
-                Certifikata e regjistrimit u ngarkua
-              </p>
+              <span className="px-3 py-1 text-xs font-medium rounded-full bg-green-50 text-green-700 border border-green-200">
+                Verifikuar
+              </span>
             ) : (
-              <p className="text-sm text-red-600 font-medium">
-                Mungon certifikata e regjistrimit
-              </p>
+              <span className="px-3 py-1 text-xs font-medium rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+                Jo e verifikuar
+              </span>
             )}
-
-            <input
-              type="file"
-              accept=".pdf,.jpg,.jpeg,.png"
-              onChange={(e) => setFile(e.target.files[0])}
-              className="mt-3"
-            />
-
-            <button
-              onClick={handleUpload}
-              disabled={!file}
-              className="mt-3 px-4 py-2 rounded-lg bg-black text-white disabled:opacity-50"
-            >
-              Dërgo
-            </button>
           </div>
+
+          {/* CONTENT */}
+          {hasDocument ? (
+            <div className="p-4 rounded-xl bg-green-50 border border-green-200 text-sm text-green-700">
+              Certifikata e regjistrimit është ngarkuar me sukses.
+            </div>
+          ) : (
+            <div className="space-y-3">
+
+              <div className="p-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 text-sm text-gray-600">
+                Ngarko një dokument (.pdf, .jpg, .png) që vërteton regjistrimin e kompanisë.
+              </div>
+
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".pdf,.jpg,.jpeg,.png"
+                onChange={(e) => setFile(e.target.files[0])}
+                className="block w-full text-sm text-gray-600"
+              />
+
+              {file && (
+                <p className="text-xs text-gray-500">
+                  Zgjedhur: <span className="font-medium">{file.name}</span>
+                </p>
+              )}
+
+              <button
+                onClick={handleUpload}
+                disabled={!file}
+                className="px-4 py-2 rounded-full bg-gray-900 text-white text-sm font-medium 
+                shadow-sm hover:shadow-md hover:bg-gray-800 active:scale-[0.98] transition 
+                disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Ngarko dokumentin
+              </button>
+            </div>
+          )}
+
+        </div>
 
           {/* ACTIONS (EDIT MODE) */}
           {isEditing && (
@@ -664,14 +710,16 @@ export default function CompanyProfile() {
               <button
                 onClick={saveChanges}
                 disabled={saving}
-                className="px-5 py-2 rounded-lg bg-gray-900 text-white text-sm font-medium hover:bg-black disabled:opacity-50"
+                className="px-4 py-2 rounded-full bg-gray-900 text-white text-sm font-medium 
+                shadow-sm hover:shadow-md hover:bg-black active:scale-[0.98] transition disabled:opacity-40"
               >
                 {saving ? "Duke ruajtur…" : "Ruaj"}
               </button>
 
               <button
                 onClick={cancelEdit}
-                className="px-5 py-2 rounded-lg bg-gray-200 text-sm font-medium hover:bg-gray-300"
+                className="px-4 py-2 rounded-full bg-gray-100 text-gray-700 text-sm font-medium 
+                shadow-sm hover:shadow-md active:scale-[0.98] hover:bg-gray-200 transition"
               >
                 Anulo
               </button>
@@ -686,12 +734,11 @@ export default function CompanyProfile() {
               <button
                 onClick={startEdit}
                 disabled={saving || isLocked}
-                className={`inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold ${
+                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition ${
                   saving || isLocked
                     ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "bg-gray-900 text-white hover:shadow-lg hover:-translate-y-[1px] active:translate-y-0 transition-all duration-200"
+                    : "bg-gray-900 text-white shadow-sm hover:bg-black hover:shadow-md active:scale-[0.98]"
                 }`}
-
               >
                 <Pencil size={16} />
                 Redakto
@@ -700,7 +747,10 @@ export default function CompanyProfile() {
               {/* Right: Delete */}
               <button
                 onClick={() => setShowDeleteModal(true)}
-                className="inline-flex items-center gap-2 px-5 py-2 rounded-full text-sm font-semibold transition border border-gray-300 text-gray-700 hover:border-red-300 hover:text-red-600"
+                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium 
+                bg-white border border-gray-200 text-gray-700 
+                hover:border-red-300 hover:text-red-600 
+                shadow-sm hover:shadow-md active:scale-[0.98] transition"
               >
                 Fshi llogarinë
               </button>
@@ -745,7 +795,8 @@ export default function CompanyProfile() {
                   setDeletePassword("");
                   setDeleteError("");
                 }}
-                className="px-4 py-2 bg-gray-200 rounded-lg"
+                className="px-4 py-2 rounded-full bg-gray-100 text-gray-700 text-sm font-medium 
+                shadow-sm hover:shadow-md active:scale-[0.98] hover:bg-gray-200 transition"
               >
                 Anulo
               </button>
@@ -753,7 +804,8 @@ export default function CompanyProfile() {
               <button
                 onClick={handleDeleteAccount}
                 disabled={deleting || !deletePassword}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                className="px-4 py-2 rounded-full bg-red-600 text-white text-sm font-medium 
+                shadow-sm hover:shadow-md hover:bg-red-700 active:scale-[0.98] transition disabled:opacity-40 disabled:cursor-not-allowed"
               >
                 {deleting ? "Duke fshirë..." : "Fshi llogarinë"}
               </button>
