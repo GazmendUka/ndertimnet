@@ -184,7 +184,7 @@ export default function Layout() {
         </header>
 
         {/* PAGE CONTENT */}
-        <main className="flex-1 px-6 md:px-10 pt-6 pb-10">
+        <main className="flex-1 px-6 md:px-10 pt-6 pb-28">
 
           <div className="max-w-6xl mx-auto space-y-8">
 
