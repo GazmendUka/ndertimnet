@@ -1,8 +1,9 @@
 // src/components/layout/MobileNav.jsx
 
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
+import api from "../../api/axios";
 
 import {
   Home,
@@ -17,7 +18,9 @@ export default function MobileNav() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  // ✅ SMART ACTIVE (din version)
+  const [newLeadsCount, setNewLeadsCount] = useState(0);
+
+  // ✅ SMART ACTIVE
   const isActive = (path) => {
     if (path === "/customer" || path === "/company") {
       return location.pathname === path;
@@ -34,6 +37,41 @@ export default function MobileNav() {
     }
   };
 
+  // ============================================================
+  // 🔥 FETCH NEW LEADS (since last visit)
+  // ============================================================
+  useEffect(() => {
+    if (!isCompany) return;
+
+    const fetchLeads = async () => {
+      try {
+        const res = await api.get("/jobrequests/");
+        const jobs = res.data || [];
+
+        const lastVisit = localStorage.getItem("lastVisitJobRequests");
+
+        let newCount = 0;
+
+        if (lastVisit) {
+          newCount = jobs.filter(
+            (job) =>
+              job.created_at &&
+              new Date(job.created_at) > new Date(lastVisit)
+          ).length;
+        }
+
+        setNewLeadsCount(newCount);
+      } catch (err) {
+        console.error("Error fetching leads:", err);
+      }
+    };
+
+    fetchLeads();
+  }, [isCompany]);
+
+  // ============================================================
+  // RENDER
+  // ============================================================
   return (
     <div className="lg:hidden fixed bottom-4 left-0 right-0 z-50 flex justify-center pointer-events-none">
 
@@ -109,7 +147,14 @@ export default function MobileNav() {
                 label="Leads"
                 to="/company/leads/mine"
                 active={isActive("/company/leads")}
-                badge={false} // 🔴 TEST (koppla senare dynamiskt)
+                badge={newLeadsCount}
+                onClick={() => {
+                  localStorage.setItem(
+                    "lastVisitJobRequests",
+                    new Date().toISOString()
+                  );
+                  setNewLeadsCount(0);
+                }}
               />
 
               <MobileItem
@@ -128,13 +173,14 @@ export default function MobileNav() {
 
 //
 // ===============================
-// 🔥 PREMIUM ITEM (V3)
+// 🔥 PREMIUM ITEM
 // ===============================
 //
-function MobileItem({ to, icon, label, active, badge }) {
+function MobileItem({ to, icon, label, active, badge, onClick }) {
   return (
     <Link
       to={to}
+      onClick={onClick}
       className="relative flex flex-col items-center justify-center flex-1 py-2"
     >
       {/* 🔥 ACTIVE PILL */}
@@ -161,7 +207,7 @@ function MobileItem({ to, icon, label, active, badge }) {
         </span>
 
         {/* 🔴 BADGE */}
-        {badge && (
+        {badge > 0 && (
           <span
             className="
               absolute -top-1 -right-2
@@ -191,7 +237,7 @@ function MobileItem({ to, icon, label, active, badge }) {
 
 //
 // ===============================
-// 🚀 FAB BUTTON (CENTER)
+// 🚀 FAB BUTTON
 // ===============================
 //
 function FabButton({ onClick }) {
