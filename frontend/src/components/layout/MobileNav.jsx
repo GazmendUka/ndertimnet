@@ -23,7 +23,7 @@ export default function MobileNav() {
   const path = location.pathname;
 
   // ============================================================
-  // ✅ SMART ACTIVE
+  // ✅ ACTIVE LOGIK
   // ============================================================
   const isActive = (p) => {
     if (p === "/customer" || p === "/company") {
@@ -33,69 +33,42 @@ export default function MobileNav() {
   };
 
   // ============================================================
-  // 🔥 SMART FAB LOGIC
+  // 🔥 SMART FAB
   // ============================================================
   const getFabConfig = () => {
-    // =====================
-    // CUSTOMER
-    // =====================
     if (isCustomer) {
-      if (path === "/customer") {
+      if (path === "/customer" || path === "/customer/jobrequests") {
         return {
           show: true,
           action: () => navigate("/customer/jobrequests/create"),
         };
       }
 
-      if (path === "/customer/jobrequests") {
-        return {
-          show: true,
-          action: () => navigate("/customer/jobrequests/create"),
-        };
-      }
+      if (path.startsWith("/customer/jobrequests/")) return { show: false };
+      if (path === "/customer/profile") return { show: false };
 
-      if (path.startsWith("/customer/jobrequests/")) {
-        return { show: false };
-      }
-
-      if (path === "/customer/profile") {
-        return { show: false };
-      }
-
-      return { show: true, action: () => navigate("/customer/jobrequests/create") };
+      return {
+        show: true,
+        action: () => navigate("/customer/jobrequests/create"),
+      };
     }
 
-    // =====================
-    // COMPANY
-    // =====================
     if (isCompany) {
-      if (path === "/company") {
+      if (path === "/company" || path === "/company/jobrequests") {
         return {
           show: true,
           action: () => navigate("/company/jobrequests"),
         };
       }
 
-      if (path === "/company/jobrequests") {
-        return {
-          show: true,
-          action: () => navigate("/company/jobrequests"),
-        };
-      }
+      if (path.startsWith("/company/jobrequests/")) return { show: false };
+      if (path.startsWith("/company/leads")) return { show: false };
+      if (path === "/company/profile") return { show: false };
 
-      if (path.startsWith("/company/jobrequests/")) {
-        return { show: false };
-      }
-
-      if (path.startsWith("/company/leads")) {
-        return { show: false };
-      }
-
-      if (path === "/company/profile") {
-        return { show: false };
-      }
-
-      return { show: true, action: () => navigate("/company/jobrequests") };
+      return {
+        show: true,
+        action: () => navigate("/company/jobrequests"),
+      };
     }
 
     return { show: false };
@@ -104,7 +77,7 @@ export default function MobileNav() {
   const fab = getFabConfig();
 
   // ============================================================
-  // 🔥 FETCH NEW LEADS
+  // 🔥 FETCH LEADS
   // ============================================================
   useEffect(() => {
     if (!isCompany) return;
@@ -229,41 +202,59 @@ export default function MobileNav() {
   );
 }
 
+//
 // ============================================================
-// 🔥 MOBILE ITEM
+// 🔥 MOBILE ITEM (ANIMATIONS)
 // ============================================================
+//
 function MobileItem({ to, icon, label, active, badge, onClick }) {
   return (
     <Link
       to={to}
       onClick={onClick}
-      className="relative flex flex-col items-center justify-center flex-1 py-2"
+      className="
+        relative flex flex-col items-center justify-center flex-1 py-2
+        transition-transform duration-150 active:scale-95
+      "
     >
+      {/* ACTIVE PILL */}
       <div
         className={`
-          absolute inset-1 rounded-xl transition-all duration-300
-          ${active ? "bg-gray-900/10 scale-100" : "scale-90 opacity-0"}
+          absolute inset-1 rounded-xl
+          transition-all duration-200 ease-out
+          ${
+            active
+              ? "bg-gray-900/10 scale-100 opacity-100"
+              : "scale-90 opacity-0"
+          }
         `}
       />
 
+      {/* ICON */}
       <div className="relative">
         <span
           className={`
-            relative z-10 transition-all duration-200
-            ${active ? "text-gray-900 scale-110" : "text-gray-400"}
+            relative z-10
+            transition-all duration-200 ease-out
+            ${
+              active
+                ? "text-gray-900 scale-110"
+                : "text-gray-400"
+            }
           `}
         >
           {icon}
         </span>
 
+        {/* BADGE */}
         {badge > 0 && (
           <span
             className="
               absolute -top-1 -right-2
               bg-red-500 text-white
               text-[10px] px-1.5 py-[1px]
-              rounded-full
-              font-semibold
+              rounded-full font-semibold
+              animate-[pop_0.25s_ease-out]
             "
           >
             {badge}
@@ -271,9 +262,11 @@ function MobileItem({ to, icon, label, active, badge, onClick }) {
         )}
       </div>
 
+      {/* LABEL */}
       <span
         className={`
           text-[11px] mt-1
+          transition-all duration-200
           ${active ? "text-gray-900" : "text-gray-400"}
         `}
       >
@@ -283,23 +276,24 @@ function MobileItem({ to, icon, label, active, badge, onClick }) {
   );
 }
 
+//
 // ============================================================
-// 🚀 FAB BUTTON
+// 🚀 FAB BUTTON (ANIMATED)
 // ============================================================
+//
 function FabButton({ onClick }) {
   return (
     <button
       onClick={onClick}
       className="
         absolute left-1/2 -translate-x-1/2 -top-6
-        w-14 h-14
-        rounded-full
+        w-14 h-14 rounded-full
         bg-gray-900 text-white
         flex items-center justify-center
-        shadow-xl
-        border-4 border-white
-        active:scale-95
-        transition
+        shadow-xl border-4 border-white
+
+        transition-transform duration-200 ease-out
+        hover:scale-105 active:scale-90
       "
     >
       <Plus size={22} />
