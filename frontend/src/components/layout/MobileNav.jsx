@@ -20,25 +20,91 @@ export default function MobileNav() {
 
   const [newLeadsCount, setNewLeadsCount] = useState(0);
 
-  // ✅ SMART ACTIVE
-  const isActive = (path) => {
-    if (path === "/customer" || path === "/company") {
-      return location.pathname === path;
-    }
-    return location.pathname.startsWith(path);
-  };
+  const path = location.pathname;
 
-  // 🚀 FAB ACTION
-  const handleCreate = () => {
-    if (isCustomer) {
-      navigate("/customer/jobrequests/create");
-    } else if (isCompany) {
-      navigate("/company/jobrequests");
+  // ============================================================
+  // ✅ SMART ACTIVE
+  // ============================================================
+  const isActive = (p) => {
+    if (p === "/customer" || p === "/company") {
+      return path === p;
     }
+    return path.startsWith(p);
   };
 
   // ============================================================
-  // 🔥 FETCH NEW LEADS (since last visit)
+  // 🔥 SMART FAB LOGIC
+  // ============================================================
+  const getFabConfig = () => {
+    // =====================
+    // CUSTOMER
+    // =====================
+    if (isCustomer) {
+      if (path === "/customer") {
+        return {
+          show: true,
+          action: () => navigate("/customer/jobrequests/create"),
+        };
+      }
+
+      if (path === "/customer/jobrequests") {
+        return {
+          show: true,
+          action: () => navigate("/customer/jobrequests/create"),
+        };
+      }
+
+      if (path.startsWith("/customer/jobrequests/")) {
+        return { show: false };
+      }
+
+      if (path === "/customer/profile") {
+        return { show: false };
+      }
+
+      return { show: true, action: () => navigate("/customer/jobrequests/create") };
+    }
+
+    // =====================
+    // COMPANY
+    // =====================
+    if (isCompany) {
+      if (path === "/company") {
+        return {
+          show: true,
+          action: () => navigate("/company/jobrequests"),
+        };
+      }
+
+      if (path === "/company/jobrequests") {
+        return {
+          show: true,
+          action: () => navigate("/company/jobrequests"),
+        };
+      }
+
+      if (path.startsWith("/company/jobrequests/")) {
+        return { show: false };
+      }
+
+      if (path.startsWith("/company/leads")) {
+        return { show: false };
+      }
+
+      if (path === "/company/profile") {
+        return { show: false };
+      }
+
+      return { show: true, action: () => navigate("/company/jobrequests") };
+    }
+
+    return { show: false };
+  };
+
+  const fab = getFabConfig();
+
+  // ============================================================
+  // 🔥 FETCH NEW LEADS
   // ============================================================
   useEffect(() => {
     if (!isCompany) return;
@@ -74,8 +140,6 @@ export default function MobileNav() {
   // ============================================================
   return (
     <div className="lg:hidden fixed bottom-4 left-0 right-0 z-50 flex justify-center pointer-events-none">
-
-      {/* CONTAINER */}
       <div
         className="
           pointer-events-auto
@@ -89,9 +153,7 @@ export default function MobileNav() {
       >
         <div className="flex items-center justify-around relative">
 
-          {/* =======================
-              CUSTOMER NAV
-          ======================= */}
+          {/* CUSTOMER */}
           {isCustomer && (
             <>
               <MobileItem
@@ -108,8 +170,7 @@ export default function MobileNav() {
                 active={isActive("/customer/jobrequests")}
               />
 
-              {/* 🔥 FAB */}
-              <FabButton onClick={handleCreate} />
+              {fab.show && <FabButton onClick={fab.action} />}
 
               <MobileItem
                 icon={<User size={20} />}
@@ -120,9 +181,7 @@ export default function MobileNav() {
             </>
           )}
 
-          {/* =======================
-              COMPANY NAV
-          ======================= */}
+          {/* COMPANY */}
           {isCompany && (
             <>
               <MobileItem
@@ -139,8 +198,7 @@ export default function MobileNav() {
                 active={isActive("/company/jobrequests")}
               />
 
-              {/* 🔥 FAB */}
-              <FabButton onClick={handleCreate} />
+              {fab.show && <FabButton onClick={fab.action} />}
 
               <MobileItem
                 icon={<FileText size={20} />}
@@ -171,11 +229,9 @@ export default function MobileNav() {
   );
 }
 
-//
-// ===============================
-// 🔥 PREMIUM ITEM
-// ===============================
-//
+// ============================================================
+// 🔥 MOBILE ITEM
+// ============================================================
 function MobileItem({ to, icon, label, active, badge, onClick }) {
   return (
     <Link
@@ -183,19 +239,13 @@ function MobileItem({ to, icon, label, active, badge, onClick }) {
       onClick={onClick}
       className="relative flex flex-col items-center justify-center flex-1 py-2"
     >
-      {/* 🔥 ACTIVE PILL */}
       <div
         className={`
           absolute inset-1 rounded-xl transition-all duration-300
-          ${
-            active
-              ? "bg-gray-900/10 scale-100"
-              : "scale-90 opacity-0"
-          }
+          ${active ? "bg-gray-900/10 scale-100" : "scale-90 opacity-0"}
         `}
       />
 
-      {/* ICON */}
       <div className="relative">
         <span
           className={`
@@ -206,7 +256,6 @@ function MobileItem({ to, icon, label, active, badge, onClick }) {
           {icon}
         </span>
 
-        {/* 🔴 BADGE */}
         {badge > 0 && (
           <span
             className="
@@ -222,7 +271,6 @@ function MobileItem({ to, icon, label, active, badge, onClick }) {
         )}
       </div>
 
-      {/* LABEL */}
       <span
         className={`
           text-[11px] mt-1
@@ -235,11 +283,9 @@ function MobileItem({ to, icon, label, active, badge, onClick }) {
   );
 }
 
-//
-// ===============================
+// ============================================================
 // 🚀 FAB BUTTON
-// ===============================
-//
+// ============================================================
 function FabButton({ onClick }) {
   return (
     <button
