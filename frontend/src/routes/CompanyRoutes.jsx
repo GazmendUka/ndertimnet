@@ -12,6 +12,8 @@ import MyLeads from "../pages/company/MyLeads";
 import LeadDetailsPage from "../pages/leads/LeadDetailsPage";
 import OfferEdit from "../pages/company/OfferEdit";
 import OfferDetails from "../pages/company/OfferDetails";
+import MarketingDashboardPage from "../pages/marketing/MarketingDashboardPage";
+import CreateMarketingCampaignPage from "../pages/marketing/CreateMarketingCampaignPage";
 
 export default function CompanyRoutes() {
   return (
@@ -29,6 +31,9 @@ export default function CompanyRoutes() {
             <Route path="jobrequests/:jobId" element={<CompanyJobDetails />} />
             <Route path="jobrequests/:jobId/offer/edit" element={<OfferEdit />} />
             <Route path="offers/:id" element={<OfferDetails />} />
+
+            <Route path="marketing" element={<MarketingDashboardPage />} />
+            <Route path="marketing/create" element={<CreateMarketingCampaignPage />} />
 
           </Route>
         </Route>

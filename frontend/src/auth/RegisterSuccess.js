@@ -21,7 +21,7 @@ export default function RegisterSuccess() {
 
     const timeout = setTimeout(() => {
       navigate(
-        isCompany ? "/company/profile" : "/profile/customer",
+        isCompany ? "/company/profile" : "/customer/profile",
         { replace: true }
       );
     }, 4000);
@@ -81,7 +81,7 @@ export default function RegisterSuccess() {
             navigate(
               isCompany
                 ? "/company/profile"
-                : "/profile/customer",
+                : "/customer/profile",
               { replace: true }
             )
           }
