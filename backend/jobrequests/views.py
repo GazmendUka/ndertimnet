@@ -149,6 +149,32 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
     def submit(self, request, pk=None):
         draft = self.get_object()
 
+        # --------------------------------------------------------
+        # 🛑 PROFILE COMPLETENESS CHECK (FINAL VERSION)
+        # --------------------------------------------------------
+        customer = draft.customer
+
+        missing_profile_fields = []
+
+        if not (customer.first_name and customer.first_name.strip()):
+            missing_profile_fields.append("first_name")
+
+        if not (customer.last_name and customer.last_name.strip()):
+            missing_profile_fields.append("last_name")
+
+        if not (customer.phone and customer.phone.strip()):
+            missing_profile_fields.append("phone")
+
+        # Rekommenderad (om adress krävs i din app)
+        if not (customer.address and customer.address.strip()):
+            missing_profile_fields.append("address")
+
+        if missing_profile_fields:
+            raise ValidationError({
+                "detail": "Profili nuk është i plotë.",
+                "missing_profile_fields": missing_profile_fields,
+            })
+
         if draft.is_submitted:
             return Response(
                 {"detail": "Ky draft është tashmë i dorëzuar."},

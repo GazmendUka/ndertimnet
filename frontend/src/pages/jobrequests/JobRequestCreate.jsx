@@ -1,6 +1,7 @@
 // src/pages/jobrequests/JobRequestCreate.jsx
-// Full Version A: Premium multi-step drafts + toast + autosave +
-// validation per step + Slide+Fade transitions (inline CSS)
+// Full Version V2:
+// Premium multi-step drafts + toast + autosave +
+// Step 1 = Contact/Profile autofill + profile sync
 // ------------------------------------------------------------
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
@@ -17,9 +18,11 @@ import SearchableSelect from "../../components/ui/SearchableSelect";
 export default function JobRequestCreate() {
   const navigate = useNavigate();
   const { isEmailVerified } = useAuth();
+
   const [cities, setCities] = useState([]);
   const [professions, setProfessions] = useState([]);
   const [lookupsLoading, setLookupsLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [country, setCountry] = useState("XK"); // default Kosovo
 
   // ------------------------------------------------------------
@@ -28,13 +31,24 @@ export default function JobRequestCreate() {
   const [draft, setDraft] = useState(null);
 
   // ------------------------------------------------------------
-  // Form data
+  // Contact/Profile data (NEW STEP 1)
+  // ------------------------------------------------------------
+  const [contactData, setContactData] = useState({
+    first_name: "",
+    last_name: "",
+    email: "",
+    email_verified: false,
+    phone: "",
+  });
+
+  // ------------------------------------------------------------
+  // Form data (JobRequest draft)
   // ------------------------------------------------------------
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    city: null,        
-    profession: null,  
+    city: null,
+    profession: null,
     budget: "",
   });
 
@@ -44,35 +58,38 @@ export default function JobRequestCreate() {
   // UI state
   // ------------------------------------------------------------
   const [loading, setLoading] = useState(true); // initial load
-  const [saving, setSaving] = useState(false); // autosave during step changes
+  const [saving, setSaving] = useState(false); // draft autosave
+  const [savingProfile, setSavingProfile] = useState(false); // profile step save
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
+
   const [consentData, setConsentData] = useState({
     personal_number: "",
     consent_publish: false,
     consent_identity: false,
   });
 
-  // Autosave indicator (Step 1)
+  // Autosave indicator
   const [saveStatus, setSaveStatus] = useState("idle");
   // idle | saving | saved | error
 
   // Toast: unfinished draft
-  const [draftToast, setDraftToast] = useState({ show: false, existingDraft: null });
+  const [draftToast, setDraftToast] = useState({
+    show: false,
+    existingDraft: null,
+  });
 
   // ------------------------------------------------------------
-  // Slide+Fade animation (Step 2)
+  // Slide+Fade animation
   // ------------------------------------------------------------
   const [animPhase, setAnimPhase] = useState("in"); // in | out
   const [navDir, setNavDir] = useState("next"); // next | back
   const animTimerRef = useRef(null);
 
   const animateToStep = (direction, nextStep) => {
-    // 1) play out animation
     setNavDir(direction);
     setAnimPhase("out");
 
-    // 2) after duration: switch step + play in animation
     if (animTimerRef.current) clearTimeout(animTimerRef.current);
     animTimerRef.current = setTimeout(() => {
       setCurrentStep(nextStep);
@@ -81,6 +98,143 @@ export default function JobRequestCreate() {
   };
 
   useEffect(() => {
+    return () => {
+      if (animTimerRef.current) clearTimeout(animTimerRef.current);
+    };
+  }, []);
+
+  const stepAnimClass = useMemo(() => {
+    const base = "jr-anim";
+    const phase = animPhase === "in" ? "jr-in" : "jr-out";
+    const dir = navDir === "next" ? "jr-next" : "jr-back";
+    return `${base} ${phase} ${dir}`;
+  }, [animPhase, navDir]);
+
+  const selectedCity = cities.find((c) => c.id === formData.city);
+  const selectedProfession = professions.find(
+    (p) => p.id === formData.profession
+  );
+
+  // ------------------------------------------------------------
+  // Validation helpers
+  // ------------------------------------------------------------
+  const isValidPhone = (value) => {
+    const cleaned = (value || "").replace(/\s+/g, "");
+    return cleaned.length >= 6;
+  };
+
+  const isValidPersonalNumber = (value, selectedCountry) => {
+    if (!value) return false;
+
+    const cleaned = value.replace(/\s/g, "").toUpperCase();
+
+    if (selectedCountry === "XK") {
+      return /^\d{13}$/.test(cleaned);
+    }
+
+    if (selectedCountry === "AL") {
+      return /^[A-Z]\d{9}$/.test(cleaned);
+    }
+
+    return false;
+  };
+
+  const isStep1Valid =
+    contactData.first_name.trim().length >= 2 &&
+    contactData.last_name.trim().length >= 2 &&
+    Boolean(contactData.email?.trim()) &&
+    isValidPhone(contactData.phone);
+
+  const isStep2Valid = formData.title.trim().length >= 5;
+  const isStep3Valid = formData.description.trim().length >= 20;
+  const isStep4Valid = Boolean(formData.city && formData.profession);
+  const isStep6Valid =
+    isValidPersonalNumber(consentData.personal_number, country) &&
+    consentData.consent_publish === true &&
+    consentData.consent_identity === true;
+
+  // ------------------------------------------------------------
+  // Step errors
+  // ------------------------------------------------------------
+  const stepErrors = useMemo(() => {
+    const errs = {
+      first_name: "",
+      last_name: "",
+      phone: "",
+      email: "",
+      title: "",
+      description: "",
+    };
+
+    if (currentStep === 1) {
+      if (!contactData.first_name.trim()) {
+        errs.first_name = "Emri është i detyrueshëm.";
+      } else if (contactData.first_name.trim().length < 2) {
+        errs.first_name = "Emri duhet të ketë së paku 2 karaktere.";
+      }
+
+      if (!contactData.last_name.trim()) {
+        errs.last_name = "Mbiemri është i detyrueshëm.";
+      } else if (contactData.last_name.trim().length < 2) {
+        errs.last_name = "Mbiemri duhet të ketë së paku 2 karaktere.";
+      }
+
+      if (!contactData.email.trim()) {
+        errs.email = "Email-i mungon në llogarinë tuaj.";
+      }
+
+      if (!contactData.phone.trim()) {
+        errs.phone = "Numri i telefonit është i detyrueshëm.";
+      } else if (!isValidPhone(contactData.phone)) {
+        errs.phone = "Numri i telefonit nuk duket i saktë.";
+      }
+    }
+
+    if (currentStep === 2) {
+      const t = formData.title.trim();
+
+      if (!t) errs.title = "Titulli është i detyrueshëm.";
+      else if (t.length < 5) {
+        errs.title = "Titulli duhet të ketë së paku 5 karaktere.";
+      }
+    }
+
+    if (currentStep === 3) {
+      const d = formData.description.trim();
+
+      if (!d) errs.description = "Përshkrimi është i detyrueshëm.";
+      else if (d.length < 20) {
+        errs.description = "Përshkrimi duhet të ketë së paku 20 karaktere.";
+      }
+    }
+
+    return errs;
+  }, [currentStep, contactData, formData]);
+
+  // ------------------------------------------------------------
+  // Initial load: profile + lookups + drafts
+  // ------------------------------------------------------------
+  useEffect(() => {
+    const loadProfile = async () => {
+      try {
+        const res = await api.get("accounts/profile/customer/");
+        const profile = res.data?.data || {};
+
+        setContactData({
+          first_name: profile.first_name || "",
+          last_name: profile.last_name || "",
+          email: profile.email || "",
+          email_verified: Boolean(profile.email_verified),
+          phone: profile.phone || "",
+        });
+      } catch (err) {
+        console.error("Profile load failed:", err);
+        setError("Profili i klientit nuk mund të ngarkohet.");
+      } finally {
+        setProfileLoading(false);
+      }
+    };
+
     const loadLookups = async () => {
       try {
         const [cityRes, professionRes] = await Promise.all([
@@ -98,61 +252,37 @@ export default function JobRequestCreate() {
       }
     };
 
-    loadLookups();
-  }, []);
+    const initDrafts = async () => {
+      try {
+        const drafts = await jobRequestDraftService.getMyDrafts();
+        const openDrafts = (drafts || []).filter((d) => !d.is_submitted);
 
-
-  useEffect(() => {
-    return () => {
-      if (animTimerRef.current) clearTimeout(animTimerRef.current);
+        if (openDrafts.length > 0) {
+          openDrafts.sort(
+            (a, b) => new Date(b.updated_at) - new Date(a.updated_at)
+          );
+          setDraftToast({ show: true, existingDraft: openDrafts[0] });
+        } else {
+          const created = await jobRequestDraftService.createDraft();
+          hydrateFromDraft(created);
+        }
+      } catch (err) {
+        console.error("Init draft failed:", err);
+        setError("Nuk mund të ngarkohet drafti. Ju lutem provoni përsëri.");
+      }
     };
+
+    const init = async () => {
+      setLoading(true);
+      setError("");
+
+      await Promise.all([loadProfile(), loadLookups(), initDrafts()]);
+
+      setLoading(false);
+    };
+
+    init();
   }, []);
-
-  const stepAnimClass = useMemo(() => {
-    // In/out + direction → different translateX
-    // Out next: slide left, Out back: slide right
-    // In next: come from right, In back: come from left
-    const base = "jr-anim";
-    const phase = animPhase === "in" ? "jr-in" : "jr-out";
-    const dir = navDir === "next" ? "jr-next" : "jr-back";
-    return `${base} ${phase} ${dir}`;
-  }, [animPhase, navDir]);
-
-  const selectedCity = cities.find(
-    (c) => c.id === formData.city
-  );
-
-  const selectedProfession = professions.find(
-    (p) => p.id === formData.profession
-  );
-
-
-
-
-  // ------------------------------------------------------------
-  // Step 5 – Consent state
-  // ------------------------------------------------------------
-  const isValidPersonalNumber = (value, country) => {
-    if (!value) return false;
-
-    const cleaned = value.replace(/\s/g, "").toUpperCase();
-
-    if (country === "XK") {
-      return /^\d{13}$/.test(cleaned);
-    }
-
-    if (country === "AL") {
-      return /^[A-Z]\d{9}$/.test(cleaned);
-    }
-
-    return false;
-  };
-
-  const isStep5Valid =
-    isValidPersonalNumber(consentData.personal_number, country) &&
-    consentData.consent_publish === true &&
-    consentData.consent_identity === true;
-
 
   // ------------------------------------------------------------
   // Helpers
@@ -169,47 +299,21 @@ export default function JobRequestCreate() {
     });
   };
 
+  const updateField = (field, value) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
 
-  // ------------------------------------------------------------
-  // Initial load: check existing drafts or create one
-  // ------------------------------------------------------------
-  useEffect(() => {
-    const init = async () => {
-      setLoading(true);
-      setError("");
-
-      try {
-        const drafts = await jobRequestDraftService.getMyDrafts();
-        const openDrafts = (drafts || []).filter((d) => !d.is_submitted);
-
-        if (openDrafts.length > 0) {
-          openDrafts.sort(
-            (a, b) => new Date(b.updated_at) - new Date(a.updated_at)
-          );
-
-          setDraftToast({ show: true, existingDraft: openDrafts[0] });
-          setLoading(false);
-        } else {
-          const created = await jobRequestDraftService.createDraft();
-          hydrateFromDraft(created);
-          setLoading(false);
-        }
-      } catch (err) {
-        console.error("Init draft failed:", err);
-        setError("Nuk mund të ngarkohet drafti. Ju lutem provoni përsëri.");
-        setLoading(false);
-      }
-    };
-
-    init();
-  }, []);
+  const updateContactField = (field, value) => {
+    setContactData((prev) => ({ ...prev, [field]: value }));
+  };
 
   // ------------------------------------------------------------
   // Toast actions
   // ------------------------------------------------------------
   const handleContinueExisting = () => {
-    if (draftToast.existingDraft)
+    if (draftToast.existingDraft) {
       hydrateFromDraft(draftToast.existingDraft);
+    }
 
     setDraftToast({ show: false, existingDraft: null });
   };
@@ -231,14 +335,33 @@ export default function JobRequestCreate() {
   };
 
   // ------------------------------------------------------------
-  // Form helpers
+  // Save profile step (NEW)
   // ------------------------------------------------------------
-  const updateField = (field, value) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+  const saveContactProfile = async () => {
+    setSavingProfile(true);
+    setError("");
+
+    try {
+      await api.patch("accounts/profile/customer/", {
+        first_name: contactData.first_name.trim(),
+        last_name: contactData.last_name.trim(),
+        phone: contactData.phone.trim(),
+      });
+
+      return true;
+    } catch (err) {
+      console.error("Profile save failed:", err);
+      setError(
+        "Nuk mund të ruhen të dhënat e kontaktit. Ju lutem provoni përsëri."
+      );
+      return false;
+    } finally {
+      setSavingProfile(false);
+    }
   };
 
   // ------------------------------------------------------------
-  // Save step (autosave)
+  // Save draft step
   // ------------------------------------------------------------
   const saveStep = async (newStep = currentStep) => {
     if (!draft) return false;
@@ -275,50 +398,31 @@ export default function JobRequestCreate() {
   };
 
   // ------------------------------------------------------------
-  // Validation per step (Step 3)
-  // ------------------------------------------------------------
-
-  const stepErrors = useMemo(() => {
-    const errs = {
-      title: "",
-      description: "",
-    };
-
-    const t = formData.title.trim();
-    const d = formData.description.trim();
-
-    if (currentStep === 1) {
-      if (!t) errs.title = "Titulli është i detyrueshëm.";
-      else if (t.length < 5)
-        errs.title = "Titulli duhet të ketë së paku 5 karaktere.";
-    }
-
-    if (currentStep === 2) {
-      if (!d) errs.description = "Përshkrimi është i detyrueshëm.";
-      else if (d.length < 20)
-        errs.description = "Përshkrimi duhet të ketë së paku 20 karaktere.";
-    }
-
-    return errs;
-  }, [formData.title, formData.description, currentStep]);
-
-  const isStep1Valid = formData.title.trim().length >= 5;
-  const isStep2Valid = formData.description.trim().length >= 20;
-  const isStep3Valid = Boolean(formData.city && formData.profession);
-
-  // ------------------------------------------------------------
   // Navigation actions
   // ------------------------------------------------------------
   const goNext = async () => {
-    if (submitting) return; // ⛔ blockera navigation under submit
+    if (submitting || saving || savingProfile) return;
 
     const next = currentStep + 1;
-    if (next > 5) return;
+    if (next > 6) return;
 
-    // validation gate
-    if (currentStep === 1 && !isStep1Valid) return;
+    // Step 1 = save profile first
+    if (currentStep === 1) {
+      if (!isStep1Valid) return;
+
+      const profileOk = await saveContactProfile();
+      if (!profileOk) return;
+
+      const draftOk = await saveStep(next);
+      if (!draftOk) return;
+
+      animateToStep("next", next);
+      return;
+    }
+
     if (currentStep === 2 && !isStep2Valid) return;
     if (currentStep === 3 && !isStep3Valid) return;
+    if (currentStep === 4 && !isStep4Valid) return;
 
     const ok = await saveStep(next);
     if (!ok) return;
@@ -326,11 +430,8 @@ export default function JobRequestCreate() {
     animateToStep("next", next);
   };
 
-
-    
-
   const goBack = async () => {
-    if (submitting) return; // ⛔ blockera navigation under submit
+    if (submitting || saving || savingProfile) return;
 
     const prev = currentStep - 1;
     if (prev < 1) return;
@@ -341,59 +442,165 @@ export default function JobRequestCreate() {
     animateToStep("back", prev);
   };
 
-
- 
   // ------------------------------------------------------------
-      // FINAL SUBMIT – Step 5 (Consent + JobRequest)
-      // ------------------------------------------------------------
-    const submitConsentAndJob = async () => {
-      if (!draft || !isStep5Valid || submitting) return;
+  // FINAL SUBMIT – Step 6
+  // ------------------------------------------------------------
+  const submitConsentAndJob = async () => {
+    if (!draft || !isStep6Valid || submitting) return;
 
-      if (!isEmailVerified) {
-        toast.error("Verifiera din email för att kunna publicera.");
+    if (!isEmailVerified) {
+      toast.error("Verifiera din email för att kunna publicera.");
+      return;
+    }
+
+    // Safety: ensure contact/profile data is saved before final submit
+    if (!isStep1Valid) {
+      setError("Plotësoni të dhënat e kontaktit përpara publikimit.");
+      setCurrentStep(1);
+      return;
+    }
+
+    setSubmitting(true);
+    setError("");
+
+    try {
+      const profileOk = await saveContactProfile();
+      if (!profileOk) throw new Error("Profile save failed");
+
+      await customerConsentService.submitConsent({
+        personal_number: consentData.personal_number,
+        country,
+        consent: true,
+      });
+
+      const ok = await saveStep(6);
+      if (!ok) throw new Error("Save failed");
+
+      const job = await jobRequestDraftService.submitDraft(draft.id);
+      navigate(`/customer/jobrequests/${job.id}`);
+    } catch (err) {
+      console.error("Final submit failed:", err);
+
+      if (isEmailNotVerifiedError(err)) {
+        toast.error("Verifikoni email-in tuaj për të publikuar.");
         return;
       }
 
-      setSubmitting(true);
-      setError("");
-
-      try {
-        await customerConsentService.submitConsent({
-          personal_number: consentData.personal_number,
-          country: country,
-          consent: true,
-        });
-
-        const ok = await saveStep(5);
-        if (!ok) throw new Error("Save failed");
-
-        const job = await jobRequestDraftService.submitDraft(draft.id);
-        navigate(`/customer/jobrequests/${job.id}`);
-      } catch (err) {
-        console.error("Final submit failed:", err);
-
-        if (isEmailNotVerifiedError(err)) {
-          toast.error("Verifikoni email-in tuaj për të publikuar.");
-          return;
-        }
-
-        setError(
-          "Çështja nuk mund të përfundojë. Ju lutemi kontrolloni detajet dhe provoni përsëri."
-        );
-      } finally {
-        setSubmitting(false);
-      }
-    };
-
-  
-
+      setError(
+        "Çështja nuk mund të përfundojë. Ju lutemi kontrolloni detajet dhe provoni përsëri."
+      );
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   // ------------------------------------------------------------
-  // Step content
-  // Step 1
+  // STEP 1 – Contact/Profile
   // ------------------------------------------------------------
-
   const Step1 = (
+    <div className="space-y-4">
+      <div className="rounded-lg bg-amber-50 border border-amber-200 p-4 text-sm text-amber-900">
+        <p className="font-medium mb-1">Të dhënat e kontaktit</p>
+        <p>
+          Këto të dhëna ruhen në profilin tuaj dhe përdoren për kërkesat që
+          krijoni në platformë.
+        </p>
+      </div>
+
+      <div>
+        <label className="block mb-1 font-medium">Emri *</label>
+        <input
+          type="text"
+          className={`premium-input ${
+            stepErrors.first_name ? "jr-input-error" : ""
+          }`}
+          placeholder="Emri"
+          value={contactData.first_name}
+          onChange={(e) => updateContactField("first_name", e.target.value)}
+          disabled={saving || savingProfile || submitting || profileLoading}
+        />
+        {stepErrors.first_name && (
+          <p className="jr-help jr-help-error">{stepErrors.first_name}</p>
+        )}
+      </div>
+
+      <div>
+        <label className="block mb-1 font-medium">Mbiemri *</label>
+        <input
+          type="text"
+          className={`premium-input ${
+            stepErrors.last_name ? "jr-input-error" : ""
+          }`}
+          placeholder="Mbiemri"
+          value={contactData.last_name}
+          onChange={(e) => updateContactField("last_name", e.target.value)}
+          disabled={saving || savingProfile || submitting || profileLoading}
+        />
+        {stepErrors.last_name && (
+          <p className="jr-help jr-help-error">{stepErrors.last_name}</p>
+        )}
+      </div>
+
+      <div>
+        <label className="block mb-1 font-medium">Email-i</label>
+        <input
+          type="email"
+          className={`premium-input bg-gray-50 ${
+            stepErrors.email ? "jr-input-error" : ""
+          }`}
+          value={contactData.email}
+          disabled
+        />
+        <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
+          <span className="text-gray-600">Statusi i email-it:</span>
+          {contactData.email_verified ? (
+            <span className="text-green-600 font-medium">i verifikuar</span>
+          ) : (
+            <span className="text-red-600 font-medium">jo i verifikuar</span>
+          )}
+        </div>
+        {stepErrors.email && (
+          <p className="jr-help jr-help-error">{stepErrors.email}</p>
+        )}
+      </div>
+
+      <div>
+        <label className="block mb-1 font-medium">Numri i telefonit *</label>
+        <input
+          type="text"
+          className={`premium-input ${
+            stepErrors.phone ? "jr-input-error" : ""
+          }`}
+          placeholder="Numri i telefonit"
+          value={contactData.phone}
+          onChange={(e) => updateContactField("phone", e.target.value)}
+          disabled={saving || savingProfile || submitting || profileLoading}
+        />
+        {stepErrors.phone && (
+          <p className="jr-help jr-help-error">{stepErrors.phone}</p>
+        )}
+      </div>
+
+      <div className="flex justify-end mt-4">
+        <button
+          type="button"
+          onClick={goNext}
+          disabled={!isStep1Valid || saving || savingProfile || submitting}
+          className="premium-btn btn-dark inline-flex items-center gap-2"
+        >
+          {(savingProfile || saving || saveStatus === "saving") && (
+            <Loader2 size={16} className="animate-spin" />
+          )}
+          {savingProfile ? "Duke ruajtur profilin..." : "Vazhdo"}
+        </button>
+      </div>
+    </div>
+  );
+
+  // ------------------------------------------------------------
+  // STEP 2 – Title
+  // ------------------------------------------------------------
+  const Step2 = (
     <div className="space-y-4">
       <div>
         <label className="block mb-1 font-medium">Titulli i punës *</label>
@@ -412,11 +619,20 @@ export default function JobRequestCreate() {
         )}
       </div>
 
-      <div className="flex justify-end mt-4">
+      <div className="flex justify-between mt-4">
+        <button
+          type="button"
+          onClick={goBack}
+          disabled={saving || submitting}
+          className="premium-btn btn-light inline-flex items-center gap-2"
+        >
+          Kthehu
+        </button>
+
         <button
           type="button"
           onClick={goNext}
-          disabled={!isStep1Valid || saving || submitting}
+          disabled={!isStep2Valid || saving || submitting}
           className="premium-btn btn-dark inline-flex items-center gap-2"
         >
           {(saving || saveStatus === "saving") && (
@@ -428,12 +644,10 @@ export default function JobRequestCreate() {
     </div>
   );
 
-
   // ------------------------------------------------------------
-  // Step 2 – 
+  // STEP 3 – Description
   // ------------------------------------------------------------
-
-  const Step2 = (
+  const Step3 = (
     <div className="space-y-4">
       <div>
         <label className="block mb-1 font-medium">Përshkrimi i punës *</label>
@@ -460,10 +674,11 @@ export default function JobRequestCreate() {
         >
           Kthehu
         </button>
+
         <button
           type="button"
           onClick={goNext}
-          disabled={!isStep2Valid || saving || submitting}
+          disabled={!isStep3Valid || saving || submitting}
           className="premium-btn btn-dark inline-flex items-center gap-2"
         >
           {(saving || saveStatus === "saving") && (
@@ -475,20 +690,17 @@ export default function JobRequestCreate() {
     </div>
   );
 
-
   // ------------------------------------------------------------
-  // Step 3 – 
+  // STEP 4 – Profession + City
   // ------------------------------------------------------------
-  const Step3 = (
+  const Step4 = (
     <div className="space-y-4">
-
       {lookupsLoading && (
         <p className="text-sm text-gray-500">
           Duke ngarkuar qytetet dhe profesionet…
         </p>
       )}
 
-      {/* Profession */}
       <div>
         <label className="block mb-1 font-medium">Profesioni *</label>
         <SearchableSelect
@@ -499,7 +711,6 @@ export default function JobRequestCreate() {
         />
       </div>
 
-      {/* City */}
       <div>
         <label className="block mb-1 font-medium">Qyteti *</label>
         <SearchableSelect
@@ -521,12 +732,9 @@ export default function JobRequestCreate() {
         </button>
 
         <button
+          type="button"
           onClick={goNext}
-          disabled={
-            lookupsLoading ||
-            !formData.city ||
-            !formData.profession
-          }
+          disabled={lookupsLoading || !formData.city || !formData.profession}
           className="premium-btn btn-dark"
         >
           Vazhdo
@@ -535,13 +743,10 @@ export default function JobRequestCreate() {
     </div>
   );
 
-
-
   // ------------------------------------------------------------
-  // Step 4 – 
+  // STEP 5 – Budget + Summary
   // ------------------------------------------------------------
-
-  const Step4 = (
+  const Step5 = (
     <div className="space-y-4">
       <div>
         <label className="block mb-1 font-medium">Buxheti (opsionale)</label>
@@ -557,6 +762,17 @@ export default function JobRequestCreate() {
 
       <div className="p-4 rounded bg-gray-50 space-y-1">
         <h3 className="font-semibold mb-2">Përmbledhja</h3>
+
+        <p>
+          <strong>Emri:</strong> {contactData.first_name || "—"}{" "}
+          {contactData.last_name || ""}
+        </p>
+        <p>
+          <strong>Email-i:</strong> {contactData.email || "—"}
+        </p>
+        <p>
+          <strong>Telefoni:</strong> {contactData.phone || "—"}
+        </p>
         <p>
           <strong>Titulli:</strong> {formData.title || "—"}
         </p>
@@ -584,6 +800,7 @@ export default function JobRequestCreate() {
         >
           Kthehu
         </button>
+
         <button
           type="button"
           onClick={goNext}
@@ -592,154 +809,137 @@ export default function JobRequestCreate() {
         >
           Vazhdo
         </button>
-
       </div>
     </div>
   );
 
   // ------------------------------------------------------------
-  // Step 5 – Consent
+  // STEP 6 – Consent
   // ------------------------------------------------------------
-  // ------------------------------------------------------------
-// Step 5 – Pëlqimi & Identiteti
-// ------------------------------------------------------------
-const Step5 = (
-  <div className="space-y-6">
-    <h2 className="text-lg font-semibold">
-      Pëlqimi & identiteti
-    </h2>
+  const Step6 = (
+    <div className="space-y-6">
+      <h2 className="text-lg font-semibold">Pëlqimi & identiteti</h2>
 
-    {/* Numri personal */}
-    <div>
-      <label className="block mb-1 font-medium">
-        Shteti *
-      </label>
-
-      <select
-        value={country}
-        onChange={(e) => setCountry(e.target.value)}
-        className="premium-input"
-        disabled={saving || submitting}
-      >
-        <option value="XK">Kosovë</option>
-        <option value="AL">Shqipëri</option>
-      </select>
-    </div>
-
-    <div>
-      <label className="block mb-1 font-medium">
-        Numri personal *
-      </label>
-      <input
-        type="text"
-        placeholder={
-          country === "XK"
-            ? "DDMMYYYYRRRRC"
-            : "A123456789"
-        }
-        value={consentData.personal_number}
-        onChange={(e) =>
-          setConsentData((prev) => ({
-            ...prev,
-            personal_number: e.target.value,
-          }))
-        }
-        className="premium-input"
-        disabled={saving || submitting}
-      />
-      <p className="text-sm text-gray-500 mt-1">
-        Këto të dhëna përdoren vetëm për verifikimin e identitetit dhe nuk publikohen.
-      </p>
-    </div>
-
-    {/* Consent checkboxes */}
-    <div className="space-y-3">
-      {/* Pëlqimi për publikim */}
-      <label className="flex items-start gap-3">
-        <input
-          type="checkbox"
-          checked={consentData.consent_publish}
-          onChange={(e) =>
-            setConsentData((prev) => ({
-              ...prev,
-              consent_publish: e.target.checked,
-            }))
-          }
+      <div>
+        <label className="block mb-1 font-medium">Shteti *</label>
+        <select
+          value={country}
+          onChange={(e) => setCountry(e.target.value)}
+          className="premium-input"
           disabled={saving || submitting}
-        />
-        <span className="text-sm">
-          Pajtohem që kërkesa ime të publikohet dhe të shpërndahet me kompani relevante.
-        </span>
-      </label>
-
-      {/* Pëlqimi për identitet */}
-      <label className="flex items-start gap-3">
-        <input
-          type="checkbox"
-          checked={consentData.consent_identity}
-          onChange={(e) =>
-            setConsentData((prev) => ({
-              ...prev,
-              consent_identity: e.target.checked,
-            }))
-          }
-          disabled={saving || submitting}
-        />
-        <span className="text-sm">
-          Deklaroj se jam personi që i përket kjo kërkesë dhe se të dhënat janë të sakta.
-        </span>
-      </label>
-    </div>
-
-
-    {/* Info box – varför personnummer behövs */}
-    <div className="rounded-lg bg-blue-50 border border-blue-100 p-4 text-sm text-blue-900">
-      <p className="font-medium mb-1">
-        Pse kërkohet numri personal?
-      </p>
-      <p>
-        Numri personal përdoret vetëm për të verifikuar identitetin tuaj dhe për të
-        siguruar që kërkesa publikohet me pëlqimin e personit të saktë. 
-        Kjo ndihmon në parandalimin e abuzimeve dhe rrit besueshmërinë për kompanitë
-        që do të kontaktojnë lidhur me kërkesën tuaj.
-      </p>
-    </div>
-
-
-    {/* Navigation */}
-    <div className="flex justify-between mt-4">
-      <button
-        type="button"
-        onClick={goBack}
-        disabled={saving || submitting}
-        className="premium-btn btn-light inline-flex items-center gap-2"
-      >
-        Kthehu
-      </button>
-
-      <button
-        type="button"
-        onClick={submitConsentAndJob}
-        disabled={!isStep5Valid || !isEmailVerified || submitting}
-        className={`premium-btn btn-dark inline-flex items-center gap-2 ${
-          !isStep5Valid || !isEmailVerified
-            ? "opacity-50 cursor-not-allowed"
-            : ""
-        }`}
         >
-        {submitting && <Loader2 size={16} className="animate-spin" />}
-        Përfundo & publiko
-      </button>
-      {!isEmailVerified && (
-        <div className="mt-2 text-sm text-amber-700">
-          ⚠️ Verifiera din email för att kunna publicera jobbet.
+          <option value="XK">Kosovë</option>
+          <option value="AL">Shqipëri</option>
+        </select>
+      </div>
+
+      <div>
+        <label className="block mb-1 font-medium">Numri personal *</label>
+        <input
+          type="text"
+          placeholder={country === "XK" ? "DDMMYYYYRRRRC" : "A123456789"}
+          value={consentData.personal_number}
+          onChange={(e) =>
+            setConsentData((prev) => ({
+              ...prev,
+              personal_number: e.target.value,
+            }))
+          }
+          className="premium-input"
+          disabled={saving || submitting}
+        />
+        <p className="text-sm text-gray-500 mt-1">
+          Këto të dhëna përdoren vetëm për verifikimin e identitetit dhe nuk
+          publikohen.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={consentData.consent_publish}
+            onChange={(e) =>
+              setConsentData((prev) => ({
+                ...prev,
+                consent_publish: e.target.checked,
+              }))
+            }
+            disabled={saving || submitting}
+          />
+          <span className="text-sm">
+            Pajtohem që kërkesa ime të publikohet dhe të shpërndahet me kompani
+            relevante.
+          </span>
+        </label>
+
+        <label className="flex items-start gap-3">
+          <input
+            type="checkbox"
+            checked={consentData.consent_identity}
+            onChange={(e) =>
+              setConsentData((prev) => ({
+                ...prev,
+                consent_identity: e.target.checked,
+              }))
+            }
+            disabled={saving || submitting}
+          />
+          <span className="text-sm">
+            Deklaroj se jam personi që i përket kjo kërkesë dhe se të dhënat janë
+            të sakta.
+          </span>
+        </label>
+      </div>
+
+      <div className="rounded-lg bg-blue-50 border border-blue-100 p-4 text-sm text-blue-900">
+        <p className="font-medium mb-1">Pse kërkohet numri personal?</p>
+        <p>
+          Numri personal përdoret vetëm për të verifikuar identitetin tuaj dhe
+          për të siguruar që kërkesa publikohet me pëlqimin e personit të saktë.
+          Kjo ndihmon në parandalimin e abuzimeve dhe rrit besueshmërinë për
+          kompanitë që do të kontaktojnë lidhur me kërkesën tuaj.
+        </p>
+      </div>
+
+      <div className="flex justify-between mt-4">
+        <button
+          type="button"
+          onClick={goBack}
+          disabled={saving || submitting}
+          className="premium-btn btn-light inline-flex items-center gap-2"
+        >
+          Kthehu
+        </button>
+
+        <div className="flex flex-col items-end">
+          <button
+            type="button"
+            onClick={submitConsentAndJob}
+            disabled={!isStep6Valid || !isEmailVerified || submitting}
+            className={`premium-btn btn-dark inline-flex items-center gap-2 ${
+              !isStep6Valid || !isEmailVerified
+                ? "opacity-50 cursor-not-allowed"
+                : ""
+            }`}
+          >
+            {submitting && <Loader2 size={16} className="animate-spin" />}
+            Përfundo & publiko
+          </button>
+
+          {!isEmailVerified && (
+            <div className="mt-2 text-sm text-amber-700">
+              ⚠️ Verifiera din email för att kunna publicera jobbet.
+            </div>
+          )}
         </div>
-      )}
+      </div>
     </div>
-  </div>
-);
+  );
 
-
+  // ------------------------------------------------------------
+  // Step render
+  // ------------------------------------------------------------
   const renderStep = () => {
     switch (currentStep) {
       case 1:
@@ -752,15 +952,17 @@ const Step5 = (
         return Step4;
       case 5:
         return Step5;
+      case 6:
+        return Step6;
       default:
         return Step1;
     }
   };
 
   // ------------------------------------------------------------
-  // Stepper (still your premium style)
+  // Stepper
   // ------------------------------------------------------------
-  const steps = [1, 2, 3, 4, 5];
+  const steps = [1, 2, 3, 4, 5, 6];
 
   const Stepper = (
     <div className="mb-6">
@@ -772,14 +974,13 @@ const Step5 = (
           return (
             <React.Fragment key={step}>
               <div
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold jr-step-dot
-                  ${
-                    isActive
-                      ? "jr-step-active"
-                      : isCompleted
-                      ? "jr-step-done"
-                      : "jr-step-idle"
-                  }`}
+                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold jr-step-dot ${
+                  isActive
+                    ? "jr-step-active"
+                    : isCompleted
+                    ? "jr-step-done"
+                    : "jr-step-idle"
+                }`}
               >
                 {step}
               </div>
@@ -797,21 +998,22 @@ const Step5 = (
       </div>
 
       <div className="mt-2 flex items-center justify-between">
-        <p className="text-sm text-gray-500">Hapi {currentStep} nga 5</p>
+        <p className="text-sm text-gray-500">Hapi {currentStep} nga 6</p>
 
-        {/* Autosave indicator (moved here to avoid layout jump) */}
-        <div className="flex items-center justify-end" style={{ minWidth: 110 }}>
-          {saveStatus === "saving" && (
+        <div className="flex items-center justify-end" style={{ minWidth: 130 }}>
+          {(saving || savingProfile) && (
             <span className="text-blue-600 text-sm flex items-center gap-1">
               <Loader2 size={14} className="animate-spin" /> Duke ruajtur…
             </span>
           )}
-          {saveStatus === "saved" && (
+
+          {!saving && !savingProfile && saveStatus === "saved" && (
             <span className="text-green-600 text-sm flex items-center gap-1">
               ✓ Ruajtur
             </span>
           )}
-          {saveStatus === "error" && (
+
+          {!saving && !savingProfile && saveStatus === "error" && (
             <span className="text-red-600 text-sm">Gabim gjatë ruajtjes!</span>
           )}
         </div>
@@ -830,25 +1032,21 @@ const Step5 = (
           <span>Duke ngarkuar formularin...</span>
         </div>
 
-        {/* Inline CSS for animations & helper styles */}
         <style>{INLINE_CSS}</style>
       </div>
     );
   }
 
-  // When toast is shown but draft not yet chosen
   const showOnlyToast = draftToast.show && !draft;
 
   return (
     <div className="premium-container">
-      {/* Inline CSS for animations & helper styles */}
       <style>{INLINE_CSS}</style>
 
-      {/* Back button */}
       <button
-        onClick={() => navigate("/dashboard/customer")}
+        onClick={() => navigate("/customer")}
         className="premium-btn btn-light mb-6 inline-flex items-center gap-2"
-        disabled={submitting || saving}
+        disabled={submitting || saving || savingProfile}
       >
         <ArrowLeft size={18} />
         Kthehu te dashboard
@@ -865,25 +1063,21 @@ const Step5 = (
         </div>
       )}
 
-
       {!showOnlyToast && draft && (
         <div className="premium-card p-6 space-y-4">
-
           {Stepper}
-          {/* Step content with slide+fade */}
           <div className={stepAnimClass}>{renderStep()}</div>
         </div>
       )}
 
-      {/* Toast – existing draft */}
       {draftToast.show && draftToast.existingDraft && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-
           <div className="premium-card w-full max-w-md p-6 shadow-2xl border border-gray-200 bg-white relative animate-fadeIn">
-
             <button
               className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
-              onClick={() => setDraftToast({ show: false, existingDraft: null })}
+              onClick={() =>
+                setDraftToast({ show: false, existingDraft: null })
+              }
               aria-label="Close"
             >
               <X size={18} />
@@ -900,8 +1094,8 @@ const Step5 = (
                 </h3>
 
                 <p className="text-sm text-gray-600 mb-4">
-                  Duket që keni filluar një kërkesë më herët. 
-                  Dëshironi ta vazhdoni apo të filloni nga e para?
+                  Duket që keni filluar një kërkesë më herët. Dëshironi ta
+                  vazhdoni apo të filloni nga e para?
                 </p>
 
                 <div className="flex gap-3">
@@ -929,7 +1123,6 @@ const Step5 = (
         </div>
       )}
 
-      {/* If only toast is showing, we can show a small helper card */}
       {showOnlyToast && (
         <div className="premium-card p-6">
           <div className="flex items-center gap-3 text-gray-700">
@@ -943,7 +1136,7 @@ const Step5 = (
 }
 
 // ------------------------------------------------------------
-// Inline CSS (temporary) — move to separate CSS later
+// Inline CSS
 // ------------------------------------------------------------
 const INLINE_CSS = `
 /* Smooth stepper transitions */
@@ -962,15 +1155,9 @@ const INLINE_CSS = `
 
 /* Slide + Fade animation container */
 .jr-anim { will-change: transform, opacity; }
-
-/* Default state uses transitions */
 .jr-in, .jr-out { transition: opacity 220ms ease, transform 220ms ease; }
-
-/* OUT phase */
 .jr-out.jr-next { opacity: 0; transform: translateX(-16px); }
 .jr-out.jr-back { opacity: 0; transform: translateX(16px); }
-
-/* IN phase */
 .jr-in.jr-next { opacity: 1; transform: translateX(0); }
 .jr-in.jr-back { opacity: 1; transform: translateX(0); }
 
