@@ -237,42 +237,51 @@ class RegisterCompanySerializer(serializers.ModelSerializer):
 
 # 👤 RegisterCustomerSerializer
 class RegisterCustomerSerializer(serializers.ModelSerializer):
-    first_name = serializers.CharField(write_only=True)
-    last_name = serializers.CharField(write_only=True)
-    phone = serializers.CharField(write_only=True, required=False, allow_blank=True)
-    address = serializers.CharField(write_only=True, required=False, allow_blank=True)
     password = serializers.CharField(write_only=True, min_length=6)
 
     class Meta:
         model = User
-        fields = ["email", "password", "first_name", "last_name", "phone", "address"]
+        fields = ["email", "password"]
 
     def validate_email(self, value):
-        if User.objects.filter(email__iexact=value).exists():
+        user = User.objects.filter(email__iexact=value).first()
+
+        if not user:
+            return value
+
+        if user.is_active:
             raise serializers.ValidationError("Ky email është tashmë i regjistruar.")
+
+        if user.role != "customer":
+            raise serializers.ValidationError("Ky email është përdorur me një rol tjetër.")
+
         return value
 
     def create(self, validated_data):
-        first_name = validated_data.pop("first_name")
-        last_name = validated_data.pop("last_name")
-        phone = validated_data.pop("phone", "")
-        address = validated_data.pop("address", "")
         password = validated_data.pop("password")
         email = validated_data.pop("email")
 
+        existing_user = User.objects.filter(email__iexact=email, role="customer").first()
+
+        # 🔐 Soft-deleted user → start reactivation flow
+        if existing_user and not existing_user.is_active:
+            from accounts.services.reactivation import initiate_customer_reactivation
+
+            initiate_customer_reactivation(email, self.context.get("request"))
+
+            raise serializers.ValidationError({
+                "email": "Ky email është i çaktivizuar. Kontrollo email-in për riaktivizim."
+            })
+
+        # 🆕 Create new user
         user = User.objects.create_user(
             email=email,
             password=password,
             role="customer",
-            first_name=first_name,
-            last_name=last_name,
         )
 
-        Customer.objects.create(
-            user=user,
-            phone=phone,
-            address=address,
-        )
+        # ✅ VIKTIGT – skapa profil
+        customer, _ = Customer.objects.get_or_create(user=user)
 
         return user
 
