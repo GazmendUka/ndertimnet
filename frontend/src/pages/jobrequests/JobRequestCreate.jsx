@@ -49,6 +49,8 @@ export default function JobRequestCreate() {
     description: "",
     city: null,
     profession: null,
+    address: "",
+    postal_code: "",
     budget: "",
   });
 
@@ -147,7 +149,7 @@ export default function JobRequestCreate() {
 
   const isStep2Valid = formData.title.trim().length >= 5;
   const isStep3Valid = formData.description.trim().length >= 20;
-  const isStep4Valid = Boolean(formData.city && formData.profession);
+  const isStep4Valid = formData.address.trim().length > 0 && Boolean(formData.city);
   const isStep6Valid =
     isValidPersonalNumber(consentData.personal_number, country) &&
     consentData.consent_publish === true &&
@@ -296,6 +298,8 @@ export default function JobRequestCreate() {
       city: d.city ?? null,
       profession: d.profession ?? null,
       budget: d.budget ?? "",
+      address: d.address || "",
+      postal_code: d.postal_code || "",
     });
   };
 
@@ -369,17 +373,22 @@ export default function JobRequestCreate() {
     setSaving(true);
     setSaveStatus("saving");
     setError("");
+    const parsedBudget = Number(formData.budget);
 
     try {
       const payload = {
-        ...formData,
+        title: formData.title,
+        description: formData.description,
+        profession: formData.profession || null,
+        city: formData.city || null,
+        address: formData.address.trim(),
+        postal_code: formData.postal_code.trim(),
         budget:
-          formData.budget === "" || formData.budget === null
+          formData.budget === "" || isNaN(parsedBudget)
             ? null
-            : Number(formData.budget),
+            : parsedBudget,
         current_step: newStep,
       };
-
       const updated = await jobRequestDraftService.updateDraft(draft.id, payload);
       setDraft(updated);
 
@@ -449,7 +458,7 @@ export default function JobRequestCreate() {
     if (!draft || !isStep6Valid || submitting) return;
 
     if (!isEmailVerified) {
-      toast.error("Verifiera din email för att kunna publicera.");
+      toast.error("Verifikoni email-in tuaj për të qenë në gjendje të publikoni.");
       return;
     }
 
@@ -458,14 +467,14 @@ export default function JobRequestCreate() {
       setError("Plotësoni të dhënat e kontaktit përpara publikimit.");
       setCurrentStep(1);
       return;
-    }
+    } 
 
     setSubmitting(true);
     setError("");
 
     try {
       const profileOk = await saveContactProfile();
-      if (!profileOk) throw new Error("Profile save failed");
+      if (!profileOk) throw new Error("Ruajtja e profilit dështoi");
 
       await customerConsentService.submitConsent({
         personal_number: consentData.personal_number,
@@ -479,7 +488,7 @@ export default function JobRequestCreate() {
       const job = await jobRequestDraftService.submitDraft(draft.id);
       navigate(`/customer/jobrequests/${job.id}`);
     } catch (err) {
-      console.error("Final submit failed:", err);
+      console.error("Ruajtja e profilit dështoi:", err);
 
       if (isEmailNotVerifiedError(err)) {
         toast.error("Verifikoni email-in tuaj për të publikuar.");
@@ -701,16 +710,31 @@ export default function JobRequestCreate() {
         </p>
       )}
 
+      {/* Address */}
       <div>
-        <label className="block mb-1 font-medium">Profesioni *</label>
-        <SearchableSelect
-          options={professions}
-          value={formData.profession}
-          onChange={(val) => updateField("profession", val)}
-          placeholder="Zgjidh profesionin"
+        <label className="block mb-1 font-medium">Adresa *</label>
+        <input
+          type="text"
+          className="premium-input"
+          placeholder="P.sh. Rr. Nënë Tereza 12, Prishtinë"
+          value={formData.address || ""}
+          onChange={(e) => updateField("address", e.target.value)}
         />
       </div>
 
+      {/* Postal Code */}
+      <div>
+        <label className="block mb-1 font-medium">Kodi postar</label>
+        <input
+          type="text"
+          className="premium-input"
+          placeholder="10000"
+          value={formData.postal_code || ""}
+          onChange={(e) => updateField("postal_code", e.target.value)}
+        />
+      </div>
+
+      {/* City */}
       <div>
         <label className="block mb-1 font-medium">Qyteti *</label>
         <SearchableSelect
@@ -721,22 +745,25 @@ export default function JobRequestCreate() {
         />
       </div>
 
+      {/* Profession (optional) */}
+      <div>
+        <label className="block mb-1 font-medium">
+          Profesioni (opsionale)
+        </label>
+        <SearchableSelect
+          options={professions}
+          value={formData.profession}
+          onChange={(val) => updateField("profession", val)}
+          placeholder="Zgjidh ose lëre bosh"
+        />
+      </div>
+
       <div className="flex justify-between mt-4">
-        <button
-          type="button"
-          onClick={goBack}
-          disabled={saving || submitting}
-          className="premium-btn btn-light"
-        >
+        <button onClick={goBack} disabled={saving || submitting} className="premium-btn btn-light" >
           Kthehu
         </button>
 
-        <button
-          type="button"
-          onClick={goNext}
-          disabled={lookupsLoading || !formData.city || !formData.profession}
-          className="premium-btn btn-dark"
-        >
+        <button onClick={goNext} disabled={lookupsLoading || !isStep4Valid || saving || submitting} className="premium-btn btn-dark">
           Vazhdo
         </button>
       </div>
@@ -780,7 +807,11 @@ export default function JobRequestCreate() {
           <strong>Përshkrimi:</strong> {formData.description || "—"}
         </p>
         <p>
-          <strong>Profesioni:</strong> {selectedProfession?.name || "—"}
+          <strong>Adresa:</strong> {formData.address || "—"}
+        </p>
+
+        <p>
+          <strong>Kodi postar:</strong> {formData.postal_code || "—"}
         </p>
         <p>
           <strong>Qyteti:</strong> {selectedCity?.name || "—"}

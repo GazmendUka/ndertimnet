@@ -188,8 +188,8 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
             missing.append("description")
         if not draft.city:
             missing.append("city")
-        if not draft.profession:
-            missing.append("profession")
+        if not draft.address:
+            missing.append("address")
 
         if missing:
             return Response(
@@ -204,6 +204,8 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
             budget=draft.budget,
             city=draft.city,
             profession=draft.profession,
+            address=draft.address,
+            postal_code=draft.postal_code,
             is_active=True,
         )
 
@@ -511,7 +513,7 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
             ArchivedJob.objects.create(
                 title=job.title,
                 description=job.description,
-                category=job.profession.name,
+                category=job.profession.name if job.profession else "",
                 location=job.city.name,
                 date_accepted=now,
                 price=price or (job.budget or 0),

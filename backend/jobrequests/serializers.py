@@ -39,7 +39,7 @@ class OfferPublicSerializer(serializers.Serializer):
     updated_at = serializers.DateTimeField()
     accepted_at = serializers.DateTimeField(allow_null=True)
     rejected_at = serializers.DateTimeField(allow_null=True)
-    current_version = OfferVersionPublicSerializer(allow_null=True)
+    current_version = OfferVersionPublicSerializer(allow_null=True, required=False)
 
 
 # ------------------------------------------------------------
@@ -143,6 +143,9 @@ class JobRequestSerializer(serializers.ModelSerializer):
             "profession",
             "city_detail",
             "profession_detail",
+
+            "address",
+            "postal_code",
 
             "created_at",
             "updated_at",
@@ -330,12 +333,14 @@ class JobRequestDraftSerializer(serializers.ModelSerializer):
             "is_submitted",
             "created_at",
             "updated_at",
+            "address",
+            "postal_code",
         ]
         read_only_fields = ["id", "is_submitted", "created_at", "updated_at"]
 
     def validate_current_step(self, value):
-        if value < 1 or value > 5:
-            raise serializers.ValidationError("current_step must be between 1 and 5.")
+        if value < 1 or value > 6:
+            raise serializers.ValidationError("current_step must be between 1 and 6.")
         return value
 
 
@@ -350,7 +355,8 @@ class JobRequestUpdateSerializer(serializers.ModelSerializer):
     )
     profession = serializers.PrimaryKeyRelatedField(
         queryset=Profession.objects.all(),
-        required=False
+        required=False,
+        allow_null=True
     )
 
     class Meta:

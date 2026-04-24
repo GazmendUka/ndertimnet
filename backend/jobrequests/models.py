@@ -18,6 +18,7 @@ class JobRequestAudit(models.Model):
         ("winner_selected", "Fituesi u përzgjodh"),
         ("job_updated", "Kërkesa u përditësua"),
         ("created_from_draft", "Kërkesa u krijua nga draft"),
+        ("job_deleted", "Kërkesa u fshi"),
     ]
 
     job_request = models.ForeignKey(
@@ -47,20 +48,16 @@ class JobRequestAudit(models.Model):
 
 
 class JobRequest(models.Model):
-
-    customer = models.ForeignKey(
-        Customer,
-        on_delete=models.CASCADE,
-        related_name="job_requests",
-        verbose_name="Klienti"
-    )
-
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="job_requests", verbose_name="Klienti")
     title = models.CharField(max_length=255, verbose_name="Titulli i punës")
     description = models.TextField(verbose_name="Përshkrimi")
     budget = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Buxheti €")
 
     city = models.ForeignKey(City, on_delete=models.PROTECT, related_name="job_requests", verbose_name="Qyteti")
-    profession = models.ForeignKey(Profession, on_delete=models.PROTECT, related_name="job_requests", verbose_name="Profesioni")
+    profession = models.ForeignKey(Profession, on_delete=models.PROTECT, related_name="job_requests", null=True, blank=True, verbose_name="Profesioni")
+
+    address = models.CharField(max_length=255, blank=True)
+    postal_code = models.CharField(max_length=20, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Krijuar më")
     updated_at = models.DateTimeField(auto_now=True, verbose_name="Përditësuar më")
@@ -138,7 +135,6 @@ class JobRequest(models.Model):
 
 class JobRequestDraft(models.Model):
     customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="jobrequest_drafts")
-
     title = models.CharField(max_length=255, blank=True)
     description = models.TextField(blank=True)
     budget = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
@@ -146,6 +142,9 @@ class JobRequestDraft(models.Model):
     city = models.ForeignKey(City, on_delete=models.PROTECT, null=True, blank=True, related_name="jobrequest_drafts", verbose_name="Qyteti")
     profession = models.ForeignKey(Profession, on_delete=models.PROTECT, null=True, blank=True, related_name="jobrequest_drafts", verbose_name="Profesioni")
 
+    address = models.CharField(max_length=255, blank=True)
+    postal_code = models.CharField(max_length=20, blank=True)
+    
     current_step = models.PositiveSmallIntegerField(default=1)
     is_submitted = models.BooleanField(default=False)
 
