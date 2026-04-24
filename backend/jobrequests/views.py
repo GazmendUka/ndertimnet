@@ -153,20 +153,20 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         # 🛑 PROFILE COMPLETENESS CHECK (FINAL VERSION)
         # --------------------------------------------------------
         customer = draft.customer
+        user = customer.user
 
         missing_profile_fields = []
 
-        if not (customer.first_name and customer.first_name.strip()):
+        if not (user.first_name and user.first_name.strip()):
             missing_profile_fields.append("first_name")
 
-        if not (customer.last_name and customer.last_name.strip()):
+        if not (user.last_name and user.last_name.strip()):
             missing_profile_fields.append("last_name")
 
-        if not (customer.phone and customer.phone.strip()):
+        if not (customer.phone and str(customer.phone).strip()):
             missing_profile_fields.append("phone")
 
-        # Rekommenderad (om adress krävs i din app)
-        if not (customer.address and customer.address.strip()):
+        if not (customer.address and str(customer.address).strip()):
             missing_profile_fields.append("address")
 
         if missing_profile_fields:
