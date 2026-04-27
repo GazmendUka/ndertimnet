@@ -346,11 +346,22 @@ export default function JobRequestCreate() {
     setError("");
 
     try {
-      await api.patch("accounts/profile/customer/", {
+      const payload = {
         first_name: contactData.first_name.trim(),
         last_name: contactData.last_name.trim(),
-        phone: contactData.phone.trim(),
-      });
+      };
+
+      // phone
+      if (contactData.phone?.trim()) {
+        payload.phone = contactData.phone.trim();
+      }
+
+      // address
+      if (formData.address?.trim()) {
+        payload.address = formData.address.trim();
+      }
+
+      await api.patch("accounts/profile/customer/", payload);
 
       return true;
     } catch (err) {
@@ -431,7 +442,12 @@ export default function JobRequestCreate() {
 
     if (currentStep === 2 && !isStep2Valid) return;
     if (currentStep === 3 && !isStep3Valid) return;
-    if (currentStep === 4 && !isStep4Valid) return;
+    if (currentStep === 4) {
+      if (!isStep4Valid) return;
+
+      const profileOk = await saveContactProfile();
+      if (!profileOk) return;
+    }
 
     const ok = await saveStep(next);
     if (!ok) return;

@@ -166,7 +166,10 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         if not (customer.phone and str(customer.phone).strip()):
             missing_profile_fields.append("phone")
 
-        if not (customer.address and str(customer.address).strip()):
+        # fallback till draft address
+        address = customer.address or draft.address
+
+        if not (address and str(address).strip()):
             missing_profile_fields.append("address")
 
         if missing_profile_fields:
