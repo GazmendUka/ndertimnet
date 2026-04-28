@@ -24,6 +24,7 @@ export default function JobRequestCreate() {
   const [lookupsLoading, setLookupsLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(true);
   const [country, setCountry] = useState("XK"); // default Kosovo
+  const [useSameAddress, setUseSameAddress] = useState(false);
 
   // ------------------------------------------------------------
   // Backend draft
@@ -40,6 +41,7 @@ export default function JobRequestCreate() {
     email_verified: false,
     phone: "",
   });
+  const [contactAddress, setContactAddress] = useState("");
 
   // ------------------------------------------------------------
   // Form data (JobRequest draft)
@@ -145,8 +147,8 @@ export default function JobRequestCreate() {
     contactData.first_name.trim().length >= 2 &&
     contactData.last_name.trim().length >= 2 &&
     Boolean(contactData.email?.trim()) &&
-    isValidPhone(contactData.phone);
-
+    isValidPhone(contactData.phone) &&
+    contactAddress.trim().length > 0;
   const isStep2Valid = formData.title.trim().length >= 5;
   const isStep3Valid = formData.description.trim().length >= 20;
   const isStep4Valid = formData.address.trim().length > 0 && Boolean(formData.city);
@@ -154,6 +156,7 @@ export default function JobRequestCreate() {
     isValidPersonalNumber(consentData.personal_number, country) &&
     consentData.consent_publish === true &&
     consentData.consent_identity === true;
+  
 
   // ------------------------------------------------------------
   // Step errors
@@ -229,6 +232,7 @@ export default function JobRequestCreate() {
           email_verified: Boolean(profile.email_verified),
           phone: profile.phone || "",
         });
+        setContactAddress(profile.address || "");
       } catch (err) {
         console.error("Profile load failed:", err);
         setError("Profili i klientit nuk mund të ngarkohet.");
@@ -236,6 +240,7 @@ export default function JobRequestCreate() {
         setProfileLoading(false);
       }
     };
+
 
     const loadLookups = async () => {
       try {
@@ -285,6 +290,12 @@ export default function JobRequestCreate() {
 
     init();
   }, []);
+
+  useEffect(() => {
+    if (useSameAddress && contactAddress?.trim()) {
+      updateField("address", contactAddress);
+    }
+  }, [contactAddress, useSameAddress]);
 
   // ------------------------------------------------------------
   // Helpers
@@ -357,8 +368,8 @@ export default function JobRequestCreate() {
       }
 
       // address
-      if (formData.address?.trim()) {
-        payload.address = formData.address.trim();
+      if (contactAddress?.trim()) {
+        payload.address = contactAddress.trim();
       }
 
       await api.patch("accounts/profile/customer/", payload);
@@ -605,6 +616,17 @@ export default function JobRequestCreate() {
           <p className="jr-help jr-help-error">{stepErrors.phone}</p>
         )}
       </div>
+      <div>
+        <label className="block mb-1 font-medium">Adresa juaj *</label>
+        <input
+          type="text"
+          className="premium-input"
+          placeholder="P.sh. Rr. Nënë Tereza 12, Prishtinë"
+          value={contactAddress}
+          onChange={(e) => setContactAddress(e.target.value)}
+          disabled={saving || savingProfile || submitting || profileLoading}
+        />
+      </div>
 
       <div className="flex justify-end mt-4">
         <button
@@ -726,15 +748,42 @@ export default function JobRequestCreate() {
         </p>
       )}
 
+      <div className="flex items-center gap-2">
+        <input
+          type="checkbox"
+          id="sameAddress"
+          checked={useSameAddress}
+          onChange={(e) => {
+            const checked = e.target.checked;
+            setUseSameAddress(checked);
+
+            if (!checked) {
+              updateField("address", "");
+            }
+          }}
+        />
+        <label htmlFor="sameAddress" className="text-sm">
+          Përdor adresën time (nga profili)
+        </label>
+
+        {useSameAddress && (
+          <p className="text-xs text-gray-500">
+            Po përdoret adresa nga profili juaj.
+          </p>
+        )}
+      </div>
+
       {/* Address */}
       <div>
-        <label className="block mb-1 font-medium">Adresa *</label>
+        <label className="block mb-1 font-medium">
+          Adresa e projektit *
+        </label>
         <input
           type="text"
           className="premium-input"
-          placeholder="P.sh. Rr. Nënë Tereza 12, Prishtinë"
           value={formData.address || ""}
           onChange={(e) => updateField("address", e.target.value)}
+          disabled={useSameAddress}
         />
       </div>
 
