@@ -1,14 +1,17 @@
 # backend/jobrequests/models.py
 
+from datetime import timedelta
+
+from django.conf import settings
 from django.db import models
 from django.utils import timezone
-from datetime import timedelta
+
+from accounts.models import Company
 from locations.models import City
 from taxonomy.models import Profession
-from accounts.models import Customer, Company
 
 
-class JobRequestAudit(models.Model):    
+class JobRequestAudit(models.Model):
     ACTION_CHOICES = [
         ("offer_sent", "Ofertë e dërguar"),
         ("offer_accepted", "Oferta u pranua"),
@@ -24,7 +27,15 @@ class JobRequestAudit(models.Model):
     job_request = models.ForeignKey(
         "JobRequest",
         on_delete=models.CASCADE,
-        related_name="audit_logs"
+        related_name="audit_logs",
+    )
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="job_audit_logs",
     )
 
     company = models.ForeignKey(
@@ -32,37 +43,79 @@ class JobRequestAudit(models.Model):
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
-        related_name="audit_company"
+        related_name="job_audit_logs",
     )
 
     action = models.CharField(max_length=50, choices=ACTION_CHOICES)
     message = models.TextField(blank=True, null=True)
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
 
     class Meta:
         verbose_name = "Auditim i kërkesës"
         verbose_name_plural = "Auditime të kërkesave"
+        ordering = ["-created_at"]
 
     def __str__(self):
-        return f"{self.action} – {self.job_request.id}"
+        return f"{self.action} – {self.job_request_id}"
 
 
 class JobRequest(models.Model):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="job_requests", verbose_name="Klienti")
+    STATUS_CHOICES = [
+        ("open", "Open"),
+        ("in_progress", "In Progress"),
+        ("completed", "Completed"),
+        ("cancelled", "Cancelled"),
+    ]
+
+    customer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="job_requests",
+        db_index=True,
+    )
+
     title = models.CharField(max_length=255, verbose_name="Titulli i punës")
     description = models.TextField(verbose_name="Përshkrimi")
-    budget = models.DecimalField(max_digits=10, decimal_places=2, blank=True, null=True, verbose_name="Buxheti €")
+    budget = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        verbose_name="Buxheti €",
+    )
 
-    city = models.ForeignKey(City, on_delete=models.PROTECT, related_name="job_requests", verbose_name="Qyteti")
-    profession = models.ForeignKey(Profession, on_delete=models.PROTECT, related_name="job_requests", null=True, blank=True, verbose_name="Profesioni")
+    city = models.ForeignKey(
+        City,
+        on_delete=models.PROTECT,
+        related_name="job_requests",
+        verbose_name="Qyteti",
+    )
+    profession = models.ForeignKey(
+        Profession,
+        on_delete=models.PROTECT,
+        related_name="job_requests",
+        null=True,
+        blank=True,
+        verbose_name="Profesioni",
+    )
 
     address = models.CharField(max_length=255, blank=True)
     postal_code = models.CharField(max_length=20, blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Krijuar më")
-    updated_at = models.DateTimeField(auto_now=True, verbose_name="Përditësuar më")
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        db_index=True,
+        verbose_name="Përditësuar më",
+    )
 
-    # 🔥 Index for performance
+    status = models.CharField(
+        max_length=20,
+        choices=STATUS_CHOICES,
+        default="open",
+        db_index=True,
+    )
+
     is_active = models.BooleanField(default=True, db_index=True, verbose_name="Aktive")
     is_completed = models.BooleanField(default=False, db_index=True, verbose_name="Përfunduar")
 
@@ -72,17 +125,12 @@ class JobRequest(models.Model):
     is_reopened = models.BooleanField(default=False, verbose_name="Rihapur")
     reopened_at = models.DateTimeField(null=True, blank=True, verbose_name="Rihapur më")
 
-    accepted_company = models.ForeignKey(
-        Company,
+    expires_at = models.DateTimeField(
         null=True,
         blank=True,
-        on_delete=models.SET_NULL,
-        related_name="accepted_jobs",
-        verbose_name="Kompania e pranuar",
+        db_index=True,
+        verbose_name="Skadon më",
     )
-
-    accepted_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Çmimi i pranuar")
-    expires_at = models.DateTimeField(null=True, blank=True, verbose_name="Skadon më")
 
     winner_company = models.ForeignKey(
         Company,
@@ -93,7 +141,13 @@ class JobRequest(models.Model):
         verbose_name="Fituesi",
     )
 
-    winner_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True, verbose_name="Çmimi fitues")
+    winner_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        verbose_name="Çmimi fitues",
+    )
 
     winner_offer = models.ForeignKey(
         "offers.Offer",
@@ -104,20 +158,38 @@ class JobRequest(models.Model):
         verbose_name="Oferta fituese",
     )
 
-    is_deleted = models.BooleanField(default=False)
+    is_deleted = models.BooleanField(default=False, db_index=True)
     deleted_at = models.DateTimeField(null=True, blank=True)
 
+    class Meta:
+        verbose_name = "Kërkesë për Punë"
+        verbose_name_plural = "Kërkesa për Punë"
+        ordering = ["-created_at"]
+
     def save(self, *args, **kwargs):
-        if not self.expires_at:
+        if self._state.adding and self.expires_at is None:
             self.expires_at = timezone.now() + timedelta(days=40)
         super().save(*args, **kwargs)
 
+    def soft_delete(self):
+        if self.is_deleted:
+            return self
+
+        self.is_deleted = True
+        self.deleted_at = timezone.now()
+        self.save(update_fields=["is_deleted", "deleted_at"])
+        return self
+
     def __str__(self):
-        return f"{self.title} ({self.customer.user.email})"
+        return f"{self.title} ({getattr(self.customer, 'email', 'unknown')})"
 
     @property
     def offers_count(self):
         from offers.models import OfferStatus
+
+        if not hasattr(self, "offers"):
+            return 0
+
         return self.offers.exclude(status=OfferStatus.DRAFT).count()
 
     @property
@@ -128,31 +200,47 @@ class JobRequest(models.Model):
     def extra_offers_added(self):
         return max(self.max_offers - 7, 0)
 
-    class Meta:
-        verbose_name = "Kërkesë për Punë"
-        verbose_name_plural = "Kërkesa për Punë"
-
 
 class JobRequestDraft(models.Model):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name="jobrequest_drafts")
+    customer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="job_request_drafts",
+        db_index=True,
+    )
+
     title = models.CharField(max_length=255, blank=True)
     description = models.TextField(blank=True)
     budget = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
 
-    city = models.ForeignKey(City, on_delete=models.PROTECT, null=True, blank=True, related_name="jobrequest_drafts", verbose_name="Qyteti")
-    profession = models.ForeignKey(Profession, on_delete=models.PROTECT, null=True, blank=True, related_name="jobrequest_drafts", verbose_name="Profesioni")
+    city = models.ForeignKey(
+        City,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="jobrequest_drafts",
+        verbose_name="Qyteti",
+    )
+    profession = models.ForeignKey(
+        Profession,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="jobrequest_drafts",
+        verbose_name="Profesioni",
+    )
 
     address = models.CharField(max_length=255, blank=True)
     postal_code = models.CharField(max_length=20, blank=True)
-    
+
     current_step = models.PositiveSmallIntegerField(default=1)
     is_submitted = models.BooleanField(default=False)
 
-    created_at = models.DateTimeField(auto_now_add=True)
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         ordering = ["-created_at"]
 
     def __str__(self):
-        return f"Draft #{self.pk} – {self.customer.user.email} (step {self.current_step})"
+        return f"Draft #{self.pk} – {getattr(self.customer, 'email', 'unknown')} (step {self.current_step})"

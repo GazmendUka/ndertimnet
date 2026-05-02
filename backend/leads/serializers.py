@@ -4,7 +4,7 @@
 
 from rest_framework import serializers
 from .models import LeadMatch, LeadMessage, ArchivedJob
-from accounts.serializers import CompanySerializer, CustomerSerializer
+from accounts.serializers import CompanySerializer, BasicCustomerSerializer
 
 
 # ------------------------------------------------------------
@@ -13,8 +13,7 @@ from accounts.serializers import CompanySerializer, CustomerSerializer
 
 class LeadMessageSerializer(serializers.ModelSerializer):
     sender_company = CompanySerializer(read_only=True)
-    sender_customer = CustomerSerializer(read_only=True)
-
+    sender_customer = BasicCustomerSerializer(read_only=True)
     class Meta:
         model = LeadMessage
         fields = [

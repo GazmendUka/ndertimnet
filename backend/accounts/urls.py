@@ -2,8 +2,6 @@
 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import DeleteAccountView
-
 
 from .views import (
     UserViewSet,
@@ -19,6 +17,7 @@ from .views import (
     ResendVerificationEmailView,
     ForgotPasswordView,          
     ResetPasswordConfirmView,
+    DeleteAccountView,
 )
 
 
@@ -40,16 +39,15 @@ urlpatterns = [
     path("profile/company/", company_profile, name="company-profile"),
 
     # 🔐 JobRequest steg 5 – Consent
-    path("customer/consent/", CustomerConsentView.as_view(), name="customer-consent"),
-
+    path("customer-consent/", CustomerConsentView.as_view(), name="customer-consent"),
     # ✉️ Email verification
     path("verify-email/", VerifyEmailView.as_view(), name="verify-email"),
     path("resend-verification/", ResendVerificationEmailView.as_view(), name="resend-verification"),
     
-    path("delete/", DeleteAccountView.as_view(), name="delete-account"),
-
+    path("account/delete/", DeleteAccountView.as_view(), name="delete-account"),
+    
     # Reset password
-    path("forgot-password/", ForgotPasswordView.as_view()),
-    path("reset-password/", ResetPasswordConfirmView.as_view()),
+    path("password/forgot/", ForgotPasswordView.as_view(), name="forgot-password"),
+    path("password/reset/", ResetPasswordConfirmView.as_view(), name="reset-password"),
 ]
 
