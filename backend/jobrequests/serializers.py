@@ -2,7 +2,7 @@
 
 from rest_framework import serializers
 from .models import JobRequest, JobRequestAudit, JobRequestDraft
-from accounts.serializers import CustomerSerializer, CompanySerializer
+from accounts.serializers import BasicCustomerSerializer, CompanySerializer
 
 from locations.serializers import CitySerializer
 from taxonomy.serializers import ProfessionSerializer
@@ -214,13 +214,13 @@ class JobRequestSerializer(serializers.ModelSerializer):
 
         role = getattr(user, "role", None)
         if role == "customer":
-            return CustomerSerializer(obj.customer).data
+            return BasicCustomerSerializer(obj.customer).data
 
         if role == "company":
             offer = self._get_company_offer(obj)
             if not offer or not offer.lead_unlocked:
                 return None
-            return CustomerSerializer(obj.customer).data
+            return BasicCustomerSerializer(obj.customer).data
 
         return None
 
@@ -310,6 +310,32 @@ class JobRequestSerializer(serializers.ModelSerializer):
             return OfferPublicSerializer(offer).data
 
         return None
+    
+    def create(self, validated_data):
+        request = self.context.get("request")
+        user = request.user if request else None
+
+        if not user:
+            raise serializers.ValidationError("User not found")
+
+        try:
+            customer = user.customer_profile
+        except Exception:
+            raise serializers.ValidationError("Customer profile not found")
+
+        # 🔥 AUTOFILL (endast om inte skickat)
+        if not validated_data.get("address"):
+            validated_data["address"] = customer.address
+
+        if not validated_data.get("postal_code"):
+            validated_data["postal_code"] = customer.postal_code
+
+        if "city" not in validated_data and customer.city:
+            validated_data["city"] = customer.city
+
+        validated_data["customer"] = user
+
+        return super().create(validated_data)
 
 
 # ------------------------------------------------------------

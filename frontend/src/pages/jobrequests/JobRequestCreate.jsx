@@ -42,6 +42,8 @@ export default function JobRequestCreate() {
     phone: "",
   });
   const [contactAddress, setContactAddress] = useState("");
+  const [contactPostalCode, setContactPostalCode] = useState("");
+  const [contactCity, setContactCity] = useState(null);
 
   // ------------------------------------------------------------
   // Form data (JobRequest draft)
@@ -148,7 +150,9 @@ export default function JobRequestCreate() {
     contactData.last_name.trim().length >= 2 &&
     Boolean(contactData.email?.trim()) &&
     isValidPhone(contactData.phone) &&
-    contactAddress.trim().length > 0;
+    contactAddress.trim().length > 0 &&
+    contactPostalCode.trim().length > 0 &&
+    Boolean(contactCity);
   const isStep2Valid = formData.title.trim().length >= 5;
   const isStep3Valid = formData.description.trim().length >= 20;
   const isStep4Valid = formData.address.trim().length > 0 && Boolean(formData.city);
@@ -233,6 +237,8 @@ export default function JobRequestCreate() {
           phone: profile.phone || "",
         });
         setContactAddress(profile.address || "");
+        setContactPostalCode(profile.postal_code || "");
+        setContactCity(profile.city_detail?.id || null);
       } catch (err) {
         console.error("Profile load failed:", err);
         setError("Profili i klientit nuk mund të ngarkohet.");
@@ -292,10 +298,19 @@ export default function JobRequestCreate() {
   }, []);
 
   useEffect(() => {
-    if (useSameAddress && contactAddress?.trim()) {
-      updateField("address", contactAddress);
+    if (!useSameAddress) return;
+
+    updateField("address", contactAddress || "");
+    updateField("postal_code", contactPostalCode || "");
+    updateField("city", contactCity || null);
+
+  }, [useSameAddress, contactAddress, contactPostalCode, contactCity]);
+
+  useEffect(() => {
+    if (!useSameAddress && contactAddress && contactPostalCode && contactCity) {
+      setUseSameAddress(true);
     }
-  }, [contactAddress, useSameAddress]);
+  }, [contactAddress, contactPostalCode, contactCity]);
 
   // ------------------------------------------------------------
   // Helpers
@@ -370,6 +385,14 @@ export default function JobRequestCreate() {
       // address
       if (contactAddress?.trim()) {
         payload.address = contactAddress.trim();
+      }
+
+      if (contactPostalCode?.trim()) {
+        payload.postal_code = contactPostalCode.trim();
+      }
+
+      if (contactCity) {
+        payload.city_id = contactCity;
       }
 
       await api.patch("accounts/profile/customer/", payload);
@@ -616,16 +639,42 @@ export default function JobRequestCreate() {
           <p className="jr-help jr-help-error">{stepErrors.phone}</p>
         )}
       </div>
+      {/* Address */}
       <div>
-        <label className="block mb-1 font-medium">Adresa juaj *</label>
+        <label className="block mb-1 font-medium">Adresa *</label>
         <input
           type="text"
           className="premium-input"
-          placeholder="P.sh. Rr. Nënë Tereza 12, Prishtinë"
+          placeholder="Rr. Nënë Tereza 12"
           value={contactAddress}
           onChange={(e) => setContactAddress(e.target.value)}
           disabled={saving || savingProfile || submitting || profileLoading}
         />
+      </div>
+
+      {/* Postal + City inline */}
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block mb-1 font-medium">Kodi postar *</label>
+          <input
+            type="text"
+            className="premium-input"
+            placeholder="10000"
+            value={contactPostalCode}
+            onChange={(e) => setContactPostalCode(e.target.value)}
+            disabled={saving || savingProfile || submitting || profileLoading}
+          />
+        </div>
+
+        <div>
+          <label className="block mb-1 font-medium">Qyteti *</label>
+          <SearchableSelect
+            options={cities}
+            value={cities.find(c => c.id === contactCity) || null}
+            onChange={(val) => setContactCity(val?.id || val)}
+            placeholder="Zgjidh qytetin"
+          />
+        </div>
       </div>
 
       <div className="flex justify-end mt-4">
@@ -748,30 +797,34 @@ export default function JobRequestCreate() {
         </p>
       )}
 
+      <div>
       <div className="flex items-center gap-2">
         <input
           type="checkbox"
           id="sameAddress"
           checked={useSameAddress}
+          disabled={!contactAddress || !contactPostalCode || !contactCity}
           onChange={(e) => {
             const checked = e.target.checked;
             setUseSameAddress(checked);
 
             if (!checked) {
-              updateField("address", "");
+              // lämna kvar värden istället för att rensa
             }
           }}
         />
         <label htmlFor="sameAddress" className="text-sm">
           Përdor adresën time (nga profili)
         </label>
-
-        {useSameAddress && (
-          <p className="text-xs text-gray-500">
-            Po përdoret adresa nga profili juaj.
-          </p>
-        )}
       </div>
+
+      {useSameAddress && (
+        <div className="text-xs text-gray-500 mt-1">
+          {contactAddress}, {contactPostalCode}{" "}
+          {cities.find(c => c.id === contactCity)?.name || ""}
+        </div>
+      )}
+    </div>
 
       {/* Address */}
       <div>
@@ -793,9 +846,9 @@ export default function JobRequestCreate() {
         <input
           type="text"
           className="premium-input"
-          placeholder="10000"
           value={formData.postal_code || ""}
           onChange={(e) => updateField("postal_code", e.target.value)}
+          disabled={useSameAddress}
         />
       </div>
 
@@ -804,9 +857,9 @@ export default function JobRequestCreate() {
         <label className="block mb-1 font-medium">Qyteti *</label>
         <SearchableSelect
           options={cities}
-          value={formData.city}
-          onChange={(val) => updateField("city", val)}
-          placeholder="Zgjidh qytetin"
+          value={cities.find(c => c.id === formData.city) || null}
+          onChange={(val) => updateField("city", val?.id || val)}
+          disabled={useSameAddress}
         />
       </div>
 
@@ -817,8 +870,8 @@ export default function JobRequestCreate() {
         </label>
         <SearchableSelect
           options={professions}
-          value={formData.profession}
-          onChange={(val) => updateField("profession", val)}
+          value={professions.find(p => p.id === formData.profession) || null}
+          onChange={(val) => updateField("profession", val?.id || val)}
           placeholder="Zgjidh ose lëre bosh"
         />
       </div>

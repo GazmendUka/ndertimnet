@@ -37,8 +37,9 @@ class UserSerializer(serializers.ModelSerializer):
         read_only_fields = ["is_active", "date_joined", "created_at", "updated_at"]
 
 
-# 👤 CustomerSerializer
-class CustomerSerializer(serializers.ModelSerializer):
+# ⚠️ Basic serializer – används endast i enkla sammanhang
+# Använd CustomerProfileSerializer för full profil
+class BasicCustomerSerializer(serializers.ModelSerializer):
     class Meta:
         model = Customer
         fields = ["id", "user", "phone", "address"]
@@ -291,6 +292,14 @@ class CustomerProfileSerializer(serializers.ModelSerializer):
     last_name = serializers.CharField(source="user.last_name")
     email = serializers.EmailField(source="user.email", read_only=True)
     email_verified = serializers.BooleanField(source="user.email_verified", read_only=True)
+    city_id = serializers.PrimaryKeyRelatedField(
+        source="city",
+        queryset=City.objects.all(),
+        write_only=True,
+        required=False,
+        allow_null=True
+    )
+    city_detail = CitySerializer(source="city", read_only=True)
 
     class Meta:
         model = Customer
@@ -299,19 +308,33 @@ class CustomerProfileSerializer(serializers.ModelSerializer):
             "last_name",
             "phone",
             "address",
+            "postal_code",
+            "city_id",
+            "city_detail",
             "email",
             "email_verified",
         ]
+    
+
 
     def update(self, instance, validated_data):
-        # Uppdatera User-fält
-        user_data = validated_data.pop("user", {})
-        for attr, value in user_data.items():
-            setattr(instance.user, attr, value)
-        instance.user.save()
+        # User fields
+        user_data = validated_data.pop("user", None)
+        if user_data:
+            for attr, value in user_data.items():
+                setattr(instance.user, attr, value)
+            instance.user.save()
 
-        # Uppdatera Customer-fält
-        return super().update(instance, validated_data)
+        # City – only if provided in payload
+        if "city" in validated_data:
+            instance.city = validated_data.pop("city")
+
+        # Other fields
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+
+        instance.save()
+        return instance
 
 class CustomerConsentSerializer(serializers.ModelSerializer):
     consent = serializers.BooleanField(write_only=True)
@@ -371,7 +394,7 @@ class CustomerConsentSerializer(serializers.ModelSerializer):
         request = self.context["request"]
 
         instance.personal_number = validated_data["personal_number"]
-        instance.country = validated_data.get("country")  # uncomment later if field exists
+        instance.country = validated_data["country"]
 
         instance.consent_job_publish = True
         instance.consent_job_publish_at = timezone.now()
@@ -443,6 +466,6 @@ class MeSerializer(serializers.ModelSerializer):
 
         try:
             customer = Customer.objects.get(user=user)
-            return CustomerSerializer(customer, context=self.context).data
+            return CustomerProfileSerializer(customer, context=self.context).data
         except Customer.DoesNotExist:
             return None

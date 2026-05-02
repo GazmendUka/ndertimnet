@@ -40,7 +40,7 @@ User = get_user_model()
 
 from .serializers import (
     UserSerializer,
-    CustomerSerializer,
+    BasicCustomerSerializer,
     CompanySerializer,
     RegisterCompanySerializer,
     RegisterCustomerSerializer,
@@ -75,6 +75,8 @@ class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.all() 
     serializer_class = UserSerializer
     pagination_class = None
+    permission_classes = [IsAuthenticated]        
+    authentication_classes = [JWTAuthentication]  
 
     def get_queryset(self):
         user = self.request.user
@@ -88,8 +90,10 @@ class UserViewSet(viewsets.ModelViewSet):
 
 class CustomerViewSet(viewsets.ModelViewSet):
     queryset = Customer.objects.all() 
-    serializer_class = CustomerSerializer
+    serializer_class = BasicCustomerSerializer
     pagination_class = None
+    permission_classes = [IsAuthenticated]
+    authentication_classes = [JWTAuthentication]
 
     def get_queryset(self):
         user = self.request.user
@@ -278,11 +282,10 @@ def current_user(request):
         ).data
 
     if hasattr(user, "customer_profile"):
-        response["customer"] = {
-            "id": user.customer_profile.id,
-            "phone": user.customer_profile.phone,
-            "address": user.customer_profile.address,
-        }
+        response["customer"] = CustomerProfileSerializer(
+            user.customer_profile,
+            context={"request": request}
+        ).data
 
     return success(data=response)
 

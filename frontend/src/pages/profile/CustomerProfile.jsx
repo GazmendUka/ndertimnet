@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import React, { useState, useEffect } from "react";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
+import SearchableSelect from "../../components/ui/SearchableSelect";
 
 export default function CustomerProfile() {
   const { access, logout, refresh } = useAuth();
@@ -14,6 +15,8 @@ export default function CustomerProfile() {
     last_name: "",
     phone: "",
     address: "",
+    postal_code: "",
+    city: null,
     email: "",
     email_verified: false,
   });
@@ -21,9 +24,11 @@ export default function CustomerProfile() {
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
 
   const [showDeactivate, setShowDeactivate] = useState(false);
   const [password, setPassword] = useState("");
+  const [cities, setCities] = useState([]);
 
   const handleDeactivate = async () => {
     setError("");
@@ -56,25 +61,47 @@ export default function CustomerProfile() {
   // Load customer profile
   // --------------------------------------------------
   useEffect(() => {
-    async function loadProfile() {
+    const init = async () => {
       try {
-        const res = await api.get("accounts/profile/customer/");
-        setForm(res.data.data);
+        const [resCities, resProfile] = await Promise.all([
+          api.get("/locations/cities/"),
+          api.get("accounts/profile/customer/"),
+        ]);
+
+        // cities
+        setCities(resCities.data.results ?? resCities.data ?? []);
+
+        // profile
+        const profile = resProfile.data?.data || {};
+
+        setForm({
+          first_name: profile.first_name || "",
+          last_name: profile.last_name || "",
+          phone: profile.phone || "",
+          address: profile.address || "",
+          postal_code: profile.postal_code || "",
+          city: profile.city_detail?.id || null,
+          email: profile.email || "",
+          email_verified: Boolean(profile.email_verified),
+        });
+
       } catch (err) {
         setError("Profili nuk mund të ngarkohet.");
       } finally {
         setLoading(false);
       }
-    }
+    };
 
-    if (access) loadProfile();
+    if (access) init();
   }, [access]);
 
   // --------------------------------------------------
   // Handle changes
   // --------------------------------------------------
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (message) setMessage("");
+    setForm((prev) => ({ ...prev, [name]: value }));
   };
 
   // --------------------------------------------------
@@ -82,7 +109,7 @@ export default function CustomerProfile() {
   // --------------------------------------------------
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setMessage("");
+    if (message) setMessage("");
     setError("");
 
     if (!form.address.trim()) {
@@ -90,16 +117,27 @@ export default function CustomerProfile() {
       return;
     }
 
+    if (!form.postal_code.trim()) {
+      setError("Kodi postar nuk mund të jetë bosh.");
+      return;
+    }
+
+    setSaving(true);
     try {
       await api.put("accounts/profile/customer/", {
         first_name: form.first_name,
         last_name: form.last_name,
         phone: form.phone,
         address: form.address,
+        postal_code: form.postal_code,
+        city_id: form.city || null,
       });
+
       setMessage("Profili u përditësua me sukses!");
     } catch (err) {
       setError("Gabim gjatë ruajtjes së profilit.");
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -123,6 +161,7 @@ export default function CustomerProfile() {
       <form onSubmit={handleSubmit} className="space-y-4">
 
         <input
+          disabled={saving}
           className="w-full border p-2 rounded"
           name="first_name"
           value={form.first_name}
@@ -131,6 +170,7 @@ export default function CustomerProfile() {
         />
 
         <input
+          disabled={saving}
           className="w-full border p-2 rounded"
           name="last_name"
           value={form.last_name}
@@ -143,7 +183,7 @@ export default function CustomerProfile() {
           <input
             className="w-full border p-2 rounded bg-gray-100"
             value={form.email}
-            disabled
+            disabled={true}
           />
           <p className="text-sm mt-1">
             Statusi i emailit:{" "}
@@ -156,6 +196,7 @@ export default function CustomerProfile() {
         </div>
 
         <input
+          disabled={saving}
           className="w-full border p-2 rounded"
           name="phone"
           value={form.phone || ""}
@@ -164,6 +205,7 @@ export default function CustomerProfile() {
         />
 
         <input
+          disabled={saving}
           className="w-full border p-2 rounded"
           name="address"
           value={form.address || ""}
@@ -172,8 +214,37 @@ export default function CustomerProfile() {
           required
         />
 
-        <button className="w-full bg-gray-900 text-white hover:bg-gray-800 p-2 rounded">
-          Ruaj ndryshimet
+        <input
+          disabled={saving}
+          className="w-full border p-2 rounded"
+          name="postal_code"
+          value={form.postal_code || ""}
+          onChange={handleChange}
+          placeholder="Kodi postar"
+        />
+
+        <SearchableSelect
+          disabled={saving}
+          options={cities}
+          value={form.city}
+          onChange={(val) => {
+            if (message) setMessage("");
+            setForm((prev) => ({ ...prev, city: val || null }));
+          }}
+          placeholder="Zgjidh qytetin"
+        />
+
+        {form.city && (
+          <p className="text-sm text-gray-500 mt-1">
+            Zgjedhur: {cities.find(c => c.id === form.city)?.name || "—"}
+          </p>
+        )}
+
+        <button
+          disabled={loading || saving}
+          className="w-full bg-gray-900 text-white hover:bg-gray-800 p-2 rounded disabled:opacity-50"
+        >
+          {saving ? "Duke ruajtur..." : "Ruaj ndryshimet"}
         </button>
       </form>
       {/* ========================================= */}
@@ -191,11 +262,12 @@ export default function CustomerProfile() {
         </p>
 
         <button
-          onClick={() => {
-            setPassword("");
-            setShowDeactivate(true);
-          }}
-          className="px-4 py-2 bg-white text-red-600 border border-red-200 hover:bg-red-50 rounded-lg hover:bg-red-700"
+        disabled={saving}
+        onClick={() => {
+          setPassword("");
+          setShowDeactivate(true);
+        }}
+          className="px-4 py-2 bg-white text-red-600 border border-red-200 hover:bg-red-50 rounded-lg"
         >
           Çaktivizo llogarinë
         </button>
@@ -210,6 +282,7 @@ export default function CustomerProfile() {
 
             <input
               type="password"
+              disabled={saving}
               placeholder="Fjalëkalimi"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -218,6 +291,7 @@ export default function CustomerProfile() {
 
             <div className="flex justify-end gap-2">
               <button
+                disabled={saving}
                 onClick={() => setShowDeactivate(false)}
                 className="px-3 py-2 bg-gray-200 rounded-lg"
               >
@@ -226,7 +300,7 @@ export default function CustomerProfile() {
 
               <button
                 onClick={handleDeactivate}
-                disabled={!password.trim()}
+                disabled={!password.trim() || saving}
                 className={`px-3 py-2 rounded-lg text-white ${
                   password.trim()
                     ? "bg-red-600 hover:bg-red-700"
