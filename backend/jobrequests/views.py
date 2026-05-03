@@ -120,10 +120,11 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
         customer = getattr(user, "customer", None)
+        
         if not user.is_authenticated or getattr(user, "role", None) != "customer":
             return JobRequestDraft.objects.none()
 
-        if not customer:
+        if not customer or not hasattr(customer, "id"):
             return JobRequestDraft.objects.none()
 
         return JobRequestDraft.objects.filter(customer=customer).order_by("-created_at")
@@ -134,7 +135,7 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         if not user.is_authenticated or getattr(user, "role", None) != "customer":
             raise ValidationError("Vetëm klientët mund të krijojnë kërkesa (draft).")
 
-        if not customer:
+        if not customer or not hasattr(customer, "id"):
             raise ValidationError("Nuk u gjet profili i klientit për këtë përdorues.")
 
         serializer.save(customer=customer)
