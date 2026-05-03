@@ -2,60 +2,72 @@
 // src/services/jobRequestDraftService.js
 // ------------------------------------------------------------
 
-import axiosInstance from "../api/axios"; // din befintliga axios-instans
+import axiosInstance from "../api/axios";
+
+const BASE_URL = "jobrequests/drafts/";
 
 const jobRequestDraftService = {
   // ----------------------------------------------------------
-  // 1️⃣ Skapa nytt utkast (steg 1 start)
-  // POST /api/jobrequests/drafts/
+  // 1️⃣ Skapa nytt utkast (ALWAYS safe payload)
   // ----------------------------------------------------------
   async createDraft() {
-    const response = await axiosInstance.post("jobrequests/drafts/", {
+    const payload = {
       current_step: 1,
+    };
+
+    console.log("CREATE DRAFT PAYLOAD:", payload); // 🔍 DEBUG
+
+    const response = await axiosInstance.post(BASE_URL, payload, {
+      headers: {
+        "Content-Type": "application/json",
+      },
     });
+
     return response.data;
   },
 
   // ----------------------------------------------------------
-  // 2️⃣ Uppdatera utkast per steg (steg 1→4)
-  // PATCH /api/jobrequests/drafts/<id>/
+  // 2️⃣ Uppdatera utkast
   // ----------------------------------------------------------
   async updateDraft(draftId, payload) {
     const response = await axiosInstance.patch(
-      `jobrequests/drafts/${draftId}/`,
-      payload
+      `${BASE_URL}${draftId}/`,
+      payload,
+      {
+        headers: {
+          "Content-Type": "application/json",
+        },
+      }
     );
+
     return response.data;
   },
 
   // ----------------------------------------------------------
   // 3️⃣ Hämta ett specifikt utkast
-  // GET /api/jobrequests/drafts/<id>/
   // ----------------------------------------------------------
   async getDraft(draftId) {
-    const response = await axiosInstance.get(
-      `jobrequests/drafts/${draftId}/`
-    );
+    const response = await axiosInstance.get(`${BASE_URL}${draftId}/`);
     return response.data;
   },
 
   // ----------------------------------------------------------
   // 4️⃣ Lista mina utkast
-  // GET /api/jobrequests/drafts/
   // ----------------------------------------------------------
   async getMyDrafts() {
-    const response = await axiosInstance.get("jobrequests/drafts/");
+    const response = await axiosInstance.get(BASE_URL);
     return response.data;
   },
 
   // ----------------------------------------------------------
-  // 5️⃣ Submit → Skapa riktig JobRequest
-  // POST /api/jobrequests/drafts/<id>/submit/
+  // 5️⃣ Submit draft
   // ----------------------------------------------------------
   async submitDraft(draftId) {
     const response = await axiosInstance.post(
-      `jobrequests/drafts/${draftId}/submit/`
+      `${BASE_URL}${draftId}/submit/`,
+      {}
     );
+
     return response.data;
   },
 };
