@@ -1,5 +1,3 @@
-# backend/jobrequests/serializers.py
-
 from rest_framework import serializers
 from .models import JobRequest, JobRequestAudit, JobRequestDraft
 from accounts.serializers import BasicCustomerSerializer, CompanySerializer
@@ -122,11 +120,9 @@ class JobRequestSerializer(serializers.ModelSerializer):
     offers_left = serializers.SerializerMethodField()
     extra_offers_added = serializers.IntegerField(read_only=True)
 
-    # ✅ Offer-truth fields
     offers = serializers.SerializerMethodField()
     winner_offer = serializers.SerializerMethodField()
 
-    # WRITE
     city = serializers.PrimaryKeyRelatedField(queryset=City.objects.all(), write_only=True)
     profession = serializers.PrimaryKeyRelatedField(queryset=Profession.objects.all(), write_only=True)
 
@@ -138,49 +134,34 @@ class JobRequestSerializer(serializers.ModelSerializer):
             "title",
             "description",
             "budget",
-
             "city",
             "profession",
             "city_detail",
             "profession_detail",
-
             "address",
             "postal_code",
-
             "created_at",
             "updated_at",
             "is_active",
             "lead_unlocked",
-
             "max_offers",
             "offers_count",
             "offers_left",
             "extra_offers_added",
             "last_offer_at",
-
             "is_reopened",
             "reopened_at",
-
             "is_completed",
             "accepted_company",
             "accepted_price",
-
             "expires_at",
-
             "winner_company",
             "winner_price",
             "winner_offer",
-
-            # ✅ Offer list
             "offers",
-
             "audit_logs",
         ]
         read_only_fields = ("customer", "created_at", "last_offer_at", "reopened_at", "updated_at")
-
-    # ----------------------------
-    # Helpers
-    # ----------------------------
 
     def _get_request_user(self):
         request = self.context.get("request")
@@ -198,21 +179,13 @@ class JobRequestSerializer(serializers.ModelSerializer):
             return None
         return obj.offers.filter(company=company).select_related("company", "current_version").first()
 
-    # ----------------------------
-    # Fields
-    # ----------------------------
-
     def get_customer(self, obj):
-        """
-        Customer-data:
-        - Customers: ser alltid sin egen data.
-        - Companies: bara om lead_unlocked=True för deras offer.
-        """
         user = self._get_request_user()
         if not user:
             return None
 
         role = getattr(user, "role", None)
+
         if role == "customer":
             return BasicCustomerSerializer(obj.customer).data
 
@@ -229,24 +202,24 @@ class JobRequestSerializer(serializers.ModelSerializer):
         return bool(offer and offer.lead_unlocked)
 
     def get_audit_logs(self, obj):
-        """
-        Audit:
-        - Customer: ser alltid.
-        - Company: bara om lead_unlocked=True.
-        """
         user = self._get_request_user()
         if not user:
             return []
 
         role = getattr(user, "role", None)
+
         if role == "customer":
-            return JobRequestAuditSerializer(obj.audit_logs.all().order_by("-created_at"), many=True).data
+            return JobRequestAuditSerializer(
+                obj.audit_logs.all().order_by("-created_at"), many=True
+            ).data
 
         if role == "company":
             offer = self._get_company_offer(obj)
             if not offer or not offer.lead_unlocked:
                 return []
-            return JobRequestAuditSerializer(obj.audit_logs.all().order_by("-created_at"), many=True).data
+            return JobRequestAuditSerializer(
+                obj.audit_logs.all().order_by("-created_at"), many=True
+            ).data
 
         return []
 
@@ -257,11 +230,6 @@ class JobRequestSerializer(serializers.ModelSerializer):
         return getattr(company, "free_leads_remaining", 0)
 
     def get_offers(self, obj):
-        """
-        Offers list:
-        - Customer: ser alla offers (med current_version).
-        - Company: ser bara sin egen offer.
-        """
         user = self._get_request_user()
         if not user:
             return []
@@ -279,11 +247,6 @@ class JobRequestSerializer(serializers.ModelSerializer):
         return []
 
     def get_winner_offer(self, obj):
-        """
-        Winner offer:
-        - Customer: ser alltid winner_offer om den finns.
-        - Company: ser bara om lead_unlocked=True (för deras egen offer).
-        """
         if not obj.winner_offer_id:
             return None
 
@@ -293,14 +256,11 @@ class JobRequestSerializer(serializers.ModelSerializer):
 
         role = getattr(user, "role", None)
 
-        # Customer ser alltid
         if role == "customer":
             offer = obj.winner_offer
-            # säkerställ current_version finns i payload
             offer = type(offer).objects.select_related("company", "current_version").get(pk=offer.pk)
             return OfferPublicSerializer(offer).data
 
-        # Company ser bara om de har lead_unlocked
         if role == "company":
             offer = self._get_company_offer(obj)
             if not offer or not offer.lead_unlocked:
@@ -310,7 +270,7 @@ class JobRequestSerializer(serializers.ModelSerializer):
             return OfferPublicSerializer(offer).data
 
         return None
-    
+
     def create(self, validated_data):
         request = self.context.get("request")
         user = request.user if request else None
@@ -318,20 +278,18 @@ class JobRequestSerializer(serializers.ModelSerializer):
         if not user:
             raise serializers.ValidationError("User not found")
 
-        try:
-            customer = user.customer_profile
-        except Exception:
+        customer_profile = getattr(user, "customer", None)
+        if not customer_profile:
             raise serializers.ValidationError("Customer profile not found")
 
-        # 🔥 AUTOFILL (endast om inte skickat)
         if not validated_data.get("address"):
-            validated_data["address"] = customer.address
+            validated_data["address"] = customer_profile.address
 
         if not validated_data.get("postal_code"):
-            validated_data["postal_code"] = customer.postal_code
+            validated_data["postal_code"] = customer_profile.postal_code
 
-        if "city" not in validated_data and customer.city:
-            validated_data["city"] = customer.city
+        if "city" not in validated_data and customer_profile.city:
+            validated_data["city"] = customer_profile.city
 
         validated_data["customer"] = user
 
@@ -364,7 +322,19 @@ class JobRequestDraftSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ["id", "is_submitted", "created_at", "updated_at"]
 
+        extra_kwargs = {
+            "title": {"required": False, "allow_blank": True},
+            "description": {"required": False, "allow_blank": True},
+            "budget": {"required": False, "allow_null": True},
+            "address": {"required": False, "allow_blank": True},
+            "postal_code": {"required": False, "allow_blank": True},
+            "current_step": {"required": False},
+        }
+
     def validate_current_step(self, value):
+        if value is None:
+            return value
+
         if value < 1 or value > 6:
             raise serializers.ValidationError("current_step must be between 1 and 6.")
         return value
