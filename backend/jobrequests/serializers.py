@@ -278,10 +278,11 @@ class JobRequestSerializer(serializers.ModelSerializer):
         if not user:
             raise serializers.ValidationError("User not found")
 
-        customer_profile = getattr(user, "customer", None)
+        customer_profile = getattr(user, "customer_profile", None)
         if not customer_profile:
             raise serializers.ValidationError("Customer profile not found")
 
+        # Autofill
         if not validated_data.get("address"):
             validated_data["address"] = customer_profile.address
 
@@ -291,6 +292,7 @@ class JobRequestSerializer(serializers.ModelSerializer):
         if "city" not in validated_data and customer_profile.city:
             validated_data["city"] = customer_profile.city
 
+        # FK till USER (inte profile!)
         validated_data["customer"] = user
 
         return super().create(validated_data)
@@ -301,6 +303,7 @@ class JobRequestSerializer(serializers.ModelSerializer):
 # ------------------------------------------------------------
 
 class JobRequestDraftSerializer(serializers.ModelSerializer):
+
     city = serializers.PrimaryKeyRelatedField(queryset=City.objects.all(), required=False, allow_null=True)
     profession = serializers.PrimaryKeyRelatedField(queryset=Profession.objects.all(), required=False, allow_null=True)
 
@@ -332,12 +335,24 @@ class JobRequestDraftSerializer(serializers.ModelSerializer):
         }
 
     def validate_current_step(self, value):
-        if value is None:
-            return value
-
         if value < 1 or value > 6:
             raise serializers.ValidationError("current_step must be between 1 and 6.")
         return value
+
+    # 🔥 ADD THIS
+    def create(self, validated_data):
+        request = self.context.get("request")
+        user = request.user if request else None
+
+        if not user:
+            raise serializers.ValidationError("User not found")
+
+        validated_data["customer"] = user
+
+        if "current_step" not in validated_data:
+            validated_data["current_step"] = 1
+
+        return super().create(validated_data)
 
 
 class JobRequestUpdateSerializer(serializers.ModelSerializer):

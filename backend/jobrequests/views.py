@@ -72,8 +72,12 @@ class IsCustomerAndOwner(permissions.BasePermission):
         )
 
     def has_object_permission(self, request, view, obj):
-        customer = getattr(request.user, "customer", None)
-        return bool(customer and obj.customer == customer)
+        user = request.user
+
+        if not user or not user.is_authenticated:
+            return False
+
+        return obj.customer == user
 
 
 # ------------------------------------------------------------
@@ -114,31 +118,19 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
     """
 
     serializer_class = JobRequestDraftSerializer
-    permission_classes = [IsAuthenticated, IsEmailVerified, IsCustomerAndOwner]
+    permission_classes = [IsAuthenticated, IsCustomerAndOwner]
     pagination_class = None
 
     def get_queryset(self):
         user = self.request.user
-        customer = getattr(user, "customer", None)
-        
+
         if not user.is_authenticated or getattr(user, "role", None) != "customer":
             return JobRequestDraft.objects.none()
 
-        if not customer or not hasattr(customer, "id"):
-            return JobRequestDraft.objects.none()
-
-        return JobRequestDraft.objects.filter(customer=customer).order_by("-created_at")
+        return JobRequestDraft.objects.filter(customer=user).order_by("-created_at")
 
     def perform_create(self, serializer):
-        user = self.request.user
-        customer = getattr(user, "customer", None)
-        if not user.is_authenticated or getattr(user, "role", None) != "customer":
-            raise ValidationError("Vetëm klientët mund të krijojnë kërkesa (draft).")
-
-        if not customer or not hasattr(customer, "id"):
-            raise ValidationError("Nuk u gjet profili i klientit për këtë përdorues.")
-
-        serializer.save(customer=customer)
+        serializer.save()
 
     # --------------------------------------------------------
     # 🚀 POST /jobrequest-drafts/<id>/submit/
@@ -151,8 +143,8 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         # --------------------------------------------------------
         # 🛑 PROFILE COMPLETENESS CHECK (FINAL VERSION)
         # --------------------------------------------------------
-        customer = draft.customer
-        user = customer.user
+        user = draft.customer
+        customer = getattr(user, "customer", None)
 
         missing_profile_fields = []
 
@@ -162,11 +154,10 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         if not (user.last_name and user.last_name.strip()):
             missing_profile_fields.append("last_name")
 
-        if not (customer.phone and str(customer.phone).strip()):
+        if not (customer and customer.phone and str(customer.phone).strip()):
             missing_profile_fields.append("phone")
 
-        # fallback till draft address
-        address = customer.address or draft.address
+        address = (customer.address if customer else None) or draft.address
 
         if not (address and str(address).strip()):
             missing_profile_fields.append("address")
@@ -363,14 +354,11 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
     # --------------------------------------------------------
     def perform_create(self, serializer):
         user = self.request.user
+
         if not user.is_authenticated or getattr(user, "role", None) != "customer":
             raise ValidationError("Vetëm klientët mund të krijojnë kërkesa.")
 
-        customer = getattr(user, "customer", None)
-        if not customer:
-            raise ValidationError("Nuk u gjet profili i klientit për këtë përdorues.")
-
-        serializer.save(customer=customer)
+        serializer.save(customer=user)
 
     # --------------------------------------------------------
     # ✏️ PATCH /api/jobrequests/{id}/
