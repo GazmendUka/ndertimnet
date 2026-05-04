@@ -238,7 +238,13 @@ export default function JobRequestCreate() {
         });
         setContactAddress(profile.address || "");
         setContactPostalCode(profile.postal_code || "");
-        setContactCity(profile.city_detail?.id || null);
+        const cityId = profile.city_detail?.id || null;
+
+        setContactCity(cityId);
+        setFormData(prev => ({
+          ...prev,
+          city: prev.city || cityId,
+        }));
       } catch (err) {
         console.error("Profile load failed:", err);
         setError("Profili i klientit nuk mund të ngarkohet.");
@@ -321,7 +327,7 @@ export default function JobRequestCreate() {
     setFormData({
       title: d.title || "",
       description: d.description || "",
-      city: d.city ?? null,
+      city: d.city ?? contactCity ?? null,
       profession: d.profession ?? null,
       budget: d.budget ?? "",
       address: d.address || "",
