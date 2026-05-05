@@ -699,16 +699,14 @@ export default function JobRequestCreate() {
           <label className="block mb-1 font-medium">Qyteti *</label>
           <SearchableSelect
             options={cities}
-            value={cities.find(c => c.id === Number(contactCity ?? null)) || null}
+            value={contactCity || null}
             onChange={(val) => {
-              const cityId = val ? Number(typeof val === "object" ? val.id : val) : null;
-
-              setContactCity(cityId);
-              profileCityRef.current = cityId;
+              setContactCity(val);
+              profileCityRef.current = val;
 
               setFormData((prev) => ({
                 ...prev,
-                city: cityId,
+                city: val,
               }));
             }}
             placeholder="Zgjidh qytetin"
