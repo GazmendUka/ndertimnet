@@ -980,6 +980,9 @@ export default function JobRequestCreate() {
           <strong>Qyteti:</strong> {selectedCity?.name || "—"}
         </p>
         <p>
+          <strong>Profesioni:</strong> {selectedProfession?.name || "—"}
+        </p>
+        <p>
           <strong>Buxheti:</strong>{" "}
           {formData.budget ? `${formData.budget} €` : "Nuk është vendosur"}
         </p>
