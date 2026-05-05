@@ -917,9 +917,9 @@ export default function JobRequestCreate() {
         </label>
         <SearchableSelect
           options={professions}
-          value={selectedProfession || null}
+          value={formData.profession || null}
           onChange={(val) => {
-            updateField("profession", val ? Number(val.id) : null);
+            updateField("profession", val);
           }}
           placeholder="Zgjidh ose lëre bosh"
         />
