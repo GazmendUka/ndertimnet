@@ -120,10 +120,10 @@ export default function JobRequestCreate() {
   const selectedCity = cities.find(
     (c) => c.id === Number(formData.city ?? null)
   );
-  const selectedProfession = professions.find(
-    (p) => p.id === Number(formData.profession ?? null)
-  );
-
+  const selectedProfession =
+  formData.profession !== null && formData.profession !== undefined
+    ? professions.find((p) => p.id === Number(formData.profession))
+    : null;
   // ------------------------------------------------------------
   // Validation helpers
   // ------------------------------------------------------------
@@ -910,19 +910,16 @@ export default function JobRequestCreate() {
       </div>
 
       {/* Profession (optional) */}
+      
       <div>
         <label className="block mb-1 font-medium">
           Profesioni (opsionale)
         </label>
         <SearchableSelect
           options={professions}
-          value={professions.find(p => p.id === Number(formData.profession ?? null)) || null}
+          value={selectedProfession || null}
           onChange={(val) => {
-            const professionId = val
-              ? Number(typeof val === "object" ? val.id : val)
-              : null;
-
-            updateField("profession", professionId);
+            updateField("profession", val ? Number(val.id) : null);
           }}
           placeholder="Zgjidh ose lëre bosh"
         />
