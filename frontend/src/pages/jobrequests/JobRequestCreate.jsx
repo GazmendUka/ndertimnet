@@ -138,7 +138,7 @@ export default function JobRequestCreate() {
     const cleaned = value.replace(/\s/g, "").toUpperCase();
 
     if (selectedCountry === "XK") {
-      return /^\d{13}$/.test(cleaned);
+      return /^\d{10}$/.test(cleaned);
     }
 
     if (selectedCountry === "AL") {
@@ -1034,7 +1034,7 @@ export default function JobRequestCreate() {
         <label className="block mb-1 font-medium">Numri personal *</label>
         <input
           type="text"
-          placeholder={country === "XK" ? "DDMMYYYYRRRRC" : "A123456789"}
+          placeholder={country === "XK" ? "1234567890" : "123456789A"}
           value={consentData.personal_number}
           onChange={(e) =>
             setConsentData((prev) => ({
