@@ -189,17 +189,9 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
                 {"detail": "Kërkesa nuk është e plotë.", "missing_fields": missing},
                 status=status.HTTP_400_BAD_REQUEST,
             )
-        
-        # 🔍 DEBUG START
-        print("DEBUG CUSTOMER:", type(draft.customer))
-        print("DEBUG CUSTOMER VALUE:", draft.customer)
-        print("DEBUG CITY:", draft.city)
-        print("DEBUG PROFESSION:", draft.profession)
-        # 🔍 DEBUG END
-
 
         job = JobRequest.objects.create(
-            customer=draft.customer,
+            customer=customer,
             title=draft.title,
             description=draft.description,
             budget=draft.budget,

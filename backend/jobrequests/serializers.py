@@ -110,9 +110,6 @@ class JobRequestSerializer(serializers.ModelSerializer):
     city_detail = CitySerializer(source="city", read_only=True)
     profession_detail = ProfessionSerializer(source="profession", read_only=True)
 
-    accepted_company = CompanySerializer(read_only=True)
-    winner_company = CompanySerializer(read_only=True)
-
     audit_logs = serializers.SerializerMethodField()
     lead_unlocked = serializers.SerializerMethodField()
 
@@ -122,6 +119,7 @@ class JobRequestSerializer(serializers.ModelSerializer):
 
     offers = serializers.SerializerMethodField()
     winner_offer = serializers.SerializerMethodField()
+    winner = serializers.SerializerMethodField()
 
     city = serializers.PrimaryKeyRelatedField(queryset=City.objects.all(), write_only=True)
     profession = serializers.PrimaryKeyRelatedField(queryset=Profession.objects.all(), write_only=True)
@@ -152,14 +150,10 @@ class JobRequestSerializer(serializers.ModelSerializer):
             "is_reopened",
             "reopened_at",
             "is_completed",
-            "accepted_company",
-            "accepted_price",
             "expires_at",
-            "winner_company",
-            "winner_price",
-            "winner_offer",
             "offers",
             "audit_logs",
+            "winner",
         ]
         read_only_fields = ("customer", "created_at", "last_offer_at", "reopened_at", "updated_at")
 
@@ -270,6 +264,45 @@ class JobRequestSerializer(serializers.ModelSerializer):
             return OfferPublicSerializer(offer).data
 
         return None
+    
+    def get_winner(self, obj):
+        if not obj.winner_offer:
+            return None
+
+        user = self._get_request_user()
+        if not user:
+            return None
+
+        role = getattr(user, "role", None)
+
+        # Customer → full data
+        if role == "customer":
+            offer = obj.winner_offer
+
+            return {
+                "company": CompanySerializer(obj.winner_company).data if obj.winner_company else None,
+                "price": obj.winner_price,
+                "offer": OfferPublicSerializer(offer).data,
+            }
+
+        # Company → endast om lead unlocked + rätt company
+        if role == "company":
+            offer = self._get_company_offer(obj)
+
+            if not offer or not offer.lead_unlocked:
+                return None
+
+            if offer.id != obj.winner_offer_id:
+                return None
+
+            return {
+                "company": CompanySerializer(obj.winner_company).data if obj.winner_company else None,
+                "price": obj.winner_price,
+                "offer": OfferPublicSerializer(offer).data,
+            }
+
+        return None
+
 
     def create(self, validated_data):
         request = self.context.get("request")
