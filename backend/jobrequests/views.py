@@ -144,7 +144,7 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         # 🛑 PROFILE COMPLETENESS CHECK (FINAL VERSION)
         # --------------------------------------------------------
         user = draft.customer
-        customer = getattr(user, "customer", None)
+        customer = getattr(user, "customer_profile", None)
 
         missing_profile_fields = []
 
@@ -154,7 +154,7 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         if not (user.last_name and user.last_name.strip()):
             missing_profile_fields.append("last_name")
 
-        if not (customer and customer.phone and str(customer.phone).strip()):
+        if not (customer and str(customer.phone).strip()):
             missing_profile_fields.append("phone")
 
         address = (customer.address if customer else None) or draft.address
