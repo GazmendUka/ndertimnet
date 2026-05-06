@@ -92,7 +92,6 @@ export default function Layout() {
                   <p className="font-medium text-gray-800">
                     {user?.first_name} {user?.last_name}
                   </p>
-                  <p className="text-xs text-gray-400">Klient</p>
                 </>
               )}
 
@@ -170,7 +169,7 @@ export default function Layout() {
                     }}
                     className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
                   >
-                    Logga ut
+                    Dil
                   </button>
 
                 </div>
