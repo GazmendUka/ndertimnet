@@ -190,13 +190,17 @@ class JobRequestSerializer(serializers.ModelSerializer):
         role = getattr(user, "role", None)
 
         if role == "customer":
-            return BasicCustomerSerializer(obj.customer).data
+            return BasicCustomerSerializer(
+                obj.customer.customer_profile
+            ).data
 
         if role == "company":
             offer = self._get_company_offer(obj)
             if not offer or not offer.lead_unlocked:
                 return None
-            return BasicCustomerSerializer(obj.customer).data
+            return BasicCustomerSerializer(
+                obj.customer.customer_profile
+            ).data
 
         return None
 
