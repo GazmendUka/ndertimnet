@@ -64,7 +64,7 @@ class OfferViewSet(viewsets.ModelViewSet):
                 return Offer.objects.none()
 
             qs = qs.filter(
-                job_request__customer=customer,
+                job_request__customer=user,
                 job_request__is_deleted=False,
             ).filter(
                 Q(job_request__is_active=True) | Q(status=OfferStatus.ACCEPTED)
@@ -91,29 +91,36 @@ class OfferViewSet(viewsets.ModelViewSet):
 
         # CUSTOMER
         if getattr(user, "role", None) == "customer":
-            customer = getattr(user, "customer_profile", None)
-            if not customer:
-                return Response({"detail": "Profili i klientit mungon."}, status=403)
 
             offer = get_object_or_404(
                 Offer.objects.select_related("current_version", "job_request")
                 .exclude(status=OfferStatus.DRAFT)
                 .filter(job_request__is_deleted=False)
-                .filter(Q(job_request__is_active=True) | Q(status=OfferStatus.ACCEPTED)),
+                .filter(
+                    Q(job_request__is_active=True) |
+                    Q(status=OfferStatus.ACCEPTED)
+                ),
                 id=offer_id,
-                job_request__customer=customer,
+                job_request__customer=user,
             )
 
         # COMPANY
         elif getattr(user, "role", None) == "company":
             company = getattr(user, "company_profile", None)
+
             if not company:
-                return Response({"detail": "Profili i kompanisë mungon."}, status=403)
+                return Response(
+                    {"detail": "Profili i kompanisë mungon."},
+                    status=403,
+                )
 
             offer = get_object_or_404(
                 Offer.objects.select_related("current_version", "job_request")
                 .filter(job_request__is_deleted=False)
-                .filter(Q(job_request__is_active=True) | Q(status=OfferStatus.ACCEPTED)),
+                .filter(
+                    Q(job_request__is_active=True) |
+                    Q(status=OfferStatus.ACCEPTED)
+                ),
                 id=offer_id,
                 company=company,
             )
@@ -314,23 +321,29 @@ class OfferViewSet(viewsets.ModelViewSet):
         user = request.user
 
         if getattr(user, "role", None) != "customer":
-            return Response({"detail": "Vetëm klientët mund të vendosin për ofertat."}, status=403)
+            return Response(
+                {"detail": "Vetëm klientët mund të vendosin për ofertat."},
+                status=403,
+            )
 
-        customer = getattr(user, "customer_profile", None)
-        if not customer:
-            return Response({"detail": "Profili i klientit mungon."}, status=403)
-
-        if offer.job_request.customer != customer:
-            return Response({"detail": "Kjo ofertë nuk është e juaja."}, status=403)
+        if offer.job_request.customer != user:
+            return Response(
+                {"detail": "Kjo ofertë nuk është e juaja."},
+                status=403,
+            )
 
         serializer = OfferDecisionSerializer(
             data=request.data,
             context={"request": request, "offer": offer},
         )
+
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
-        return Response({"success": True, "status": offer.status}, status=200)
+        return Response(
+            {"success": True, "status": offer.status},
+            status=200,
+        )
 
     # --------------------------------------------------
     # EARLY CHAT UNLOCK
