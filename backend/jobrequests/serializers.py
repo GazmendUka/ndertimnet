@@ -124,37 +124,47 @@ class JobRequestSerializer(serializers.ModelSerializer):
     city = serializers.PrimaryKeyRelatedField(queryset=City.objects.all(), write_only=True)
     profession = serializers.PrimaryKeyRelatedField(queryset=Profession.objects.all(), write_only=True)
 
-    fields = [
-        "id",
-        "customer",
-        "title",
-        "description",
-        "budget",
-        "city",
-        "profession",
-        "city_detail",
-        "profession_detail",
-        "address",
-        "postal_code",
-        "created_at",
-        "updated_at",
-        "is_active",
-        "lead_unlocked",
-        "max_offers",
-        "offers_count",
-        "offers_left",
-        "extra_offers_added",
-        "last_offer_at",
-        "is_reopened",
-        "reopened_at",
-        "is_completed",
-        "expires_at",
-        "offers",
-        "winner_offer",
-        "audit_logs",
-        "winner",
-    ]
-        read_only_fields = ("customer", "created_at", "last_offer_at", "reopened_at", "updated_at")
+    class Meta:
+        model = JobRequest
+
+        fields = [
+            "id",
+            "customer",
+            "title",
+            "description",
+            "budget",
+            "city",
+            "profession",
+            "city_detail",
+            "profession_detail",
+            "address",
+            "postal_code",
+            "created_at",
+            "updated_at",
+            "is_active",
+            "lead_unlocked",
+            "max_offers",
+            "offers_count",
+            "offers_left",
+            "extra_offers_added",
+            "last_offer_at",
+            "is_reopened",
+            "reopened_at",
+            "is_completed",
+            "expires_at",
+            "offers",
+            "winner_offer",
+            "audit_logs",
+            "winner",
+        ]
+
+        read_only_fields = (
+            "customer",
+            "created_at",
+            "last_offer_at",
+            "reopened_at",
+            "updated_at",
+        )
 
     def _get_request_user(self):
         request = self.context.get("request")
