@@ -366,7 +366,7 @@ class CustomerConsentSerializer(serializers.ModelSerializer):
         pn = pn.strip().replace(" ", "").upper()
 
         if country == "XK":
-            if not re.match(r"^\d{13}$", pn):
+            if not re.match(r"^\d{10}$", pn):
                 raise serializers.ValidationError({
                     "personal_number": "Numri personal duhet të ketë 13 shifra."
                 })
