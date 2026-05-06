@@ -187,7 +187,7 @@ class JobRequest(models.Model):
     def offers_count(self):
         from offers.models import OfferStatus
 
-        if not hasattr(self, "offers"):
+        if not self.pk:
             return 0
 
         return self.offers.exclude(status=OfferStatus.DRAFT).count()

@@ -144,7 +144,7 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         # 🛑 PROFILE COMPLETENESS CHECK (FINAL VERSION)
         # --------------------------------------------------------
         user = draft.customer
-        customer = getattr(user, "customer_profile", None)
+        customer_profile = getattr(user, "customer_profile", None)
 
         missing_profile_fields = []
 
@@ -154,12 +154,15 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         if not (user.last_name and user.last_name.strip()):
             missing_profile_fields.append("last_name")
 
-        if not (customer and str(customer.phone).strip()):
+        if not (customer_profile and str(customer_profile.phone).strip()):
             missing_profile_fields.append("phone")
 
-        address = (customer.address if customer else None) or draft.address
+        resolved_address = (
+            draft.address
+            or (customer_profile.address if customer_profile else "")
+        )
 
-        if not (address and str(address).strip()):
+        if not (resolved_address and str(resolved_address).strip()):
             missing_profile_fields.append("address")
 
         if missing_profile_fields:
@@ -175,13 +178,13 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
             )
 
         missing = []
-        if not draft.title:
+        if not (draft.title and draft.title.strip()):
             missing.append("title")
-        if not draft.description:
+        if not (draft.description and draft.description.strip()):
             missing.append("description")
         if not draft.city:
             missing.append("city")
-        if not draft.address:
+        if not (resolved_address and str(resolved_address).strip()):
             missing.append("address")
 
         if missing:
@@ -190,6 +193,14 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        customer = draft.customer
+
+        if hasattr(customer, "user"):
+            customer = customer.user
+
+        if not customer:
+            raise ValidationError("Customer not found.")
+
         job = JobRequest.objects.create(
             customer=customer,
             title=draft.title,
@@ -197,7 +208,7 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
             budget=draft.budget,
             city=draft.city,
             profession=draft.profession,
-            address=draft.address,
+            address=resolved_address,
             postal_code=draft.postal_code,
             is_active=True,
         )
@@ -238,8 +249,7 @@ class IsCustomerOrReadOnly(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
 
-        customer = getattr(request.user, "customer", None)
-        return bool(customer and obj.customer == customer)
+        return obj.customer == request.user
 
 
 # ------------------------------------------------------------
@@ -297,34 +307,24 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
 
         # Support for frontend request /api/jobrequests/?mine=1
         if params.get("mine") == "1":
-            customer = getattr(user, "customer", None)
-
-            # 🔴 NY RAD (KRITISK FIX)
-            if not customer or not hasattr(customer, "id"):
-                return JobRequest.objects.none()
-
             if getattr(user, "role", None) == "customer":
                 return (
                     JobRequest.objects.filter(
-                        customer=customer,
+                        customer=user,
                         is_deleted=False
                     )
                     .select_related("customer", "city", "profession")
                     .prefetch_related("offers")
                     .order_by("-created_at")
                 )
+
             return JobRequest.objects.none()
 
         # Customer → only own job requests
         if getattr(user, "role", None) == "customer":
-            customer = getattr(user, "customer", None)
-
-            if not customer or not hasattr(customer, "id"):
-                return JobRequest.objects.none()
-
             return (
                 JobRequest.objects.filter(
-                    customer=customer,
+                    customer=user,
                     is_deleted=False
                 )
                 .select_related("customer", "city", "profession")
@@ -370,8 +370,7 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         if getattr(user, "role", None) != "customer":
             raise PermissionDenied("Vetëm klientët mund të ndryshojnë kërkesën.")
 
-        customer = getattr(user, "customer", None)
-        if not customer or job.customer != customer:
+        if job.customer != user:
             raise PermissionDenied("Kjo kërkesë nuk është e juaja.")
 
         if not job.is_active:
@@ -414,13 +413,9 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         if getattr(user, "role", None) != "customer":
             return Response({"detail": "Not allowed"}, status=status.HTTP_403_FORBIDDEN)
 
-        customer = getattr(user, "customer", None)
-        if not customer:
-            return Response([], status=status.HTTP_200_OK)
-
         qs = (
             JobRequest.objects.filter(
-                customer=customer,
+                customer=user,
                 is_deleted=False
             )
             .select_related("customer", "city", "profession")
@@ -441,8 +436,7 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         if not user.is_authenticated or getattr(user, "role", None) != "customer":
             return Response({"detail": "Not allowed"}, status=status.HTTP_403_FORBIDDEN)
 
-        customer = getattr(user, "customer", None)
-        if not customer or job.customer != customer:
+        if job.customer != user:
             return Response(
                 {"detail": "Kjo kërkesë nuk është e juaja."},
                 status=status.HTTP_403_FORBIDDEN,
@@ -496,8 +490,6 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
             # ✅ Update job fields (för UI/compat)
             price = offer.current_version.price_amount if offer.current_version else None
 
-            job.accepted_company = offer.company
-            job.accepted_price = price or job.budget
             job.winner_company = offer.company
             job.winner_price = price or job.budget
             job.winner_offer = offer
@@ -549,8 +541,7 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         if not user.is_authenticated or getattr(user, "role", None) != "customer":
             return Response({"detail": "Not allowed"}, status=status.HTTP_403_FORBIDDEN)
 
-        customer = getattr(user, "customer", None)
-        if not customer or job.customer != customer:
+        if job.customer != user:
             return Response({"detail": "Kjo kërkesë nuk është e juaja."}, status=status.HTTP_403_FORBIDDEN)
 
         offer_id = request.data.get("offer_id")
@@ -592,8 +583,7 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         if not user.is_authenticated or getattr(user, "role", None) != "customer":
             return Response({"detail": "Not allowed"}, status=status.HTTP_403_FORBIDDEN)
 
-        customer = getattr(user, "customer", None)
-        if not customer or job.customer != customer:
+        if job.customer != user:
             return Response({"detail": "Kjo kërkesë nuk është e juaja."}, status=status.HTTP_403_FORBIDDEN)
 
         if job.is_completed:
@@ -653,8 +643,7 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
 
         # Customer: endast ägaren
         if role == "customer":
-            customer = getattr(user, "customer", None)
-            if not customer or job.customer != customer:
+            if job.customer != user:
                 return Response({"detail": "Not allowed"}, status=status.HTTP_403_FORBIDDEN)
             
 
@@ -686,8 +675,7 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         if getattr(user, "role", None) != "customer":
             raise PermissionDenied("Vetëm klientët mund ta fshijnë kërkesën.")
 
-        customer = getattr(user, "customer", None)
-        if not customer or job.customer != customer:
+        if job.customer != user:
             raise PermissionDenied("Kjo kërkesë nuk është e juaja.")
 
         # 🚫 Permanent block om jobbet redan är avslutat
