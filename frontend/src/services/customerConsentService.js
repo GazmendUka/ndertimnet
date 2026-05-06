@@ -1,8 +1,8 @@
-import axiosInstance from "../api/axios"; // korrekt axios-instans
+import axiosInstance from "../api/axios";
 
 const customerConsentService = {
   submitConsent(data) {
-    return axiosInstance.post("/accounts/customer/consent/", data);
+    return axiosInstance.post("/accounts/customer-consent/", data);
   },
 };
 
