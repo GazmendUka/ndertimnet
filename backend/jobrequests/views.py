@@ -201,29 +201,35 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         if not customer:
             raise ValidationError("Customer not found.")
 
-        job = JobRequest.objects.create(
-            customer=customer,
-            title=draft.title,
-            description=draft.description,
-            budget=draft.budget,
-            city=draft.city,
-            profession=draft.profession,
-            address=resolved_address,
-            postal_code=draft.postal_code,
-            is_active=True,
+        with transaction.atomic():
+            job = JobRequest.objects.create(
+                customer=customer,
+                title=draft.title,
+                description=draft.description,
+                budget=draft.budget,
+                city=draft.city,
+                profession=draft.profession,
+                address=resolved_address,
+                postal_code=draft.postal_code,
+                is_active=True,
+            )
+
+            draft.is_submitted = True
+            draft.save(update_fields=["is_submitted"])
+
+            JobRequestAudit.objects.create(
+                job_request=job,
+                action="created_from_draft",
+                message="Kërkesa u krijua nga një draft multi-step.",
+            )
+
+        return Response(
+            {
+                "id": job.id,
+                "detail": "Kërkesa u krijua me sukses.",
+            },
+            status=status.HTTP_201_CREATED,
         )
-
-        draft.is_submitted = True
-        draft.save(update_fields=["is_submitted"])
-
-        JobRequestAudit.objects.create(
-            job_request=job,
-            action="created_from_draft",
-            message="Kërkesa u krijua nga një draft multi-step.",
-        )
-
-        serializer = JobRequestSerializer(job, context={"request": request})
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 # ------------------------------------------------------------
