@@ -53,6 +53,9 @@ class BasicCustomerSerializer(serializers.ModelSerializer):
 
 # 🏢 CompanySerializer
 class CompanySerializer(serializers.ModelSerializer):
+    can_access_marketplace = serializers.SerializerMethodField()
+    missing_requirements = serializers.SerializerMethodField()
+    recommended_improvements = serializers.SerializerMethodField()
     profile_step = serializers.SerializerMethodField()
     profile_completion = serializers.SerializerMethodField()
     logo = serializers.ImageField(required=False, allow_null=True)
@@ -109,6 +112,9 @@ class CompanySerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "registration_document",
+            "can_access_marketplace",
+            "missing_requirements",
+            "recommended_improvements",
         ]
 
     def to_internal_value(self, data):
@@ -136,6 +142,17 @@ class CompanySerializer(serializers.ModelSerializer):
 
     def get_profile_completion(self, obj):
         return get_company_profile_completion(obj)
+    
+    def get_can_access_marketplace(self, obj):
+        return obj.can_access_marketplace()
+
+
+    def get_missing_requirements(self, obj):
+        return obj.get_missing_requirements()
+
+
+    def get_recommended_improvements(self, obj):
+        return obj.get_recommended_improvements()
 
     def update(self, instance, validated_data):
         print("COMPANY VALIDATED DATA:", validated_data)

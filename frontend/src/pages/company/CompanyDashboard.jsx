@@ -53,12 +53,8 @@ export default function CompanyDashboard() {
   // ============================================================
   // PROFILE STEP (soft gating)
   // ============================================================
-  const profileStep = useMemo(() => {
-    const step = company?.profile_step;
-    return Number.isInteger(step) ? step : 0;
-  }, [company]);
-
-  const isProfileComplete = profileStep >= 4;
+  const canAccessMarketplace =
+    company?.can_access_marketplace === true;
 
   // ============================================================
   // LOAD OFFERS (SAME SOURCE AS "OFERTAT E MIA")
@@ -74,7 +70,7 @@ export default function CompanyDashboard() {
     let alive = true;
 
     async function fetchOffers() {
-      if (!isProfileComplete) {
+      if (!canAccessMarketplace) {
         setLeads([]);
         setLoading(false);
         return;
@@ -102,7 +98,7 @@ export default function CompanyDashboard() {
     return () => {
       alive = false;
     };
-  }, [access, isProfileComplete]);
+  }, [access, canAccessMarketplace]);
 
   // ============================================================
   // STATS (OFFER-DRIVEN)
