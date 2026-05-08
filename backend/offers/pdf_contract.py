@@ -110,6 +110,13 @@ def build_offer_contract_pdf(offer) -> bytes:
     version = getattr(offer, "current_version", None)
     company = getattr(offer, "company", None)
     job = getattr(offer, "job_request", None)
+    print("JOB:", job)    
+    print("JOB DIR:", dir(job))
+    print("JOB DICT:", job.__dict__ if job else None)
+
+    print("CUSTOMER_PROFILE:", getattr(job, "customer_profile", None))
+    print("CUSTOMER:", getattr(job, "customer", None))
+    print("USER:", getattr(job, "user", None))
 
     # Company fields
     company_name = _safe(company, "company_name", "Kompani")
