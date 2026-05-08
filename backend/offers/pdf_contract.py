@@ -118,21 +118,34 @@ def build_offer_contract_pdf(offer) -> bytes:
     company_website = _safe(company, "website", "-")
     company_org = _safe(company, "org_number", "-")
 
-    # Customer fields (best-effort; adapt later if your JobRequest differs)
+    # Customer fields
     customer_name = "-"
     customer_phone = "-"
     customer_address = "-"
+
     try:
-        # common patterns: job.customer.user.first_name etc.
-        cust = getattr(job, "customer", None)
+        # Din JobRequest använder customer_profile
+        cust = getattr(job, "customer_profile", None)
+
+        # fallback om äldre relation finns
+        if not cust:
+            cust = getattr(job, "customer", None)
+
         user = getattr(cust, "user", None) if cust else None
+
         fn = _safe(user, "first_name", "")
         ln = _safe(user, "last_name", "")
-        customer_name = (f"{fn} {ln}").strip() or _safe(user, "email", "-")
+
+        customer_name = (
+            f"{fn} {ln}".strip()
+            or _safe(user, "email", "-")
+        )
+
         customer_phone = _safe(cust, "phone", "-")
         customer_address = _safe(cust, "address", "-")
-    except Exception:
-        pass
+
+    except Exception as e:
+        print("PDF customer extraction error:", e)
 
     # Job request (best-effort)
     job_title = _safe(job, "title", f"Kërkesë pune #{_safe(job,'id','-')}")
