@@ -137,7 +137,7 @@ class LeadMatchViewSet(viewsets.ModelViewSet):
     permission_classes = [
         IsAuthenticated,
         IsEmailVerified,
-        IsCompanyProfileCompleteOnlyForCompanies,
+        IsCompanyMarketplaceReady,
     ]   
     pagination_class = AlbanianPagination
 
@@ -426,7 +426,7 @@ class LeadMessageViewSet(viewsets.ModelViewSet):
     permission_classes = [
         IsAuthenticated,
         IsEmailVerified,
-        IsCompanyProfileCompleteOnlyForCompanies,
+        IsCompanyMarketplaceReady,
 ]
     pagination_class = AlbanianPagination
     ordering = ["created_at"]
