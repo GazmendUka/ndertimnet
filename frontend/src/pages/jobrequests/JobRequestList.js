@@ -46,13 +46,13 @@ export default function JobRequestList() {
   // ============================================================
   // SOURCE OF TRUTH
   // ============================================================
-  const profileStep = useMemo(() => {
-    const step = company?.profile_step;
-    return Number.isInteger(step) ? step : 0;
-  }, [company]);
+  const canAccessMarketplace =
+    company?.can_access_marketplace === true;
 
-  const isProfileComplete = profileStep >= 4;
-  const uiLocked = isCompany && !companyLoading && !isProfileComplete;
+  const uiLocked =
+    isCompany &&
+    !companyLoading &&
+    !canAccessMarketplace;
 
   // ============================================================
   // PREMIUM PLACEHOLDERS
