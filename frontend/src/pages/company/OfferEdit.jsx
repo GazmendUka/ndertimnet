@@ -296,7 +296,7 @@ export default function OfferEdit() {
       toast.success("Oferta u nënshkrua me sukses!");
 
       // ✅ Steg 4-kompat: byt senare till /offers/mine när du flyttar från /leads
-      navigate("/leads/mine");
+      navigate("/company/leads/mine");
     } catch (err) {
       console.error(err.response?.data || err);
 

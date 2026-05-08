@@ -137,15 +137,15 @@ def build_offer_contract_pdf(offer) -> bytes:
                 or _safe(user, "email", "-")
             )
 
-            # Hämta customer profile via OneToOne
+            # Customer profile
             customer_profile = getattr(user, "customer_profile", None)
 
             if customer_profile:
                 customer_phone = _safe(customer_profile, "phone", "-")
                 customer_address = _safe(customer_profile, "address", "-")
 
-    except Exception as e:
-        logger.exception("PDF customer extraction error")
+    except Exception:
+        pass
 
     # Job request (best-effort)
     job_title = _safe(job, "title", f"Kërkesë pune #{_safe(job,'id','-')}")
