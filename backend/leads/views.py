@@ -13,7 +13,10 @@ from .serializers import LeadMatchSerializer, LeadMessageSerializer
 from jobrequests.serializers import JobRequestSerializer
 from core.pagination import AlbanianPagination
 
-from accounts.permissions import IsEmailVerified, IsCompanyProfileCompleteOnlyForCompanies
+from accounts.permissions import (
+    IsEmailVerified,
+    IsCompanyMarketplaceReady,
+)
 from payments.services.access import has_offer_access
 
 
@@ -37,7 +40,7 @@ class JobRequestViewSet(viewsets.ModelViewSet):
     permission_classes = [
         IsAuthenticated,
         IsEmailVerified,
-        IsCompanyProfileCompleteOnlyForCompanies,
+        IsCompanyMarketplaceReady,
     ]
     pagination_class = AlbanianPagination
 
