@@ -110,13 +110,7 @@ def build_offer_contract_pdf(offer) -> bytes:
     version = getattr(offer, "current_version", None)
     company = getattr(offer, "company", None)
     job = getattr(offer, "job_request", None)
-    print("JOB:", job)    
-    print("JOB DIR:", dir(job))
-    print("JOB DICT:", job.__dict__ if job else None)
 
-    print("CUSTOMER_PROFILE:", getattr(job, "customer_profile", None))
-    print("CUSTOMER:", getattr(job, "customer", None))
-    print("USER:", getattr(job, "user", None))
 
     # Company fields
     company_name = _safe(company, "company_name", "Kompani")
@@ -131,28 +125,27 @@ def build_offer_contract_pdf(offer) -> bytes:
     customer_address = "-"
 
     try:
-        # Din JobRequest använder customer_profile
-        cust = getattr(job, "customer_profile", None)
+        # JobRequest.customer = User
+        user = getattr(job, "customer", None)
 
-        # fallback om äldre relation finns
-        if not cust:
-            cust = getattr(job, "customer", None)
+        if user:
+            fn = _safe(user, "first_name", "")
+            ln = _safe(user, "last_name", "")
 
-        user = getattr(cust, "user", None) if cust else None
+            customer_name = (
+                f"{fn} {ln}".strip()
+                or _safe(user, "email", "-")
+            )
 
-        fn = _safe(user, "first_name", "")
-        ln = _safe(user, "last_name", "")
+            # Hämta customer profile via OneToOne
+            customer_profile = getattr(user, "customer_profile", None)
 
-        customer_name = (
-            f"{fn} {ln}".strip()
-            or _safe(user, "email", "-")
-        )
-
-        customer_phone = _safe(cust, "phone", "-")
-        customer_address = _safe(cust, "address", "-")
+            if customer_profile:
+                customer_phone = _safe(customer_profile, "phone", "-")
+                customer_address = _safe(customer_profile, "address", "-")
 
     except Exception as e:
-        print("PDF customer extraction error:", e)
+        logger.exception("PDF customer extraction error")
 
     # Job request (best-effort)
     job_title = _safe(job, "title", f"Kërkesë pune #{_safe(job,'id','-')}")
