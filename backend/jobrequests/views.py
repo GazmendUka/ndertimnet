@@ -11,7 +11,10 @@ from rest_framework.exceptions import PermissionDenied, ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from accounts.permissions import IsCompanyProfileComplete, IsEmailVerified
+from accounts.permissions import (
+    IsEmailVerified,
+    IsCompanyMarketplaceReady,
+)
 from main.pagination import AlbanianPagination
 
 from offers.models import Offer, OfferStatus
@@ -78,29 +81,6 @@ class IsCustomerAndOwner(permissions.BasePermission):
             return False
 
         return obj.customer == user
-
-
-# ------------------------------------------------------------
-# ✅ Company-profile completeness bara för companies
-# ------------------------------------------------------------
-
-class IsCompanyProfileCompleteIfCompany(permissions.BasePermission):
-    """
-    Customers ska inte blockas av company-profile-krav.
-    Companies måste ha komplett profil (enligt IsCompanyProfileComplete).
-    """
-
-    def has_permission(self, request, view):
-        user = request.user
-        if not user or not user.is_authenticated:
-            return False
-
-        if getattr(user, "role", None) != "company":
-            return True
-
-        # Delegation till befintlig permission
-        return IsCompanyProfileComplete().has_permission(request, view)
-
 
 # ------------------------------------------------------------
 # 🆕 JobRequestDraft ViewSet – Multi-step form
@@ -280,7 +260,7 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         IsAuthenticated,
         IsEmailVerified,
         IsCustomerOrReadOnly,
-        IsCompanyProfileCompleteIfCompany,
+        IsCompanyMarketplaceReady,
     ]
     pagination_class = AlbanianPagination
 

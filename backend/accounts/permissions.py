@@ -1,32 +1,11 @@
-#backend/accounts/permissions.py
+# backend/accounts/permissions.py
 
 from rest_framework.permissions import BasePermission
 
-class IsCompanyProfileComplete(BasePermission):
-    """
-    Blockerar endast företag vars profil inte är klar (profile_step < 4).
-    Customers/admin påverkas inte.
-    """
-    required_step = 4
-    message = "Slutför din företagsprofil för att få åtkomst."
 
-    def has_permission(self, request, view):
-        user = request.user
-
-        if not user or not user.is_authenticated:
-            return False
-
-        # Endast företag ska spärras av denna permission
-        if getattr(user, "role", None) != "company":
-            return True
-
-        company = getattr(user, "company_profile", None)
-        if not company:
-            return False
-
-        step = getattr(company, "profile_step", 0) or 0
-        return step >= self.required_step
-
+# ======================================================
+# EMAIL VERIFIED
+# ======================================================
 
 class IsEmailVerified(BasePermission):
     """
@@ -42,14 +21,52 @@ class IsEmailVerified(BasePermission):
         if not user or not user.is_authenticated:
             return False
 
-        # Admin/staff blockeras inte
+        # Admin/staff bypass
         if user.is_staff or user.is_superuser:
             return True
 
         return getattr(user, "email_verified", False)
 
-class IsCompanyProfileCompleteOnlyForCompanies(BasePermission):
-    message = "Slutför din företagsprofil."
+
+# ======================================================
+# COMPANY MARKETPLACE ACCESS
+# ======================================================
+
+class IsCompanyMarketplaceReady(BasePermission):
+    """
+    Blockerar endast företag som saknar required marketplace-fields.
+    """
+
+    message = "Plotëso profilin për të marrë qasje në marketplace."
+
+    def has_permission(self, request, view):
+        user = request.user
+
+        if not user or not user.is_authenticated:
+            return False
+
+        # Endast companies påverkas
+        if getattr(user, "role", None) != "company":
+            return True
+
+        company = getattr(user, "company_profile", None)
+
+        if not company:
+            return False
+
+        return company.can_access_marketplace()
+
+
+# ======================================================
+# COMPANY OFFER ACCESS
+# ======================================================
+
+class IsCompanyOfferReady(BasePermission):
+    """
+    Krävs för att skapa/skicka offerter.
+    """
+
+    message = "Plotëso profilin për të dërguar oferta."
 
     def has_permission(self, request, view):
         user = request.user
@@ -61,4 +78,64 @@ class IsCompanyProfileCompleteOnlyForCompanies(BasePermission):
             return True
 
         company = getattr(user, "company_profile", None)
-        return company and company.profile_step >= 4
+
+        if not company:
+            return False
+
+        return company.can_send_offers()
+
+
+# ======================================================
+# COMPANY LEAD ACCESS
+# ======================================================
+
+class IsCompanyLeadReady(BasePermission):
+    """
+    Krävs för lead unlocks.
+    """
+
+    message = "Plotëso profilin për të zhbllokuar klientë."
+
+    def has_permission(self, request, view):
+        user = request.user
+
+        if not user or not user.is_authenticated:
+            return False
+
+        if getattr(user, "role", None) != "company":
+            return True
+
+        company = getattr(user, "company_profile", None)
+
+        if not company:
+            return False
+
+        return company.can_unlock_leads()
+
+
+# ======================================================
+# COMPANY CHAT ACCESS
+# ======================================================
+
+class IsCompanyChatReady(BasePermission):
+    """
+    Krävs för chat/message-system.
+    """
+
+    message = "Plotëso profilin për të përdorur chat-in."
+
+    def has_permission(self, request, view):
+        user = request.user
+
+        if not user or not user.is_authenticated:
+            return False
+
+        if getattr(user, "role", None) != "company":
+            return True
+
+        company = getattr(user, "company_profile", None)
+
+        if not company:
+            return False
+
+        return company.can_access_chat()
