@@ -136,8 +136,6 @@ export default function JobRequestList() {
         Kthehu te dashboard
       </button>
 
-      <h1 className="page-title mb-4">Kërkesat e punës</h1>
-
       <div className="flex items-start justify-between gap-4 mb-8">
         <div>
           <h1 className="page-title mb-3">
