@@ -138,11 +138,37 @@ export default function JobRequestList() {
 
       <h1 className="page-title mb-4">Kërkesat e punës</h1>
 
-      <p className="text-dim mb-8">
-        {isCompany
-          ? "Shikoni kërkesat aktuale dhe dërgoni ofertat tuaja."
-          : "Këtu janë të gjitha kërkesat tuaja."}
-      </p>
+      <div className="flex items-start justify-between gap-4 mb-8">
+        <div>
+          <h1 className="page-title mb-3">
+            Kërkesat e punës
+          </h1>
+
+          <p className="text-dim">
+            {isCompany
+              ? "Shikoni kërkesat aktuale dhe dërgoni ofertat tuaja."
+              : "Këtu janë të gjitha kërkesat tuaja."}
+          </p>
+        </div>
+
+        {isCustomer && (
+          <Link
+            to="/customer/jobrequests/create"
+            className="
+              hidden md:inline-flex
+              sticky
+              top-6
+              premium-btn
+              btn-dark
+              items-center
+              gap-2
+              whitespace-nowrap
+            "
+          >
+            + Krijo kërkesë
+          </Link>
+        )}
+      </div>
 
       {/* LIST */}
       <div className="space-y-5">
