@@ -127,9 +127,10 @@ export default function Sidebar() {
 function SidebarLink({ to, icon, text, badge }) {
   const location = useLocation();
   const active =
-    location.pathname === to ||
-    location.pathname.startsWith(to + "/");
-
+  to === "/customer" || to === "/company"
+    ? location.pathname === to
+    : location.pathname === to ||
+      location.pathname.startsWith(to + "/");
   return (
     <Link
       to={to}
