@@ -141,7 +141,7 @@ export default function JobRequestCreate() {
   const isStep2Valid = formData.title.trim().length >= 5;
   const isStep3Valid = formData.description.trim().length >= 20;
   const isStep4Valid = formData.address.trim().length > 0 && Boolean(formData.city);
-  const isStep6Valid =
+  const isStep5Valid =
     consentData.consent_publish === true &&
     consentData.consent_identity === true;
   
@@ -480,7 +480,7 @@ export default function JobRequestCreate() {
     if (submitting || saving || savingProfile) return;
 
     const next = currentStep + 1;
-    if (next > 6) return;
+    if (next > 5) return;
 
     // Step 1 = save profile first
     if (currentStep === 1) {
@@ -524,10 +524,10 @@ export default function JobRequestCreate() {
   };
 
   // ------------------------------------------------------------
-  // FINAL SUBMIT – Step 6
+  // FINAL SUBMIT – Step 5
   // ------------------------------------------------------------
   const submitConsentAndJob = async () => {
-    if (!draft || !isStep6Valid || submitting) return;
+    if (!draft || !isStep5Valid || submitting) return;
 
     if (!isEmailVerified) {
       toast.error("Verifikoni email-in tuaj për të qenë në gjendje të publikoni.");
@@ -552,7 +552,7 @@ export default function JobRequestCreate() {
         consent: true,
       });
 
-      const ok = await saveStep(6);
+      const ok = await saveStep(5);
       if (!ok) throw new Error("Save failed");
 
       const job = await jobRequestDraftService.submitDraft(draft.id);
@@ -991,36 +991,7 @@ export default function JobRequestCreate() {
         </p>
       </div>
 
-      <div className="flex justify-between mt-4">
-        <button
-          type="button"
-          onClick={goBack}
-          disabled={saving || submitting}
-          className="premium-btn btn-light inline-flex items-center gap-2"
-        >
-          Kthehu
-        </button>
-
-        <button
-          type="button"
-          onClick={goNext}
-          disabled={saving || submitting}
-          className="premium-btn btn-dark inline-flex items-center gap-2"
-        >
-          Vazhdo
-        </button>
-      </div>
-    </div>
-  );
-
-  // ------------------------------------------------------------
-  // STEP 6 – Consent
-  // ------------------------------------------------------------
-  const Step6 = (
-    <div className="space-y-6">
-      <h2 className="text-lg font-semibold">Pëlqimi & publikimi</h2>
-
-      <div className="space-y-3">
+      <div className="space-y-3 pt-4 border-t border-gray-200">
         <label className="flex items-start gap-3">
           <input
             type="checkbox"
@@ -1034,8 +1005,7 @@ export default function JobRequestCreate() {
             disabled={saving || submitting}
           />
           <span className="text-sm">
-            Pajtohem që kërkesa ime të publikohet dhe të shpërndahet me kompani
-            relevante.
+            Pajtohem që kërkesa ime të publikohet dhe të shpërndahet me kompani relevante.
           </span>
         </label>
 
@@ -1052,8 +1022,7 @@ export default function JobRequestCreate() {
             disabled={saving || submitting}
           />
           <span className="text-sm">
-            Deklaroj se jam personi që i përket kjo kërkesë dhe se të dhënat janë
-            të sakta.
+            Deklaroj se jam personi që i përket kjo kërkesë dhe se të dhënat janë të sakta.
           </span>
         </label>
       </div>
@@ -1068,27 +1037,19 @@ export default function JobRequestCreate() {
           Kthehu
         </button>
 
-        <div className="flex flex-col items-end">
-          <button
-            type="button"
-            onClick={submitConsentAndJob}
-            disabled={!isStep6Valid || !isEmailVerified || submitting}
-            className={`premium-btn btn-dark inline-flex items-center gap-2 ${
-              !isStep6Valid || !isEmailVerified
-                ? "opacity-50 cursor-not-allowed"
-                : ""
-            }`}
-          >
-            {submitting && <Loader2 size={16} className="animate-spin" />}
-            Përfundo & publiko
-          </button>
-
-          {!isEmailVerified && (
-            <div className="mt-2 text-sm text-amber-700">
-              ⚠️ Verifiera din email för att kunna publicera jobbet.
-            </div>
-          )}
-        </div>
+        <button
+          type="button"
+          onClick={submitConsentAndJob}
+          disabled={
+            !isStep5Valid ||
+            !isEmailVerified ||
+            saving ||
+            submitting
+          }
+          className="premium-btn btn-dark inline-flex items-center gap-2"
+        >
+          Përfundo & publiko
+        </button>
       </div>
     </div>
   );
@@ -1108,8 +1069,6 @@ export default function JobRequestCreate() {
         return Step4;
       case 5:
         return Step5;
-      case 6:
-        return Step6;
       default:
         return Step1;
     }
@@ -1118,7 +1077,7 @@ export default function JobRequestCreate() {
   // ------------------------------------------------------------
   // Stepper
   // ------------------------------------------------------------
-  const steps = [1, 2, 3, 4, 5, 6];
+  const steps = [1, 2, 3, 4, 5];
 
   const Stepper = (
     <div className="mb-6">
@@ -1154,7 +1113,7 @@ export default function JobRequestCreate() {
       </div>
 
       <div className="mt-2 flex items-center justify-between">
-        <p className="text-sm text-gray-500">Hapi {currentStep} nga 6</p>
+        <p className="text-sm text-gray-500">Hapi {currentStep} nga 5</p>
 
         <div className="flex items-center justify-end" style={{ minWidth: 130 }}>
           {(saving || savingProfile) && (
