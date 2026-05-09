@@ -355,52 +355,12 @@ class CustomerProfileSerializer(serializers.ModelSerializer):
 
 class CustomerConsentSerializer(serializers.ModelSerializer):
     consent = serializers.BooleanField(write_only=True)
-    personal_number = serializers.CharField(write_only=True)
-    country = serializers.CharField(write_only=True)
 
     class Meta:
         model = Customer
         fields = [
-            "personal_number",
-            "country",
             "consent",
         ]
-
-    def validate(self, data):
-        pn = data.get("personal_number")
-        country = data.get("country")
-
-        if not pn:
-            raise serializers.ValidationError({
-                "personal_number": "Numri personal është i detyrueshëm."
-            })
-
-        if not country:
-            raise serializers.ValidationError({
-                "country": "Shteti është i detyrueshëm."
-            })
-
-        pn = pn.strip().replace(" ", "").upper()
-
-        if country == "XK":
-            if not re.match(r"^\d{10}$", pn):
-                raise serializers.ValidationError({
-                    "personal_number": "Numri personal duhet të ketë 13 shifra."
-                })
-
-        elif country == "AL":
-            if not re.match(r"^[A-Z]\d{9}$", pn):
-                raise serializers.ValidationError({
-                    "personal_number": "Numri personal nuk është valid."
-                })
-
-        else:
-            raise serializers.ValidationError({
-                "country": "Shteti nuk është valid."
-            })
-
-        data["personal_number"] = pn
-        return data
 
     def validate_consent(self, value):
         if value is not True:
@@ -409,9 +369,6 @@ class CustomerConsentSerializer(serializers.ModelSerializer):
 
     def update(self, instance, validated_data):
         request = self.context["request"]
-
-        instance.personal_number = validated_data["personal_number"]
-        instance.country = validated_data["country"]
 
         instance.consent_job_publish = True
         instance.consent_job_publish_at = timezone.now()

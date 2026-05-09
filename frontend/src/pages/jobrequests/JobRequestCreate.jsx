@@ -23,7 +23,6 @@ export default function JobRequestCreate() {
   const [professions, setProfessions] = useState([]);
   const [lookupsLoading, setLookupsLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(true);
-  const [country, setCountry] = useState("XK"); // default Kosovo
   const [useSameAddress, setUseSameAddress] = useState(false);
 
   // ------------------------------------------------------------
@@ -71,7 +70,6 @@ export default function JobRequestCreate() {
   const [error, setError] = useState("");
 
   const [consentData, setConsentData] = useState({
-    personal_number: "",
     consent_publish: false,
     consent_identity: false,
   });
@@ -132,22 +130,6 @@ export default function JobRequestCreate() {
     return cleaned.length >= 6;
   };
 
-  const isValidPersonalNumber = (value, selectedCountry) => {
-    if (!value) return false;
-
-    const cleaned = value.replace(/\s/g, "").toUpperCase();
-
-    if (selectedCountry === "XK") {
-      return /^\d{10}$/.test(cleaned);
-    }
-
-    if (selectedCountry === "AL") {
-      return /^[A-Z]\d{9}$/.test(cleaned);
-    }
-
-    return false;
-  };
-
   const isStep1Valid =
     contactData.first_name.trim().length >= 2 &&
     contactData.last_name.trim().length >= 2 &&
@@ -160,7 +142,6 @@ export default function JobRequestCreate() {
   const isStep3Valid = formData.description.trim().length >= 20;
   const isStep4Valid = formData.address.trim().length > 0 && Boolean(formData.city);
   const isStep6Valid =
-    isValidPersonalNumber(consentData.personal_number, country) &&
     consentData.consent_publish === true &&
     consentData.consent_identity === true;
   
@@ -568,8 +549,6 @@ export default function JobRequestCreate() {
       if (!profileOk) throw new Error("Ruajtja e profilit dështoi");
 
       await customerConsentService.submitConsent({
-        personal_number: consentData.personal_number,
-        country,
         consent: true,
       });
 
@@ -1039,41 +1018,7 @@ export default function JobRequestCreate() {
   // ------------------------------------------------------------
   const Step6 = (
     <div className="space-y-6">
-      <h2 className="text-lg font-semibold">Pëlqimi & identiteti</h2>
-
-      <div>
-        <label className="block mb-1 font-medium">Shteti *</label>
-        <select
-          value={country}
-          onChange={(e) => setCountry(e.target.value)}
-          className="premium-input"
-          disabled={saving || submitting}
-        >
-          <option value="XK">Kosovë</option>
-          <option value="AL">Shqipëri</option>
-        </select>
-      </div>
-
-      <div>
-        <label className="block mb-1 font-medium">Numri personal *</label>
-        <input
-          type="text"
-          placeholder={country === "XK" ? "1234567890" : "123456789A"}
-          value={consentData.personal_number}
-          onChange={(e) =>
-            setConsentData((prev) => ({
-              ...prev,
-              personal_number: e.target.value,
-            }))
-          }
-          className="premium-input"
-          disabled={saving || submitting}
-        />
-        <p className="text-sm text-gray-500 mt-1">
-          Këto të dhëna përdoren vetëm për verifikimin e identitetit dhe nuk
-          publikohen.
-        </p>
-      </div>
+      <h2 className="text-lg font-semibold">Pëlqimi & publikimi</h2>
 
       <div className="space-y-3">
         <label className="flex items-start gap-3">
@@ -1111,16 +1056,6 @@ export default function JobRequestCreate() {
             të sakta.
           </span>
         </label>
-      </div>
-
-      <div className="rounded-lg bg-blue-50 border border-blue-100 p-4 text-sm text-blue-900">
-        <p className="font-medium mb-1">Pse kërkohet numri personal?</p>
-        <p>
-          Numri personal përdoret vetëm për të verifikuar identitetin tuaj dhe
-          për të siguruar që kërkesa publikohet me pëlqimin e personit të saktë.
-          Kjo ndihmon në parandalimin e abuzimeve dhe rrit besueshmërinë për
-          kompanitë që do të kontaktojnë lidhur me kërkesën tuaj.
-        </p>
       </div>
 
       <div className="flex justify-between mt-4">
