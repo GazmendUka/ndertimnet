@@ -176,6 +176,8 @@ export default function JobRequestCreate() {
       email: "",
       title: "",
       description: "",
+      address: "",
+      city: "",
     };
 
     if (currentStep === 1) {
@@ -217,6 +219,16 @@ export default function JobRequestCreate() {
       if (!d) errs.description = "Përshkrimi është i detyrueshëm.";
       else if (d.length < 20) {
         errs.description = "Përshkrimi duhet të ketë së paku 20 karaktere.";
+      }
+    }
+
+    if (currentStep === 4) {
+      if (!formData.address.trim()) {
+        errs.address = "Adresa është e detyrueshme.";
+      }
+
+      if (!formData.city) {
+        errs.city = "Qyteti është i detyrueshëm.";
       }
     }
 
@@ -873,10 +885,17 @@ export default function JobRequestCreate() {
           value={formData.address || ""}
           onChange={(e) => updateField("address", e.target.value)}
           className={`premium-input transition ${
+            stepErrors.address ? "jr-input-error" : ""
+          } ${
             useSameAddress ? "bg-gray-100 cursor-not-allowed opacity-80" : ""
           }`}
           disabled={useSameAddress}
         />
+        {stepErrors.address && (
+          <p className="jr-help jr-help-error">
+            {stepErrors.address}
+          </p>
+        )}
       </div>
 
       {/* Postal Code */}
@@ -903,6 +922,11 @@ export default function JobRequestCreate() {
             updateField("city", val);
           }}
         />
+        {stepErrors.city && (
+          <p className="jr-help jr-help-error">
+            {stepErrors.city}
+          </p>
+        )}
       </div>
 
       {/* Profession (optional) */}
