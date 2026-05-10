@@ -77,6 +77,12 @@ export default function OfferEdit() {
 
   const currentVersion = offer?.current_version;
 
+  useEffect(() => {
+    return () => {
+      clearTimeout(saveStatusTimeoutRef.current);
+    };
+  }, []);
+
   const progressPercent = useMemo(() => {
     const idx = Math.min(Math.max(step, 1), 5);
     return Math.round(((idx - 1) / 4) * 100);
@@ -519,14 +525,6 @@ export default function OfferEdit() {
       </div>
     );
   }
-
-  
-  
-  useEffect(() => {
-    return () => {
-      clearTimeout(saveStatusTimeoutRef.current);
-    };
-  }, []);
 
   const stepHint = getStepHint();
 
