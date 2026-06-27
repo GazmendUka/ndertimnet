@@ -3,7 +3,15 @@
 import React, { useState } from "react";
 import { useAuth } from "./AuthContext";
 import { useNavigate, Link } from "react-router-dom";
-import { Eye, EyeOff, Loader2, ArrowLeft } from "lucide-react";
+import {
+  AlertCircle,
+  ArrowLeft,
+  Eye,
+  EyeOff,
+  Loader2,
+  LockKeyhole,
+  Mail,
+} from "lucide-react";
 
 const Login = () => {
   const { login } = useAuth();
@@ -21,27 +29,31 @@ const Login = () => {
 
     if (loading) return;
 
+    const normalizedEmail = email.trim().toLowerCase();
+
     setError("");
+
+    if (!normalizedEmail || !password) {
+      setError("Ju lutemi plotësoni emailin dhe fjalëkalimin.");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      const user = await login(email, password, remember);
+      const user = await login(normalizedEmail, password, remember);
 
       if (!user) {
         setError("Email ose fjalëkalim i pasaktë.");
         return;
       }
 
-      // ✅ Enda redirecten – låt AuthRedirect ta över
       navigate("/");
-
     } catch (err) {
-      console.error("Login error:", err);
-
       setError(
         err?.response?.data?.message ||
-        err.message ||
-        "Diçka shkoi keq gjatë kyçjes."
+          err.message ||
+          "Diçka shkoi keq gjatë kyçjes."
       );
     } finally {
       setLoading(false);
@@ -49,136 +61,210 @@ const Login = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
-      <div className="w-full max-w-md">
-
-        {/* BACK LINK */}
-        <button
-          onClick={() => navigate("/")}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
-        >
-          <ArrowLeft size={18} />
-          <span>Kthehu në faqen kryesore</span>
-        </button>
-
-        <div className="bg-white shadow-xl rounded-2xl p-8">
-
-          <h2 className="text-3xl font-bold text-center mb-2">
-            Mirë se u kthyet 👋
-          </h2>
-
-          <p className="text-center text-gray-600 mb-6">
-            Hyni për të vazhduar
-          </p>
-
-          {error && (
-            <div className="bg-red-100 text-red-700 p-3 rounded mb-4 text-center">
-              {error}
-            </div>
-          )}
-
-          <form onSubmit={handleSubmit}>
-
-            {/* EMAIL */}
-            <div className="mb-4">
-              <label className="block mb-1 font-medium">
-                Email
-              </label>
-
-              <input
-                type="email"
-                disabled={loading}
-                className="w-full px-4 py-2 border rounded-lg focus:ring focus:ring-blue-200 disabled:opacity-60"
-                placeholder="shembull@mail.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-              />
-            </div>
-
-            {/* PASSWORD */}
-            <div className="mb-4">
-
-              <label className="block mb-1 font-medium">
-                Fjalëkalimi
-              </label>
-
-              <div className="relative">
-
-                <input
-                  type={showPass ? "text" : "password"}
-                  disabled={loading}
-                  className="w-full px-4 py-2 border rounded-lg pr-10 focus:ring focus:ring-blue-200 disabled:opacity-60"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                />
-
-                <button
-                  type="button"
-                  onClick={() => setShowPass(!showPass)}
-                  className="absolute inset-y-0 right-3 flex items-center text-gray-500 hover:text-gray-700"
-                >
-                  {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-
-              </div>
-
-            </div>
-
-            {/* REMEMBER */}
-            <div className="flex items-center justify-between mb-6">
-
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={remember}
-                  onChange={() => setRemember(!remember)}
-                />
-
-                <span className="text-sm">
-                  Më mbaj mend
-                </span>
-              </label>
-
-              <Link
-                to="/forgot-password"
-                className="text-sm text-blue-600 hover:underline"
-              >
-                Keni harruar fjalëkalimin?
+    <main className="min-h-screen bg-slate-50 px-4 py-6 sm:px-6 lg:px-8">
+      <div className="mx-auto flex min-h-[calc(100vh-3rem)] w-full max-w-6xl items-center">
+        <section className="grid w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm lg:grid-cols-[1fr_480px]">
+          <div className="hidden bg-slate-950 px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between">
+            <div>
+              <Link to="/" className="text-2xl font-semibold tracking-tight">
+                Ndertimnet
               </Link>
 
+              <div className="mt-16 max-w-md">
+                <p className="text-sm font-medium uppercase tracking-wide text-blue-200">
+                  Platformë ndërtimi
+                </p>
+                <h1 className="mt-4 text-4xl font-semibold leading-tight">
+                  Hyni dhe vazhdoni menaxhimin e projekteve tuaja.
+                </h1>
+                <p className="mt-5 text-base leading-7 text-slate-300">
+                  Qasuni te ofertat, kërkesat dhe profili juaj në një hapësirë
+                  të qartë dhe të sigurt.
+                </p>
+              </div>
             </div>
 
-            {/* LOGIN BUTTON */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
-            >
-              {loading && (
-                <Loader2 size={20} className="animate-spin" />
-              )}
+            <div className="grid gap-3 text-sm text-slate-300">
+              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+                Për kompani që duan të ndjekin kërkesat dhe ofertat.
+              </div>
+              <div className="rounded-lg border border-white/10 bg-white/5 p-4">
+                Për klientë që kërkojnë profesionistë për ndërtim dhe renovim.
+              </div>
+            </div>
+          </div>
 
-              {loading ? "Duke u kyçur..." : "Hyni"}
-            </button>
+          <div className="px-5 py-6 sm:px-8 sm:py-10 lg:px-10">
+            <div className="mb-8 flex items-center justify-between gap-4">
+              <Link
+                to="/"
+                className="text-xl font-semibold tracking-tight lg:hidden"
+              >
+                Ndertimnet
+              </Link>
 
-          </form>
+              <button
+                type="button"
+                onClick={() => navigate("/")}
+                className="inline-flex items-center gap-2 rounded-lg px-2 py-2 text-sm font-medium text-slate-600 transition hover:bg-slate-100 hover:text-slate-950 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2"
+              >
+                <ArrowLeft size={18} aria-hidden="true" />
+                <span>Kthehu</span>
+              </button>
+            </div>
 
-          <p className="text-center text-gray-600 mt-6">
-            Nuk keni llogari?{" "}
-            <Link
-              to="/register"
-              className="text-blue-600 font-semibold hover:underline"
-            >
-              Regjistrohu
-            </Link>
-          </p>
+            <div className="mb-8">
+              <p className="text-sm font-medium text-blue-700">
+                Mirë se vini
+              </p>
+              <h2 className="mt-2 text-3xl font-semibold tracking-tight text-slate-950">
+                Kyçuni në llogarinë tuaj
+              </h2>
+              <p className="mt-3 text-sm leading-6 text-slate-600">
+                Shkruani emailin dhe fjalëkalimin për të vazhduar.
+              </p>
+            </div>
 
-        </div>
+            {error && (
+              <div
+                className="mb-5 flex gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+                role="alert"
+              >
+                <AlertCircle
+                  className="mt-0.5 h-5 w-5 flex-none"
+                  aria-hidden="true"
+                />
+                <p>{error}</p>
+              </div>
+            )}
+
+            <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+              <div>
+                <label
+                  htmlFor="login-email"
+                  className="block text-sm font-medium text-slate-800"
+                >
+                  Email
+                </label>
+
+                <div className="relative mt-2">
+                  <Mail
+                    className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                    aria-hidden="true"
+                  />
+                  <input
+                    id="login-email"
+                    type="email"
+                    disabled={loading}
+                    className="w-full rounded-lg border border-slate-300 bg-white px-10 py-3 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-70"
+                    placeholder="shembull@mail.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    autoComplete="email"
+                    inputMode="email"
+                    aria-invalid={!!error}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label
+                  htmlFor="login-password"
+                  className="block text-sm font-medium text-slate-800"
+                >
+                  Fjalëkalimi
+                </label>
+
+                <div className="relative mt-2">
+                  <LockKeyhole
+                    className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400"
+                    aria-hidden="true"
+                  />
+                  <input
+                    id="login-password"
+                    type={showPass ? "text" : "password"}
+                    disabled={loading}
+                    className="w-full rounded-lg border border-slate-300 bg-white py-3 pl-10 pr-12 text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-slate-900 focus:ring-2 focus:ring-slate-900/10 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:opacity-70"
+                    placeholder="Fjalëkalimi juaj"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    autoComplete="current-password"
+                    aria-invalid={!!error}
+                    required
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() => setShowPass(!showPass)}
+                    disabled={loading}
+                    className="absolute inset-y-0 right-2 inline-flex w-10 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60"
+                    aria-label={
+                      showPass ? "Fshih fjalëkalimin" : "Shfaq fjalëkalimin"
+                    }
+                    aria-pressed={showPass}
+                  >
+                    {showPass ? (
+                      <EyeOff size={20} aria-hidden="true" />
+                    ) : (
+                      <Eye size={20} aria-hidden="true" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <label className="inline-flex items-center gap-2 text-sm text-slate-700">
+                  <input
+                    type="checkbox"
+                    checked={remember}
+                    disabled={loading}
+                    onChange={(e) => setRemember(e.target.checked)}
+                    className="h-4 w-4 rounded border-slate-300 text-slate-900 focus:ring-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
+                  />
+                  <span>Më mbaj mend</span>
+                </label>
+
+                <Link
+                  to="/forgot-password"
+                  className="text-sm font-medium text-blue-700 hover:text-blue-900 hover:underline"
+                >
+                  Keni harruar fjalëkalimin?
+                </Link>
+              </div>
+
+              <button
+                type="submit"
+                disabled={loading}
+                className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {loading && (
+                  <Loader2
+                    size={20}
+                    className="animate-spin"
+                    aria-hidden="true"
+                  />
+                )}
+
+                {loading ? "Duke u kyçur..." : "Hyni"}
+              </button>
+            </form>
+
+            <div className="mt-8 border-t border-slate-200 pt-6">
+              <p className="text-center text-sm text-slate-600">
+                Nuk keni llogari?{" "}
+                <Link
+                  to="/register"
+                  className="font-semibold text-blue-700 hover:text-blue-900 hover:underline"
+                >
+                  Regjistrohu
+                </Link>
+              </p>
+            </div>
+          </div>
+        </section>
       </div>
-    </div>
+    </main>
   );
 };
 
