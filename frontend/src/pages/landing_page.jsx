@@ -76,7 +76,7 @@ export default function LandingPage() {
                 "@type": "Organization",
                 name: "Ndertimnet",
                 url: "https://ndertimnet.com",
-                logo: "https://ndertimnet.com/logo.png",
+                logo: "https://ndertimnet.com/logo512.png",
               },
               {
                 "@type": "WebSite",

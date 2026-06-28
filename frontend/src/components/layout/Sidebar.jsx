@@ -8,6 +8,8 @@ import api from "../../api/axios";
 
 import { Home, User, LogOut, Briefcase, FileText } from "lucide-react";
 
+const logoSrc = "/ndertimnet-logo-full-width/ndertimnet-logo-search-transparent.png";
+
 export default function Sidebar() {
   const { user, logout, isCompany, isCustomer, access } = useAuth();
   const navigate = useNavigate();
@@ -69,9 +71,13 @@ export default function Sidebar() {
     >
       {/* LOGO */}
       <div className="mb-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-gray-900">
-          NdertimNet
-        </h1>
+        <Link to={isCompany ? "/company" : "/customer"} className="inline-flex">
+          <img
+            src={logoSrc}
+            alt="Ndertimnet"
+            className="h-[61px] w-auto"
+          />
+        </Link>
 
         <p className="text-sm text-gray-400 mt-1">
           {user?.role === "company" ? "Panel i kompanisë" : "Panel i klientit"}

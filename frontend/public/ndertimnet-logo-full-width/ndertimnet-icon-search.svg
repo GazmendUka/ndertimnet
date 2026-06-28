@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">NdertimNet search icon</title>
+  <desc id="desc">A simple house icon inside an orange magnifying glass for NdertimNet.</desc>
+  <defs>
+    <style>
+      .orange-fill { fill: #f28c28; }
+      .house { fill: none; stroke: #111111; stroke-width: 94; stroke-linecap: round; stroke-linejoin: round; }
+      .search { fill: none; stroke: #f28c28; stroke-width: 44; stroke-linecap: round; stroke-linejoin: round; }
+    </style>
+  </defs>
+
+  <circle class="search" cx="252" cy="242" r="138"/>
+  <path class="search" d="M154 340 92 402"/>
+
+  <g transform="translate(178 165.5) scale(.29)">
+    <path class="house" d="M100 264 256 116l156 148"/>
+    <path class="house" d="M156 280v132h200V280"/>
+    <circle class="orange-fill" cx="386" cy="120" r="19.25"/>
+  </g>
+</svg>

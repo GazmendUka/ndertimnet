@@ -4,6 +4,8 @@ import { Link, Outlet } from "react-router-dom";
 import { useState, useRef } from "react";
 import { Menu, X } from "lucide-react";
 
+const logoSrc = "/ndertimnet-logo-full-width/ndertimnet-logo-search-transparent.png";
+
 export default function PublicLayout() {
   const [open, setOpen] = useState(false);
 
@@ -31,8 +33,12 @@ export default function PublicLayout() {
       <header className="w-full border-b bg-white sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
 
-          <Link to="/" className="text-xl font-semibold tracking-tight">
-            Ndertimnet
+          <Link to="/" className="inline-flex items-center">
+            <img
+              src={logoSrc}
+              alt="Ndertimnet"
+              className="h-12 w-auto sm:h-[53px]"
+            />
           </Link>
 
           {/* DESKTOP NAV */}
@@ -82,7 +88,11 @@ export default function PublicLayout() {
       >
         {/* HEADER */}
         <div className="flex items-center justify-between px-6 py-4 border-b">
-          <span className="font-semibold">Menu</span>
+          <img
+            src={logoSrc}
+            alt="Ndertimnet"
+            className="h-11 w-auto sm:h-[46px]"
+          />
 
           <button
             onClick={() => setOpen(false)}
@@ -124,9 +134,11 @@ export default function PublicLayout() {
 
           {/* BRAND */}
           <div>
-            <h3 className="font-semibold text-gray-900 mb-3">
-              Ndertimnet
-            </h3>
+            <img
+              src={logoSrc}
+              alt="Ndertimnet"
+              className="h-[53px] w-auto mb-3"
+            />
             <p className="text-gray-600">
               Platformë për të gjetur kompani ndërtimi dhe profesionistë për
               çdo projekt ndërtimi dhe renovimi në Kosovë dhe Shqipëri.

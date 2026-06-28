@@ -13,6 +13,9 @@ import {
   Mail,
 } from "lucide-react";
 
+const logoSrc = "/ndertimnet-logo-full-width/ndertimnet-logo-search-transparent.png";
+const darkLogoSrc = "/ndertimnet-logo-full-width/ndertimnet-logo-search-white.png";
+
 const Login = () => {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -66,8 +69,12 @@ const Login = () => {
         <section className="grid w-full overflow-hidden rounded-lg border border-slate-200 bg-white shadow-sm lg:grid-cols-[1fr_480px]">
           <div className="hidden bg-slate-950 px-10 py-12 text-white lg:flex lg:flex-col lg:justify-between">
             <div>
-              <Link to="/" className="text-2xl font-semibold tracking-tight">
-                Ndertimnet
+              <Link to="/" className="inline-flex">
+                <img
+                  src={darkLogoSrc}
+                  alt="Ndertimnet"
+                  className="h-[61px] w-auto"
+                />
               </Link>
 
               <div className="mt-16 max-w-md">
@@ -98,9 +105,13 @@ const Login = () => {
             <div className="mb-8 flex items-center justify-between gap-4">
               <Link
                 to="/"
-                className="text-xl font-semibold tracking-tight lg:hidden"
+                className="inline-flex lg:hidden"
               >
-                Ndertimnet
+                <img
+                  src={logoSrc}
+                  alt="Ndertimnet"
+                  className="h-10 w-auto sm:h-12"
+                />
               </Link>
 
               <button
