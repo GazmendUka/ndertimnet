@@ -1,6 +1,6 @@
 // ===========================================
-// src/pages/UpdatesPage.jsx
-// Ndertimnet - Updates / Roadmap Page
+// src/pages/PerditesimePage.jsx
+// Ndertimnet - Përditësime / Roadmap Page
 // ===========================================
 
 import { useEffect, useMemo, useState } from "react";
@@ -8,29 +8,29 @@ import { Helmet } from "react-helmet";
 import { Link } from "react-router-dom";
 import api from "../api/axios";
 
-const emptyUpdates = {
+const emptyPerditesime = {
   in_progress: [],
   planned: [],
   done: [],
 };
 
-export default function UpdatesPage() {
-  const [updates, setUpdates] = useState(emptyUpdates);
+export default function PerditesimePage() {
+  const [perditesime, setPerditesime] = useState(emptyPerditesime);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
     let isMounted = true;
 
-    const loadUpdates = async () => {
+    const loadPerditesime = async () => {
       try {
-        const response = await api.get("updates/", { skipAuth: true });
+        const response = await api.get("perditesime/", { skipAuth: true });
 
         if (!isMounted) {
           return;
         }
 
-        setUpdates({
+        setPerditesime({
           in_progress: response.data?.in_progress || [],
           planned: response.data?.planned || [],
           done: response.data?.done || [],
@@ -47,19 +47,19 @@ export default function UpdatesPage() {
       }
     };
 
-    loadUpdates();
+    loadPerditesime();
 
     return () => {
       isMounted = false;
     };
   }, []);
 
-  const hasUpdates = useMemo(
+  const hasPerditesime = useMemo(
     () =>
-      updates.in_progress.length > 0 ||
-      updates.planned.length > 0 ||
-      updates.done.length > 0,
-    [updates]
+      perditesime.in_progress.length > 0 ||
+      perditesime.planned.length > 0 ||
+      perditesime.done.length > 0,
+    [perditesime]
   );
 
   // ================= COMPONENT =================
@@ -119,7 +119,7 @@ export default function UpdatesPage() {
     </div>
   );
 
-  const UpdateSection = ({ title, items, variant = "light" }) => {
+  const PerditesimSection = ({ title, items, variant = "light" }) => {
     if (items.length === 0) {
       return null;
     }
@@ -188,25 +188,25 @@ export default function UpdatesPage() {
           </section>
         )}
 
-        {!loading && !error && !hasUpdates && (
+        {!loading && !error && !hasPerditesime && (
           <section className="max-w-4xl mx-auto px-6 py-10">
             <EmptyState />
           </section>
         )}
 
         {/* ================= IN PROGRESS ================= */}
-        {!loading && !error && hasUpdates && (
-          <UpdateSection title="🚧 Në zhvillim" items={updates.in_progress} />
+        {!loading && !error && hasPerditesime && (
+          <PerditesimSection title="🚧 Në zhvillim" items={perditesime.in_progress} />
         )}
 
         {/* ================= PLANNED ================= */}
-        {!loading && !error && hasUpdates && (
-          <UpdateSection title="🧭 Në plan" items={updates.planned} variant="white" />
+        {!loading && !error && hasPerditesime && (
+          <PerditesimSection title="🧭 Në plan" items={perditesime.planned} variant="white" />
         )}
 
         {/* ================= DONE ================= */}
-        {!loading && !error && hasUpdates && (
-          <UpdateSection title="✅ Të publikuara" items={updates.done} />
+        {!loading && !error && hasPerditesime && (
+          <PerditesimSection title="✅ Të publikuara" items={perditesime.done} />
         )}
 
       </div>

@@ -1,10 +1,10 @@
 // src/routes/PublicRoutes.jsx
 
-import { Route } from "react-router-dom";
+import { Navigate, Route, useParams } from "react-router-dom";
 import AboutPage from "../pages/about";
 import ContactPage from "../pages/ContactPage";
-import UpdateDetailPage from "../pages/UpdateDetailPage";
-import UpdatesPage from "../pages/UpdatesPage";
+import PerditesimDetailPage from "../pages/PerditesimDetailPage";
+import PerditesimePage from "../pages/PerditesimePage";
 import PublicLayout from "../components/layout/PublicLayout";
 
 import Login from "../auth/Login";
@@ -38,6 +38,12 @@ import Cati from "../pages/seo/services/Cati";
 import Pllakashtrues from "../pages/seo/services/Pllakashtrues";
 import Dysheme from "../pages/seo/services/Dysheme";
 
+function LegacyUpdateRedirect() {
+  const { slug } = useParams();
+
+  return <Navigate to={`/perditesime/${slug}`} replace />;
+}
+
 export default function PublicRoutes() {
   return (
     <>
@@ -48,8 +54,10 @@ export default function PublicRoutes() {
         <Route path="/" element={<AuthRedirect />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
-        <Route path="/updates" element={<UpdatesPage />} />
-        <Route path="/updates/:slug" element={<UpdateDetailPage />} />
+        <Route path="/perditesime" element={<PerditesimePage />} />
+        <Route path="/perditesime/:slug" element={<PerditesimDetailPage />} />
+        <Route path="/updates" element={<Navigate to="/perditesime" replace />} />
+        <Route path="/updates/:slug" element={<LegacyUpdateRedirect />} />
 
         {/* ================= CITY PAGES ================= */}
         <Route path="/ndertim/prishtine" element={<NdertimPrishtine />} />

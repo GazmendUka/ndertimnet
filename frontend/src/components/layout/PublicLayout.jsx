@@ -43,7 +43,7 @@ export default function PublicLayout() {
 
           {/* DESKTOP NAV */}
           <nav className="hidden md:flex items-center gap-6 text-sm">
-            <Link to="/updates">Updates</Link>
+            <Link to="/perditesime">Përditësime</Link>
             <Link to="/about">Rreth nesh</Link>
             <Link to="/contact">Kontakt</Link>
 
@@ -105,7 +105,7 @@ export default function PublicLayout() {
         {/* LINKS */}
         <div className="flex flex-col p-6 gap-4 text-base">
 
-          <Link onClick={() => setOpen(false)} to="/updates">Updates</Link>
+          <Link onClick={() => setOpen(false)} to="/perditesime">Përditësime</Link>
           <Link onClick={() => setOpen(false)} to="/about">Rreth nesh</Link>
           <Link onClick={() => setOpen(false)} to="/contact">Kontakt</Link>
 

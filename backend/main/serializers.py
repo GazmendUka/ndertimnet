@@ -26,7 +26,7 @@ class PlatformUpdateSerializer(serializers.ModelSerializer):
         if not obj.is_clickable or not obj.slug:
             return None
 
-        return f"/updates/{obj.slug}"
+        return f"/perditesime/{obj.slug}"
 
 
 class PlatformUpdateDetailSerializer(serializers.ModelSerializer):

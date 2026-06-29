@@ -9,7 +9,7 @@ const statusLabels = {
   done: "Të publikuara",
 };
 
-export default function UpdateDetailPage() {
+export default function PerditesimDetailPage() {
   const { slug } = useParams();
   const [update, setUpdate] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,7 @@ export default function UpdateDetailPage() {
 
     const loadUpdate = async () => {
       try {
-        const response = await api.get(`updates/${slug}/`, { skipAuth: true });
+        const response = await api.get(`perditesime/${slug}/`, { skipAuth: true });
 
         if (!isMounted) {
           return;
@@ -66,7 +66,7 @@ export default function UpdateDetailPage() {
 
       <div className="bg-white text-gray-900">
         <main className="max-w-3xl mx-auto px-6 py-16 md:py-20">
-          <Link to="/updates" className="text-sm font-medium text-gray-600 hover:text-gray-950">
+          <Link to="/perditesime" className="text-sm font-medium text-gray-600 hover:text-gray-950">
             ← Kthehu te përditësimet
           </Link>
 

@@ -27,8 +27,8 @@ class PlatformUpdate(models.Model):
 
     class Meta:
         ordering = ("status", "display_order", "-created_at")
-        verbose_name = "Platform update"
-        verbose_name_plural = "Platform updates"
+        verbose_name = "Përditësim platforme"
+        verbose_name_plural = "Përditësime platforme"
 
     def __str__(self):
         return self.title
