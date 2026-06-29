@@ -71,11 +71,14 @@ export default function Sidebar() {
     >
       {/* LOGO */}
       <div className="mb-8">
-        <Link to={isCompany ? "/company" : "/customer"} className="inline-flex">
+        <Link
+          to={isCompany ? "/company" : "/customer"}
+          className="block w-full max-w-[184px]"
+        >
           <img
             src={logoSrc}
             alt="Ndertimnet"
-            className="h-[61px] w-auto"
+            className="block h-auto w-full"
           />
         </Link>
 
