@@ -11,12 +11,34 @@ class PlatformUpdateAdmin(admin.ModelAdmin):
         "date_label",
         "display_order",
         "is_new",
+        "is_clickable",
         "is_published",
         "updated_at",
     )
-    list_filter = ("status", "is_new", "is_published")
-    search_fields = ("title", "date_label")
-    list_editable = ("display_order", "is_new", "is_published")
+    list_filter = ("status", "is_new", "is_clickable", "is_published")
+    search_fields = ("title", "date_label", "summary", "body")
+    list_editable = ("display_order", "is_new", "is_clickable", "is_published")
     ordering = ("status", "display_order", "-created_at")
+    prepopulated_fields = {"slug": ("title",)}
+    fieldsets = (
+        ("Update", {
+            "fields": (
+                "title",
+                "date_label",
+                "status",
+                "display_order",
+                "is_new",
+                "is_published",
+            )
+        }),
+        ("Clickable detail page", {
+            "fields": (
+                "is_clickable",
+                "slug",
+                "summary",
+                "body",
+            )
+        }),
+    )
 
 # Register your models here.

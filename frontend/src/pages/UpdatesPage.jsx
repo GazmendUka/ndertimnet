@@ -5,6 +5,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
+import { Link } from "react-router-dom";
 import api from "../api/axios";
 
 const emptyUpdates = {
@@ -62,26 +63,55 @@ export default function UpdatesPage() {
   );
 
   // ================= COMPONENT =================
-  const Item = ({ item, variant = "light" }) => (
-    <div
-      className={`p-4 rounded-xl border flex items-center justify-between ${
+  const Item = ({ item, variant = "light" }) => {
+    const className = `p-4 rounded-xl border flex items-center justify-between gap-4 ${
         variant === "light" ? "bg-gray-50" : "bg-white"
-      }`}
-    >
-      <div>
-        <p className="font-medium">{item.title}</p>
-        <p className="text-sm text-gray-500 mt-1">
-          Planifikuar: {item.date_label}
-        </p>
-      </div>
+      } ${item.detail_url ? "transition hover:border-gray-900 hover:bg-white" : ""}`;
 
-      {item.is_new && (
-        <span className="text-xs font-semibold px-3 py-1 rounded-full bg-black text-white">
-          NEW
-        </span>
-      )}
-    </div>
-  );
+    const content = (
+      <>
+        <div>
+          <p className="font-medium">{item.title}</p>
+          <p className="text-sm text-gray-500 mt-1">
+            Planifikuar: {item.date_label}
+          </p>
+          {item.summary && (
+            <p className="text-sm text-gray-600 mt-2">
+              {item.summary}
+            </p>
+          )}
+        </div>
+
+        <div className="flex items-center gap-3 shrink-0">
+          {item.is_new && (
+            <span className="text-xs font-semibold px-3 py-1 rounded-full bg-black text-white">
+              NEW
+            </span>
+          )}
+
+          {item.detail_url && (
+            <span className="text-sm font-medium text-gray-700">
+              Lexo më shumë
+            </span>
+          )}
+        </div>
+      </>
+    );
+
+    if (item.detail_url) {
+      return (
+        <Link to={item.detail_url} className={className}>
+          {content}
+        </Link>
+      );
+    }
+
+    return (
+      <div className={className}>
+        {content}
+      </div>
+    );
+  };
 
   const EmptyState = () => (
     <div className="p-4 rounded-xl border bg-gray-50 text-gray-600">

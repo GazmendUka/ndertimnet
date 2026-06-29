@@ -3,6 +3,7 @@
 import { Route } from "react-router-dom";
 import AboutPage from "../pages/about";
 import ContactPage from "../pages/ContactPage";
+import UpdateDetailPage from "../pages/UpdateDetailPage";
 import UpdatesPage from "../pages/UpdatesPage";
 import PublicLayout from "../components/layout/PublicLayout";
 
@@ -48,6 +49,7 @@ export default function PublicRoutes() {
         <Route path="/about" element={<AboutPage />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/updates" element={<UpdatesPage />} />
+        <Route path="/updates/:slug" element={<UpdateDetailPage />} />
 
         {/* ================= CITY PAGES ================= */}
         <Route path="/ndertim/prishtine" element={<NdertimPrishtine />} />
