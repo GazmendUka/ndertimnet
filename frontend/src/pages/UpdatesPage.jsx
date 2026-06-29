@@ -1,66 +1,65 @@
 // ===========================================
 // src/pages/UpdatesPage.jsx
-// Ndertimnet – Updates / Roadmap Page (v1.1)
+// Ndertimnet - Updates / Roadmap Page
 // ===========================================
 
+import { useEffect, useMemo, useState } from "react";
 import { Helmet } from "react-helmet";
+import api from "../api/axios";
+
+const emptyUpdates = {
+  in_progress: [],
+  planned: [],
+  done: [],
+};
 
 export default function UpdatesPage() {
+  const [updates, setUpdates] = useState(emptyUpdates);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  // ================= DATA =================
-  const inProgress = [
-    {
-      title: "Përmirësime sigurie për faqet publike",
-      date: "Prill 2026",
-      isNew: false,
-    },
-    {
-      title: "përmirësime sigurie për faqet e kyçura",
-      date: "Prill 2026",
-      isNew: false,
-    },
-    {
-      title: "Optimizimi i shpejtësisë së faqes së internetit",
-      date: "Prill 2026",
-      isNew: false,
-    },
-  ];
+  useEffect(() => {
+    let isMounted = true;
 
-  const planned = [
-    {
-      title: "Profile të avancuara për kompani",
-      date: "Maj 2026",
-      isNew: false,
-    },
-    {
-      title: "Sistem vlerësimi dhe review",
-      date: "Maj 2026",
-      isNew: false,
-    },
-    {
-      title: "Përmirësimi i panelit të kompanisë",
-      date: "Maj 2026",
-      isNew: false,
-    },
-  ];
+    const loadUpdates = async () => {
+      try {
+        const response = await api.get("updates/", { skipAuth: true });
 
-  const done = [
-    {
-      title: "Landing page e re me fokus në ty si përdoreus",
-      date: "Mars 2026",
-      isNew: true,
-    },
-    {
-      title: "Faqet për qytete (Prishtinë, Tiranë, etj.)",
-      date: "Mars 2026",
-      isNew: true,
-    },
-    {
-      title: "Përmirësime në login dhe autentikim",
-      date: "Mars 2026",
-      isNew: false,
-    },
-  ];
+        if (!isMounted) {
+          return;
+        }
+
+        setUpdates({
+          in_progress: response.data?.in_progress || [],
+          planned: response.data?.planned || [],
+          done: response.data?.done || [],
+        });
+        setError("");
+      } catch (err) {
+        if (isMounted) {
+          setError("Përditësimet nuk mund të ngarkohen për momentin.");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadUpdates();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const hasUpdates = useMemo(
+    () =>
+      updates.in_progress.length > 0 ||
+      updates.planned.length > 0 ||
+      updates.done.length > 0,
+    [updates]
+  );
 
   // ================= COMPONENT =================
   const Item = ({ item, variant = "light" }) => (
@@ -72,17 +71,43 @@ export default function UpdatesPage() {
       <div>
         <p className="font-medium">{item.title}</p>
         <p className="text-sm text-gray-500 mt-1">
-          Planifikuar: {item.date}
+          Planifikuar: {item.date_label}
         </p>
       </div>
 
-      {item.isNew && (
+      {item.is_new && (
         <span className="text-xs font-semibold px-3 py-1 rounded-full bg-black text-white">
           NEW
         </span>
       )}
     </div>
   );
+
+  const EmptyState = () => (
+    <div className="p-4 rounded-xl border bg-gray-50 text-gray-600">
+      Nuk ka përditësime të publikuara këtu për momentin.
+    </div>
+  );
+
+  const UpdateSection = ({ title, items, variant = "light" }) => {
+    if (items.length === 0) {
+      return null;
+    }
+
+    return (
+      <section className="max-w-4xl mx-auto px-6 py-10">
+        <h2 className="text-2xl font-semibold mb-6">
+          {title}
+        </h2>
+
+        <div className="space-y-4">
+          {items.map((item) => (
+            <Item key={item.id} item={item} variant={variant} />
+          ))}
+        </div>
+      </section>
+    );
+  };
 
   return (
     <>
@@ -117,44 +142,42 @@ export default function UpdatesPage() {
           </p>
         </section>
 
-        {/* ================= IN PROGRESS ================= */}
-        <section className="max-w-4xl mx-auto px-6 py-10">
-          <h2 className="text-2xl font-semibold mb-6">
-            🚧 Në zhvillim
-          </h2>
+        {loading && (
+          <section className="max-w-4xl mx-auto px-6 py-10">
+            <div className="p-4 rounded-xl border bg-gray-50 text-gray-600">
+              Duke ngarkuar përditësimet...
+            </div>
+          </section>
+        )}
 
-          <div className="space-y-4">
-            {inProgress.map((item, i) => (
-              <Item key={i} item={item} />
-            ))}
-          </div>
-        </section>
+        {!loading && error && (
+          <section className="max-w-4xl mx-auto px-6 py-10">
+            <div className="p-4 rounded-xl border border-red-100 bg-red-50 text-red-700">
+              {error}
+            </div>
+          </section>
+        )}
+
+        {!loading && !error && !hasUpdates && (
+          <section className="max-w-4xl mx-auto px-6 py-10">
+            <EmptyState />
+          </section>
+        )}
+
+        {/* ================= IN PROGRESS ================= */}
+        {!loading && !error && hasUpdates && (
+          <UpdateSection title="🚧 Në zhvillim" items={updates.in_progress} />
+        )}
 
         {/* ================= PLANNED ================= */}
-        <section className="max-w-4xl mx-auto px-6 py-10">
-          <h2 className="text-2xl font-semibold mb-6">
-            🧭 Në plan
-          </h2>
-
-          <div className="space-y-4">
-            {planned.map((item, i) => (
-              <Item key={i} item={item} variant="white" />
-            ))}
-          </div>
-        </section>
+        {!loading && !error && hasUpdates && (
+          <UpdateSection title="🧭 Në plan" items={updates.planned} variant="white" />
+        )}
 
         {/* ================= DONE ================= */}
-        <section className="max-w-4xl mx-auto px-6 py-10 pb-20">
-          <h2 className="text-2xl font-semibold mb-6">
-            ✅ Të publikuara
-          </h2>
-
-          <div className="space-y-4">
-            {done.map((item, i) => (
-              <Item key={i} item={item} />
-            ))}
-          </div>
-        </section>
+        {!loading && !error && hasUpdates && (
+          <UpdateSection title="✅ Të publikuara" items={updates.done} />
+        )}
 
       </div>
     </>

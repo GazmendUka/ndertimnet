@@ -22,6 +22,9 @@ urlpatterns = [
     # 👤 Accounts API
     path("api/accounts/", include("accounts.urls")),
 
+    # 🌐 Public platform content
+    path("api/", include("main.urls")),
+
     # 🧩 Taxonomy API  
     path("api/taxonomy/", include("taxonomy.urls")),
 
