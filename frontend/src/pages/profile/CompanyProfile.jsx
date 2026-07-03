@@ -159,6 +159,10 @@ export default function CompanyProfile() {
     ? cities.filter((c) => form.cities.includes(c.id))
     : [];
 
+  const selectedProfessions = form?.professions
+    ? professions.filter((p) => form.professions.includes(p.id))
+    : [];
+
   // --------------------------------------------------
   // EDIT HANDLERS
   // --------------------------------------------------
@@ -505,17 +509,59 @@ export default function CompanyProfile() {
             <h2 className="text-sm font-semibold text-gray-900">Specialitetet</h2>
 
             {isEditing ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                {professions.map((p) => (
-                  <label key={p.id} className="flex items-center gap-2 text-sm">
-                    <input
-                      type="checkbox"
-                      checked={form?.professions?.includes(p.id) || false}
-                      onChange={() => toggleProfession(p.id)}
-                    />
-                    {p.name}
-                  </label>
-                ))}
+              <div className="space-y-5">
+                {selectedProfessions.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs text-gray-500">
+                      Specialitetet e zgjedhura ({selectedProfessions.length})
+                    </p>
+
+                    <div className="flex flex-wrap gap-2">
+                      {selectedProfessions.map((p) => (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => toggleProfession(p.id)}
+                          className="px-3 py-1.5 rounded-full text-sm font-medium 
+                          bg-gray-900 text-white shadow-sm 
+                          hover:opacity-80 transition-all duration-150 active:scale-[0.95]
+                          flex items-center gap-1"
+                        >
+                          {p.name}
+                          <span className="text-xs text-white/70 font-semibold">×</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="space-y-2">
+                  <p className="text-xs text-gray-500">
+                    Zgjidh specialitetet që ofron kompania juaj
+                  </p>
+
+                  <div className="flex flex-wrap gap-2">
+                    {professions.map((p) => {
+                      const isSelected = form?.professions?.includes(p.id);
+
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => toggleProfession(p.id)}
+                          className={`px-3 py-1.5 rounded-full text-sm font-medium 
+                          transition-transform duration-150 hover:scale-[1.02] active:scale-[0.97] ${
+                            isSelected
+                              ? "bg-gray-900 text-white shadow-sm"
+                              : "text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+                          }`}
+                        >
+                          {p.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             ) : (
               <div className="flex flex-wrap gap-2">
