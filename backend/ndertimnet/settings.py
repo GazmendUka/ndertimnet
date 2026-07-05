@@ -54,6 +54,10 @@ DEBUG = env_bool("DEBUG", default=(ENVIRONMENT != "production"))
 default_hosts = ["localhost", "127.0.0.1"]
 ALLOWED_HOSTS = env_list("ALLOWED_HOSTS", default=default_hosts)
 
+for host in ("admin.ndertimnet.com",):
+    if host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(host)
+
 if ENVIRONMENT == "production" and ALLOWED_HOSTS == default_hosts:
     raise Exception("ALLOWED_HOSTS must be set in production")
 
@@ -72,6 +76,10 @@ USE_X_FORWARDED_HOST = True
 # Example value in Render:
 # CSRF_TRUSTED_ORIGINS=https://your-backend.onrender.com,https://ndertimnet.com,https://www.ndertimnet.com
 CSRF_TRUSTED_ORIGINS = env_list("CSRF_TRUSTED_ORIGINS", default=[])
+
+for origin in ("https://admin.ndertimnet.com",):
+    if origin not in CSRF_TRUSTED_ORIGINS:
+        CSRF_TRUSTED_ORIGINS.append(origin)
 
 
 # ======================================================

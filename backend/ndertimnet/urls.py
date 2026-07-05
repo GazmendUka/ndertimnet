@@ -8,6 +8,12 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 
+def admin_root_redirect(request):
+    if request.get_host().split(":")[0] == "admin.ndertimnet.com":
+        return redirect("/admin/")
+    return redirect("/api/")
+
+
 # 📚 (valfritt) API-dokumentation via drf-spectacular
 try:
     from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
@@ -16,6 +22,8 @@ except ImportError:
     SPECTACULAR_ENABLED = False
 
 urlpatterns = [
+    path("", admin_root_redirect),
+
     # 🧱 Admin panel
     path("admin/", admin.site.urls),
 
