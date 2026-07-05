@@ -1,4 +1,10 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { useEffect } from "react";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useLocation,
+} from "react-router-dom";
 
 import { AuthProvider } from "./auth/AuthContext";
 import ErrorBoundary from "./components/ErrorBoundary";
@@ -7,11 +13,31 @@ import PublicRoutes from "./routes/PublicRoutes";
 import CustomerRoutes from "./routes/CustomerRoutes";
 import CompanyRoutes from "./routes/CompanyRoutes";
 
+function ScrollToTop() {
+  const { pathname, search, hash } = useLocation();
+
+  useEffect(() => {
+    if (hash) {
+      const target = document.querySelector(hash);
+
+      if (target) {
+        target.scrollIntoView({ behavior: "auto", block: "start" });
+        return;
+      }
+    }
+
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [pathname, search, hash]);
+
+  return null;
+}
+
 function App() {
   return (
     <AuthProvider>
       <ErrorBoundary>
         <Router>
+          <ScrollToTop />
           <Routes>
 
             {/* PUBLIC */}
