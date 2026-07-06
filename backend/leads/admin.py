@@ -13,21 +13,24 @@ class JobRequestAdmin(admin.ModelAdmin):
         "city",
         "profession",
         "budget",
+        "status",
         "max_offers",
         "is_reopened",
         "is_completed",
     )
     list_filter = (
-        "is_active", 
-        "is_reopened", 
-        "is_completed"
-        )
+        "status",
+        "is_active",
+        "is_reopened",
+        "is_completed",
+        "is_deleted",
+    )
     search_fields = (
         "title",
         "description",
         "city__name",
         "profession__name",
-        "customer__user__email",
+        "customer__email",
     )
     ordering = ("-created_at",)
 
@@ -49,16 +52,31 @@ class JobRequestAdmin(admin.ModelAdmin):
                 "is_reopened",
                 "reopened_at",
                 "is_completed",
-                "accepted_company",
-                "accepted_price",
+                "winner_company",
+                "winner_price",
+                "winner_offer",
             )
         }),
         ("📅 Data dhe Statusi", {
-            "fields": ("created_at", "expires_at", "is_active")
+            "fields": (
+                "status",
+                "created_at",
+                "updated_at",
+                "expires_at",
+                "is_active",
+                "is_deleted",
+                "deleted_at",
+            )
         }),
     )
 
-    readonly_fields = ("created_at", "last_offer_at", "reopened_at")
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+        "last_offer_at",
+        "reopened_at",
+        "deleted_at",
+    )
 
 
 @admin.register(LeadMatch)
