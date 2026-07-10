@@ -8,12 +8,12 @@ import { useNavigate } from "react-router-dom";
 // import { getMediaUrl } from "../../utils/media";
 
 const INDUSTRY_SHORT_LABELS = {
-  "ndertim-dhe-renovim": "Bygg",
-  "pastrim-dhe-mirembajtje": "Städ",
-  "shperngulje-dhe-transport": "Flytt",
-  "kopsht-dhe-ambient-i-jashtem": "Trädgård",
-  "siguri-dhe-bravari": "Säkerhet",
-  "sherbime-prone-dhe-mirembajtje": "Service",
+  "ndertim-dhe-renovim": "Ndërtim",
+  "pastrim-dhe-mirembajtje": "Pastrim",
+  "shperngulje-dhe-transport": "Transport",
+  "kopsht-dhe-ambient-i-jashtem": "Kopsht",
+  "siguri-dhe-bravari": "Siguri",
+  "sherbime-prone-dhe-mirembajtje": "Servis",
 };
 
 const getIndustryLabel = (industry) =>
