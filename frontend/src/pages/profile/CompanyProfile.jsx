@@ -21,6 +21,7 @@ export default function CompanyProfile() {
   const [professions, setProfessions] = useState([]);
   const [cities, setCities] = useState([]);
   const [selectedCountry, setSelectedCountry] = useState("XK");
+  const [selectedIndustryId, setSelectedIndustryId] = useState(null);
 
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -155,15 +156,20 @@ export default function CompanyProfile() {
     (c) => String(c.country).toUpperCase() === selectedCountry
   );
 
-  const selectedCities = form?.cities
-    ? cities.filter((c) => form.cities.includes(c.id))
-    : [];
+  const selectedCities = useMemo(
+    () => (form?.cities ? cities.filter((c) => form.cities.includes(c.id)) : []),
+    [cities, form?.cities]
+  );
 
-  const selectedProfessions = form?.professions
-    ? professions.filter((p) => form.professions.includes(p.id))
-    : [];
-  const groupedProfessions = useMemo(() => {
-    const groups = new Map();
+  const selectedProfessions = useMemo(
+    () =>
+      form?.professions
+        ? professions.filter((p) => form.professions.includes(p.id))
+        : [],
+    [form?.professions, professions]
+  );
+  const industryOptions = useMemo(() => {
+    const industries = new Map();
 
     professions.forEach((profession) => {
       const industry = profession.industry_detail || {
@@ -171,18 +177,34 @@ export default function CompanyProfile() {
         name: "Të tjera",
       };
 
-      if (!groups.has(industry.id)) {
-        groups.set(industry.id, {
-          industry,
-          professions: [],
-        });
+      if (!industries.has(industry.id)) {
+        industries.set(industry.id, industry);
       }
-
-      groups.get(industry.id).professions.push(profession);
     });
 
-    return Array.from(groups.values());
+    return Array.from(industries.values());
   }, [professions]);
+  const filteredProfessions = useMemo(
+    () =>
+      selectedIndustryId
+        ? professions.filter(
+            (p) =>
+              String(p.industry_detail?.id || "uncategorized") ===
+              String(selectedIndustryId)
+          )
+        : [],
+    [professions, selectedIndustryId]
+  );
+
+  useEffect(() => {
+    if (!industryOptions.length || selectedIndustryId) return;
+
+    const firstSelectedProfession = selectedProfessions[0];
+    const firstSelectedIndustryId =
+      firstSelectedProfession?.industry_detail?.id || null;
+
+    setSelectedIndustryId(firstSelectedIndustryId || industryOptions[0].id);
+  }, [industryOptions, selectedIndustryId, selectedProfessions]);
 
   // --------------------------------------------------
   // EDIT HANDLERS
@@ -237,6 +259,10 @@ export default function CompanyProfile() {
     setError("");
     setMessage("");
     setSelectedCountry("XK");
+    const firstProfession = professionList[0];
+    setSelectedIndustryId(
+      firstProfession?.industry_detail?.id || industryOptions[0]?.id || null
+    );
   };
 
   const cancelEdit = () => {
@@ -245,6 +271,7 @@ export default function CompanyProfile() {
     setLogoFile(null);
     setError("");
     setMessage("");
+    setSelectedIndustryId(industryOptions[0]?.id || null);
   };
 
   const saveChanges = async () => {
@@ -558,39 +585,53 @@ export default function CompanyProfile() {
 
                 <div className="space-y-2">
                   <p className="text-xs text-gray-500">
-                    Zgjidh specialitetet që ofron kompania juaj
+                    Zgjidh kategorinë kryesore
                   </p>
 
-                  <div className="space-y-4">
-                    {groupedProfessions.map(({ industry, professions: items }) => (
-                      <div key={industry.id} className="space-y-2">
-                        <p className="text-sm font-semibold text-gray-900">
-                          {industry.name}
-                        </p>
-
-                        <div className="flex flex-wrap gap-2">
-                          {items.map((p) => {
-                            const isSelected = form?.professions?.includes(p.id);
-
-                            return (
-                              <button
-                                key={p.id}
-                                type="button"
-                                onClick={() => toggleProfession(p.id)}
-                                className={`px-3 py-1.5 rounded-full text-sm font-medium 
-                                transition-transform duration-150 hover:scale-[1.02] active:scale-[0.97] ${
-                                  isSelected
-                                    ? "bg-gray-900 text-white shadow-sm"
-                                    : "text-gray-700 hover:text-gray-900 hover:bg-gray-100"
-                                }`}
-                              >
-                                {p.name}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
+                  <div className="flex flex-wrap gap-2">
+                    {industryOptions.map((industry) => (
+                      <button
+                        key={industry.id}
+                        type="button"
+                        onClick={() => setSelectedIndustryId(industry.id)}
+                        className={`px-3 py-1.5 rounded-full text-sm font-medium 
+                        transition-transform duration-150 hover:scale-[1.02] active:scale-[0.97] ${
+                          String(selectedIndustryId) === String(industry.id)
+                            ? "bg-gray-900 text-white shadow-sm"
+                            : "text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+                        }`}
+                      >
+                        {industry.name}
+                      </button>
                     ))}
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <p className="text-xs text-gray-500">
+                    Zgjidh specialitetet në këtë kategori
+                  </p>
+
+                  <div className="flex flex-wrap gap-2">
+                    {filteredProfessions.map((p) => {
+                      const isSelected = form?.professions?.includes(p.id);
+
+                      return (
+                        <button
+                          key={p.id}
+                          type="button"
+                          onClick={() => toggleProfession(p.id)}
+                          className={`px-3 py-1.5 rounded-full text-sm font-medium 
+                          transition-transform duration-150 hover:scale-[1.02] active:scale-[0.97] ${
+                            isSelected
+                              ? "bg-gray-900 text-white shadow-sm"
+                              : "text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+                          }`}
+                        >
+                          {p.name}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
