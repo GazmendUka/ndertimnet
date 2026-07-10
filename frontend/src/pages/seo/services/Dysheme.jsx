@@ -6,7 +6,6 @@ import {
   Layers,
   CheckCircle2,
   ShieldCheck,
-  Hammer,
   HelpCircle,
 } from "lucide-react";
 

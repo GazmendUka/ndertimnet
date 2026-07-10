@@ -6,8 +6,6 @@ import {
   Building2,
   CheckCircle2,
   ShieldCheck,
-  Paintbrush,
-  ArrowRight,
   HelpCircle,
 } from "lucide-react";
 

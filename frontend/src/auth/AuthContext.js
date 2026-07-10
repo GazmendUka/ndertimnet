@@ -1,6 +1,6 @@
 // frontend/src/auth/AuthContext.jsx
 
-import { createContext, useContext, useState, useEffect } from "react";
+import { createContext, useCallback, useContext, useState, useEffect } from "react";
 import api from "../api/axios";
 
 const AuthContext = createContext();
@@ -45,7 +45,7 @@ export const AuthProvider = ({ children }) => {
   // 🚪 LOGOUT
   // ============================================================
 
-  const logout = () => {
+  const logout = useCallback(() => {
     clearStorage();
     setUser(null);
     setAccess(null);
@@ -53,13 +53,13 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
 
     window.location.href = "/";
-  };
+  }, []);
 
   // ============================================================
   // 👤 Fetch current user
   // ============================================================
 
-  const fetchCurrentUser = async (forcedToken = null) => {
+  const fetchCurrentUser = useCallback(async (forcedToken = null) => {
     try {
       const res = await api.get(
         "accounts/me/",
@@ -91,7 +91,7 @@ export const AuthProvider = ({ children }) => {
 
       throw err;
     }
-  };
+  }, [logout]);
 
   // ============================================================
   // 🔧 Init auth (on app load)
@@ -121,7 +121,7 @@ export const AuthProvider = ({ children }) => {
     };
 
     initAuth();
-  }, []);
+  }, [fetchCurrentUser, logout]);
 
   // ============================================================
   // 🔑 LOGIN

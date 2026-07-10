@@ -6,7 +6,6 @@ import {
   Grid3X3,
   CheckCircle2,
   ShieldCheck,
-  Hammer,
   HelpCircle,
 } from "lucide-react";
 

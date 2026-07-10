@@ -77,7 +77,7 @@ class JobRequestViewSet(viewsets.ModelViewSet):
             if company.professions.exists():
                 return qs.filter(
                     is_active=True,
-                    professions__in=company.professions.all()
+                    profession__in=company.professions.all()
                 ).distinct()
             return qs.none()
 
@@ -512,4 +512,3 @@ class LeadMessageViewSet(viewsets.ModelViewSet):
         raise serializers.ValidationError(
             {"detail": "Përdoruesi nuk është kompani as klient."}
         )
-

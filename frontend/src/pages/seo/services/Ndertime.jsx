@@ -5,9 +5,7 @@ import { Helmet } from "react-helmet";
 import {
   Building2,
   CheckCircle2,
-  Hammer,
   ShieldCheck,
-  ArrowRight,
   HelpCircle,
 } from "lucide-react";
 

@@ -1,10 +1,7 @@
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import {
-  Wrench,
   CheckCircle2,
-  Sparkles,
-  ArrowRight,
   HelpCircle,
   Home,
 } from "lucide-react";

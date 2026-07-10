@@ -15,7 +15,6 @@ export default function CompanyDashboard() {
   const { user, isCompany, access } = useAuth();
 
   const [company, setCompany] = useState(null);
-  const [companyLoading, setCompanyLoading] = useState(true);
 
   // ⚠️ leads = OFFERS (namnet behålls för minimal diff)
   const [leads, setLeads] = useState([]);
@@ -39,7 +38,7 @@ export default function CompanyDashboard() {
         console.error("Error loading company profile:", err);
         if (alive) setCompany(null);
       } finally {
-        if (alive) setCompanyLoading(false);
+        if (!alive) return;
       }
     }
 

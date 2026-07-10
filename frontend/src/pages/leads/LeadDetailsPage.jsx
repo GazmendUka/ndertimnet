@@ -3,7 +3,7 @@
 // Lead Details + Unlock + Chat + Workflow
 // ===========================================
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
@@ -41,7 +41,7 @@ export default function LeadDetailsPage() {
   // ===========================================
   // LOAD LEAD DETAILS (with job + customer data)
   // ===========================================
-  async function fetchLead() {
+  const fetchLead = useCallback(async () => {
     try {
       setLoading(true);
       const res = await api.get(`leads/leadmatches/${id}/`);
@@ -55,7 +55,7 @@ export default function LeadDetailsPage() {
     } finally {
       setLoading(false);
     }
-  }
+  }, [id]);
 
   async function checkOffer(jobId) {
     try {
@@ -74,7 +74,7 @@ export default function LeadDetailsPage() {
     }
 
     load();
-  }, [access, id]);
+  }, [access, id, fetchLead]);
 
   useEffect(() => {
     if (job?.id) {

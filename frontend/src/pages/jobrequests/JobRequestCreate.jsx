@@ -21,6 +21,7 @@ export default function JobRequestCreate() {
 
   const [cities, setCities] = useState([]);
   const [professions, setProfessions] = useState([]);
+  const [selectedIndustryId, setSelectedIndustryId] = useState(null);
   const [lookupsLoading, setLookupsLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(true);
   const [useSameAddress, setUseSameAddress] = useState(false);
@@ -119,9 +120,28 @@ export default function JobRequestCreate() {
     (c) => c.id === Number(formData.city ?? null)
   );
   const selectedProfession =
-  formData.profession !== null && formData.profession !== undefined
-    ? professions.find((p) => p.id === Number(formData.profession))
-    : null;
+    formData.profession !== null && formData.profession !== undefined
+      ? professions.find((p) => p.id === Number(formData.profession))
+      : null;
+  const industries = useMemo(() => {
+    const byId = new Map();
+
+    professions.forEach((p) => {
+      const industry = p.industry_detail;
+      if (industry?.id && !byId.has(industry.id)) {
+        byId.set(industry.id, industry);
+      }
+    });
+
+    return Array.from(byId.values());
+  }, [professions]);
+  const filteredProfessions = useMemo(() => {
+    if (!selectedIndustryId) return [];
+
+    return professions.filter(
+      (p) => Number(p.industry_detail?.id) === Number(selectedIndustryId)
+    );
+  }, [professions, selectedIndustryId]);
   // ------------------------------------------------------------
   // Validation helpers
   // ------------------------------------------------------------
@@ -140,7 +160,11 @@ export default function JobRequestCreate() {
     Boolean(contactCity);
   const isStep2Valid = formData.title.trim().length >= 5;
   const isStep3Valid = formData.description.trim().length >= 20;
-  const isStep4Valid = formData.address.trim().length > 0 && Boolean(formData.city);
+  const isStep4Valid =
+    formData.address.trim().length > 0 &&
+    Boolean(formData.city) &&
+    Boolean(selectedIndustryId) &&
+    Boolean(formData.profession);
   const isStep5Valid =
     consentData.consent_publish === true &&
     consentData.consent_identity === true;
@@ -159,6 +183,8 @@ export default function JobRequestCreate() {
       description: "",
       address: "",
       city: "",
+      industry: "",
+      profession: "",
     };
 
     if (currentStep === 1) {
@@ -211,10 +237,18 @@ export default function JobRequestCreate() {
       if (!formData.city) {
         errs.city = "Qyteti është i detyrueshëm.";
       }
+
+      if (!selectedIndustryId) {
+        errs.industry = "Kategoria kryesore është e detyrueshme.";
+      }
+
+      if (!formData.profession) {
+        errs.profession = "Specialiteti është i detyrueshëm.";
+      }
     }
 
     return errs;
-  }, [currentStep, contactData, formData]);
+  }, [currentStep, contactData, formData, selectedIndustryId]);
 
   // ------------------------------------------------------------
   // Initial load: profile + lookups + drafts
@@ -318,6 +352,18 @@ export default function JobRequestCreate() {
       city: profileCityRef.current,
     }));
   }, [cities, formData.city]);
+
+  useEffect(() => {
+    if (!formData.profession || !professions.length) return;
+
+    const profession = professions.find(
+      (p) => Number(p.id) === Number(formData.profession)
+    );
+
+    if (profession?.industry_detail?.id) {
+      setSelectedIndustryId(profession.industry_detail.id);
+    }
+  }, [formData.profession, professions]);
 
   
 
@@ -908,20 +954,47 @@ export default function JobRequestCreate() {
         )}
       </div>
 
-      {/* Profession (optional) */}
+      {/* Industry */}
+      <div>
+        <label className="block mb-1 font-medium">
+          Kategoria kryesore *
+        </label>
+        <SearchableSelect
+          options={industries}
+          value={selectedIndustryId || null}
+          onChange={(val) => {
+            setSelectedIndustryId(val);
+            updateField("profession", null);
+          }}
+          placeholder="Zgjidh kategorinë"
+        />
+        {stepErrors.industry && (
+          <p className="jr-help jr-help-error">
+            {stepErrors.industry}
+          </p>
+        )}
+      </div>
+
+      {/* Profession */}
       
       <div>
         <label className="block mb-1 font-medium">
-          Profesioni (opsionale)
+          Specialiteti *
         </label>
         <SearchableSelect
-          options={professions}
+          options={filteredProfessions}
           value={formData.profession || null}
           onChange={(val) => {
             updateField("profession", val);
           }}
-          placeholder="Zgjidh ose lëre bosh"
+          placeholder="Zgjidh specialitetin"
+          disabled={!selectedIndustryId}
         />
+        {stepErrors.profession && (
+          <p className="jr-help jr-help-error">
+            {stepErrors.profession}
+          </p>
+        )}
       </div>
 
       <div className="flex justify-between mt-4">
@@ -983,7 +1056,11 @@ export default function JobRequestCreate() {
           <strong>Qyteti:</strong> {selectedCity?.name || "—"}
         </p>
         <p>
-          <strong>Profesioni:</strong> {selectedProfession?.name || "—"}
+          <strong>Kategoria:</strong>{" "}
+          {selectedProfession?.industry_detail?.name || "—"}
+        </p>
+        <p>
+          <strong>Specialiteti:</strong> {selectedProfession?.name || "—"}
         </p>
         <p>
           <strong>Buxheti:</strong>{" "}

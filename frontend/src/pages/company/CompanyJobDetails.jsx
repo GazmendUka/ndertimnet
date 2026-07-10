@@ -111,6 +111,12 @@ export default function CompanyJobDetails() {
   // ------------------------------
   const leadUnlocked = job.lead_unlocked === true;
   const isClosed = !job.is_active;
+  const freeLeadsRemaining = Number(job.offers_left || 0);
+  const unlockLeadPriceLabel = freeLeadsRemaining > 0 ? "Gratis" : "4,95 €";
+  const unlockLeadHint =
+    freeLeadsRemaining > 0
+      ? `Ju keni ${freeLeadsRemaining} hapje falas të mbetura`
+      : "Hapja e këtij lead-i kushton 4,95 €";
 
   const formatBudget = (b) => (b ? `${b} €` : "Pa buxhet");
   const formatDate = (d) => new Date(d).toLocaleDateString("sv-SE");
@@ -130,7 +136,11 @@ export default function CompanyJobDetails() {
         job_request: jobId,
       });
 
-      toast.success("Lead u hap me sukses!");
+      toast.success(
+        res.data.used_free_lead
+          ? "Lead u hap falas!"
+          : "Lead u hap me sukses!"
+      );
 
       // 🔑 FORCE UI UPDATE
       setJob((prev) => ({
@@ -209,7 +219,10 @@ export default function CompanyJobDetails() {
 
             <p className="flex items-center gap-2">
               <Tag size={16} />
-              Kategoria: {job.profession_detail?.name || "—"}
+              Kategoria:{" "}
+              {job.profession_detail?.industry_detail?.name
+                ? `${job.profession_detail.industry_detail.name} / ${job.profession_detail.name}`
+                : job.profession_detail?.name || "—"}
             </p>
 
             <p className="text-xs text-gray-500 flex items-center gap-2">
@@ -254,11 +267,12 @@ export default function CompanyJobDetails() {
                         Duhet të hapni lead-in përpara se të krijoni ofertë.
                       </p>
                       <p className="text-sm mt-1">
-                        <span className="line-through text-gray-500">15 €</span>
-                        <span className="ml-2 font-semibold text-green-600">Gratis tani</span>
+                        <span className="font-semibold text-green-600">
+                          {unlockLeadPriceLabel}
+                        </span>
                       </p>
                       <p className="text-xs text-gray-500 mt-1">
-                        Ju keni <strong>{job.offers_left}</strong> hapje falas të mbetura
+                        {unlockLeadHint}
                       </p>
                     </div>
                   </div>
@@ -319,8 +333,12 @@ export default function CompanyJobDetails() {
                       </p>
 
                       <div className="mt-2 text-sm">
-                        <span className="line-through text-gray-500">15 €</span>
-                        <span className="ml-2 font-semibold text-green-600">Gratis tani</span>
+                        <span className="font-semibold text-green-600">
+                          {unlockLeadPriceLabel}
+                        </span>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {unlockLeadHint}
+                        </p>
                       </div>
 
                       <button
@@ -329,7 +347,11 @@ export default function CompanyJobDetails() {
                         className="mt-3 premium-btn btn-dark inline-flex items-center gap-2 disabled:opacity-50"
                       >
                         <Unlock size={16} />
-                        {unlocking ? "Po hapet..." : "Hap lead"}
+                        {unlocking
+                          ? "Po hapet..."
+                          : freeLeadsRemaining > 0
+                            ? "Hap lead falas"
+                            : "Blej lead"}
                       </button>
                     </div>
                   </div>

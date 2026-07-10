@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useCallback, useEffect, useState, useRef } from "react";
 import api from "../../api/axios";
 import { Send } from "lucide-react";
 
@@ -11,7 +11,7 @@ export default function LeadChat({ lead }) {
   // ------------------------------------------------------------
   // LOAD CHAT MESSAGES
   // ------------------------------------------------------------
-  async function fetchMessages() {
+  const fetchMessages = useCallback(async () => {
     if (!lead) return;
 
     try {
@@ -25,11 +25,11 @@ export default function LeadChat({ lead }) {
     } finally {
       setLoading(false);
     }
-  }
+  }, [lead]);
 
   useEffect(() => {
     fetchMessages();
-  }, [lead]);
+  }, [fetchMessages]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });

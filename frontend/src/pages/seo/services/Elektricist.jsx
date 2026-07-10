@@ -6,9 +6,6 @@ import {
   Zap,
   CheckCircle2,
   ShieldCheck,
-  Wrench,
-  Lightbulb,
-  ArrowRight,
   HelpCircle,
 } from "lucide-react";
 

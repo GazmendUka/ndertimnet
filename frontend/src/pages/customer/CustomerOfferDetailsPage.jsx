@@ -3,7 +3,7 @@
 // Customer marketplace offer details page
 // ==========================================================
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
@@ -114,7 +114,7 @@ export default function CustomerOfferDetailsPage() {
   const [error, setError] = useState("");
 
   const [messages, setMessages] = useState([]);
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     try {
       const res = await api.get(`offers/${id}/messages/`);
       setMessages(res.data || []);
@@ -123,7 +123,7 @@ export default function CustomerOfferDetailsPage() {
         console.error("Chat load error:", err);
       }
     }
-  };
+  }, [id]);
   const [messageInput, setMessageInput] = useState("");
 
   // const API_URL = process.env.REACT_APP_API_BASE_URL || "";
@@ -133,7 +133,7 @@ export default function CustomerOfferDetailsPage() {
   // Fetch offer
   // ==========================================================
 
-  const fetchOffer = async () => {
+  const fetchOffer = useCallback(async () => {
     try {
       setLoading(true);
       setError("");
@@ -167,19 +167,19 @@ export default function CustomerOfferDetailsPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id]);
 
   useEffect(() => {
     if (access && id) {
       fetchOffer();
     }
-  }, [access, id]);
+  }, [access, id, fetchOffer]);
 
   useEffect(() => {
     if (access && id && offer && !noOfferYet) {
       fetchMessages();
     }
-  }, [access, id, offer, noOfferYet]);
+  }, [access, id, offer, noOfferYet, fetchMessages]);
 
   // ==========================================================
   // Auto refresh chat
@@ -193,7 +193,7 @@ export default function CustomerOfferDetailsPage() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [id, noOfferYet]);
+  }, [id, noOfferYet, fetchMessages]);
 
 
   // ==========================================================
@@ -601,20 +601,20 @@ export default function CustomerOfferDetailsPage() {
 
             <button
               onClick={handleAccept}
-              disabled={!canDecide}
+              disabled={!canDecide || decisionLoading === "accept"}
               className="premium-btn bg-green-600 text-white w-full flex items-center justify-center gap-2"
             >
               <CheckCircle2 size={18} />
-              Prano ofertën
+              {decisionLoading === "accept" ? "Duke pranuar..." : "Prano ofertën"}
             </button>
 
             <button
               onClick={handleDecline}
-              disabled={!canDecide}
+              disabled={!canDecide || decisionLoading === "reject"}
               className="premium-btn bg-red-600 text-white w-full flex items-center justify-center gap-2"
             >
               <XCircle size={18} />
-              Refuzo ofertën
+              {decisionLoading === "reject" ? "Duke refuzuar..." : "Refuzo ofertën"}
             </button>
 
           </div>

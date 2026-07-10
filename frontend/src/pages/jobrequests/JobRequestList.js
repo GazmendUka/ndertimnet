@@ -235,8 +235,9 @@ export default function JobRequestList() {
 
                       <span className="flex items-center gap-1">
                         <Tag size={14} />
-                        {req.profession_detail?.name ||
-                          "Pa profesion"}
+                        {req.profession_detail?.industry_detail?.name
+                          ? `${req.profession_detail.industry_detail.name} / ${req.profession_detail.name}`
+                          : req.profession_detail?.name || "Pa profesion"}
                       </span>
                     </div>
 
@@ -291,5 +292,4 @@ export default function JobRequestList() {
     </div>
   );
 }
-
 

@@ -6,7 +6,6 @@ import {
   Paintbrush,
   CheckCircle2,
   ShieldCheck,
-  Sparkles,
   HelpCircle,
 } from "lucide-react";
 

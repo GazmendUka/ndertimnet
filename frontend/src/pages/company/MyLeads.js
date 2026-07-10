@@ -73,13 +73,6 @@ export default function MyLeads() {
 
   const getDate = (offer) => offer.created_at;
 
-  const sorters = {
-    newest: (a, b) => new Date(getDate(b)) - new Date(getDate(a)),
-    oldest: (a, b) => new Date(getDate(a)) - new Date(getDate(b)),
-    budget_high: (a, b) => (getBudget(b) || 0) - (getBudget(a) || 0),
-    budget_low: (a, b) => (getBudget(a) || 0) - (getBudget(b) || 0),
-  };
-
   // ============================================================
   // STATUS BADGE
   // ============================================================
@@ -124,6 +117,12 @@ export default function MyLeads() {
   // FILTER + SORT
   // ============================================================
   const sortedFiltered = useMemo(() => {
+    const sorters = {
+      newest: (a, b) => new Date(getDate(b)) - new Date(getDate(a)),
+      oldest: (a, b) => new Date(getDate(a)) - new Date(getDate(b)),
+      budget_high: (a, b) => (getBudget(b) || 0) - (getBudget(a) || 0),
+      budget_low: (a, b) => (getBudget(a) || 0) - (getBudget(b) || 0),
+    };
 
     let list = [...offers];
 

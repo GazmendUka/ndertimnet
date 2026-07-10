@@ -1,6 +1,6 @@
 // frontend/src/components/jobrequests/JobRequestForm.jsx
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 
 export default function JobRequestForm({
   mode = "create",
@@ -12,9 +12,29 @@ export default function JobRequestForm({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [budget, setBudget] = useState("");
+  const [industry, setIndustry] = useState("");
   const [profession, setProfession] = useState("");
 
   const [error, setError] = useState(null);
+  const industries = useMemo(() => {
+    const byId = new Map();
+
+    professions.forEach((p) => {
+      const item = p.industry_detail;
+      if (item?.id && !byId.has(item.id)) {
+        byId.set(item.id, item);
+      }
+    });
+
+    return Array.from(byId.values());
+  }, [professions]);
+
+  const filteredProfessions = useMemo(() => {
+    if (!industry) return [];
+    return professions.filter(
+      (p) => String(p.industry_detail?.id || "") === String(industry)
+    );
+  }, [industry, professions]);
 
   // Prefill on edit
   useEffect(() => {
@@ -30,6 +50,15 @@ export default function JobRequestForm({
     }
   }, [initialData]);
 
+  useEffect(() => {
+    if (!profession || !professions.length) return;
+
+    const selected = professions.find((p) => String(p.id) === String(profession));
+    if (selected?.industry_detail?.id) {
+      setIndustry(String(selected.industry_detail.id));
+    }
+  }, [profession, professions]);
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
@@ -41,8 +70,13 @@ export default function JobRequestForm({
       return;
     }
 
+    if (!industry) {
+      setError("Kategoria kryesore është e detyrueshme.");
+      return;
+    }
+
     if (!profession) {
-      setError("Profesioni është i detyrueshëm.");
+      setError("Specialiteti është i detyrueshëm.");
       return;
     }
 
@@ -107,19 +141,42 @@ export default function JobRequestForm({
         />
       </div>
 
+      {/* Industry */}
+      <div>
+        <label className="block text-sm font-medium mb-1">
+          Kategoria kryesore
+        </label>
+        <select
+          value={industry}
+          onChange={(e) => {
+            setIndustry(e.target.value);
+            setProfession("");
+          }}
+          className="w-full border rounded-lg px-3 py-2"
+          disabled={loading}
+        >
+          <option value="">Zgjidh kategorinë</option>
+          {industries.map((item) => (
+            <option key={item.id} value={item.id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+      </div>
+
       {/* Profession */}
       <div>
         <label className="block text-sm font-medium mb-1">
-          Profesioni
+          Specialiteti
         </label>
         <select
           value={profession}
           onChange={(e) => setProfession(e.target.value)}
           className="w-full border rounded-lg px-3 py-2"
-          disabled={loading}
+          disabled={loading || !industry}
         >
-          <option value="">Zgjidh profesionin</option>
-          {professions.map((p) => (
+          <option value="">Zgjidh specialitetin</option>
+          {filteredProfessions.map((p) => (
             <option key={p.id} value={p.id}>
               {p.name}
             </option>

@@ -6,7 +6,6 @@ import {
   Home,
   CheckCircle2,
   ShieldCheck,
-  Hammer,
   HelpCircle,
 } from "lucide-react";
 

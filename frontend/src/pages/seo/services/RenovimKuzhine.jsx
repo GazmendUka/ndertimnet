@@ -5,9 +5,6 @@ import { Helmet } from "react-helmet";
 import {
   ChefHat,
   CheckCircle2,
-  Sparkles,
-  Wrench,
-  ArrowRight,
   HelpCircle,
 } from "lucide-react";
 

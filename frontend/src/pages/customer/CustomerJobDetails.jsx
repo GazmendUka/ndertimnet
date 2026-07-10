@@ -5,7 +5,6 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
 
-import { isEmailNotVerifiedError } from "../../utils/emailVerification";
 import { toast } from "react-hot-toast";
 
 import { ArrowLeft, MapPin, Euro, Tag, Users, Clock } from "lucide-react";
@@ -23,9 +22,7 @@ export default function CustomerJobDetails() {
   const [loadingJob, setLoadingJob] = useState(true);
   const [loadingOffers, setLoadingOffers] = useState(true);
 
-  const [actionLoadingId, setActionLoadingId] = useState(null);
   const [error, setError] = useState("");
-  const [info, setInfo] = useState("");
 
   // ---------------- Helpers ----------------
   const formatBudget = (b) => (b ? `${b} €` : "Pa buxhet");
@@ -84,7 +81,7 @@ export default function CustomerJobDetails() {
       !hasOffers &&
       within48h
     );
-  }, [job, acceptedOffer]);
+  }, [job]);
 
   // ------------------------------------------------------------
   // Delete Jobrequest (All functionality in backend)
@@ -180,64 +177,6 @@ export default function CustomerJobDetails() {
     return <p className="text-center mt-10">🔄 Po ngarkohet kërkesa...</p>;
   if (error) return <p className="text-center text-red-500 mt-10">{error}</p>;
   if (!job) return <p className="text-center mt-10">Kërkesa nuk u gjet.</p>;
-
-  // ============================================================
-  // Update offer status (accept / decline) via backend actions
-  // ============================================================
-  async function handleUpdateOffer(offerId, newStatus) {
-    if (!job) return;
-
-    if (!isEmailVerified) {
-      toast.error("Ju lutem verifikoni email-in për të vazhduar.");
-      return;
-    }
-
-    try {
-      setActionLoadingId(offerId);
-      setInfo("");
-      setError("");
-
-      if (newStatus === "accepted") {
-        // 🔥 Använd vår custom action → sätter winner, arkiverar, loggar osv.
-        const res = await api.post(`jobrequests/${job.id}/accept-offer/`, {
-          offer_id: offerId,
-        });
-
-        // Backend returnerar uppdaterad JobRequest med matches
-        setJob(res.data);
-        setOffers(res.data.matches || []);
-        setInfo("Oferta u pranua dhe kërkesa u mbyll.");
-      } else if (newStatus === "declined") {
-        // Använd decline-offer-action för att få audit-loggar
-        await api.post(`jobrequests/${job.id}/decline-offer/`, {
-          offer_id: offerId,
-        });
-
-        setOffers((prev) =>
-          prev.map((o) =>
-            o.id === offerId ? { ...o, status: "declined" } : o
-          )
-        );
-        setInfo("Oferta u refuzua.");
-      }
-    } catch (err) {
-      console.error("Error updating offer:", err);
-
-      if (isEmailNotVerifiedError(err)) {
-        toast.error("Ju lutem verifikoni email-in për të vazhduar.");
-        return;
-      }
-      const backendMsg =
-        err.response?.data?.detail ||
-        err.response?.data?.message ||
-        err.response?.data?.error;
-
-      setError(backendMsg || "Gabim gjatë përditësimit të ofertës.");
-    } finally {
-      setActionLoadingId(null);
-    }
-  }
-
 
   // ============================================================
   // Delete jobrequest via backend actions
@@ -375,18 +314,11 @@ export default function CustomerJobDetails() {
           </div>
         </div>
 
-        {(info || error) && (
+        {error && (
           <div className="mt-4 space-y-2 w-full max-w-xl">
-            {info && (
-              <div className="bg-green-50 border border-green-200 text-green-800 text-sm px-3 py-2 rounded">
-                {info}
-              </div>
-            )}
-            {error && (
-              <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded">
-                {error}
-              </div>
-            )}
+            <div className="bg-red-50 border border-red-200 text-red-700 text-sm px-3 py-2 rounded">
+              {error}
+            </div>
           </div>
         )}
       </section>
@@ -413,7 +345,10 @@ export default function CustomerJobDetails() {
 
               <p className="flex items-center gap-2">
                 <Tag size={16} />
-                Kategoria: {job.profession_detail?.name || "—"}
+                Kategoria:{" "}
+                {job.profession_detail?.industry_detail?.name
+                  ? `${job.profession_detail.industry_detail.name} / ${job.profession_detail.name}`
+                  : job.profession_detail?.name || "—"}
               </p>
             </div>
           </div>
@@ -457,7 +392,6 @@ export default function CustomerJobDetails() {
             ) : (
               <div className="space-y-4">
                 {offers.map((offer) => {
-                  const isPending = offer.status === "signed";
                   const isAccepted = offer.status === "accepted";
                   const isDeclined = offer.status === "declined";
 

@@ -6,8 +6,6 @@ import {
   Bath,
   CheckCircle2,
   ShieldCheck,
-  Wrench,
-  Sparkles,
   HelpCircle,
 } from "lucide-react";
 

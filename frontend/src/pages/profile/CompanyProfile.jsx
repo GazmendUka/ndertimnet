@@ -1,6 +1,6 @@
 // src/pages/profile/CompanyProfile.jsx
 
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useMemo, useState, useRef } from "react";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
 import { Pencil } from "lucide-react";
@@ -162,6 +162,27 @@ export default function CompanyProfile() {
   const selectedProfessions = form?.professions
     ? professions.filter((p) => form.professions.includes(p.id))
     : [];
+  const groupedProfessions = useMemo(() => {
+    const groups = new Map();
+
+    professions.forEach((profession) => {
+      const industry = profession.industry_detail || {
+        id: "uncategorized",
+        name: "Të tjera",
+      };
+
+      if (!groups.has(industry.id)) {
+        groups.set(industry.id, {
+          industry,
+          professions: [],
+        });
+      }
+
+      groups.get(industry.id).professions.push(profession);
+    });
+
+    return Array.from(groups.values());
+  }, [professions]);
 
   // --------------------------------------------------
   // EDIT HANDLERS
@@ -540,26 +561,36 @@ export default function CompanyProfile() {
                     Zgjidh specialitetet që ofron kompania juaj
                   </p>
 
-                  <div className="flex flex-wrap gap-2">
-                    {professions.map((p) => {
-                      const isSelected = form?.professions?.includes(p.id);
+                  <div className="space-y-4">
+                    {groupedProfessions.map(({ industry, professions: items }) => (
+                      <div key={industry.id} className="space-y-2">
+                        <p className="text-sm font-semibold text-gray-900">
+                          {industry.name}
+                        </p>
 
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => toggleProfession(p.id)}
-                          className={`px-3 py-1.5 rounded-full text-sm font-medium 
-                          transition-transform duration-150 hover:scale-[1.02] active:scale-[0.97] ${
-                            isSelected
-                              ? "bg-gray-900 text-white shadow-sm"
-                              : "text-gray-700 hover:text-gray-900 hover:bg-gray-100"
-                          }`}
-                        >
-                          {p.name}
-                        </button>
-                      );
-                    })}
+                        <div className="flex flex-wrap gap-2">
+                          {items.map((p) => {
+                            const isSelected = form?.professions?.includes(p.id);
+
+                            return (
+                              <button
+                                key={p.id}
+                                type="button"
+                                onClick={() => toggleProfession(p.id)}
+                                className={`px-3 py-1.5 rounded-full text-sm font-medium 
+                                transition-transform duration-150 hover:scale-[1.02] active:scale-[0.97] ${
+                                  isSelected
+                                    ? "bg-gray-900 text-white shadow-sm"
+                                    : "text-gray-700 hover:text-gray-900 hover:bg-gray-100"
+                                }`}
+                              >
+                                {p.name}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </div>
               </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
@@ -83,7 +83,7 @@ export default function OfferDetails() {
   // CHAT
   // ===============================
 
-  const fetchMessages = async () => {
+  const fetchMessages = useCallback(async () => {
     try {
       const res = await api.get(`/offers/${id}/messages/`);
       setMessages(Array.isArray(res.data) ? res.data : []);
@@ -91,7 +91,7 @@ export default function OfferDetails() {
       console.error("Chat load error:", err);
       setMessages([]);
     }
-  };
+  }, [id]);
 
   const sendMessage = async () => {
     const trimmed = messageInput.trim();
@@ -185,7 +185,7 @@ export default function OfferDetails() {
     return () => {
       alive = false;
     };
-  }, [id, access]);
+  }, [id, access, fetchMessages]);
 
   // ===============================
   // CHAT POLLING
@@ -199,7 +199,7 @@ export default function OfferDetails() {
     }, 5000);
 
     return () => clearInterval(interval);
-  }, [id]);
+  }, [id, fetchMessages]);
 
   // ===============================
   // AUTO SCROLL CHAT
@@ -340,7 +340,9 @@ export default function OfferDetails() {
           </InfoRow>
 
           <InfoRow icon={<Tag size={16} />} label="Kërkohët">
-            {job?.profession_detail?.name || "Nuk specifikohet"}
+            {job?.profession_detail?.industry_detail?.name
+              ? `${job.profession_detail.industry_detail.name} / ${job.profession_detail.name}`
+              : job?.profession_detail?.name || "Nuk specifikohet"}
           </InfoRow>
 
           <InfoRow icon={<Euro size={16} />} label="Qmimi">
@@ -539,15 +541,6 @@ function InfoRow({ icon, label, children }) {
       <span className="text-gray-700">
         {label}: <b className="text-gray-900">{children}</b>
       </span>
-    </div>
-  );
-}
-
-function Section({ title, children }) {
-  return (
-    <div className="pt-4">
-      <h3 className="font-semibold mb-2">{title}</h3>
-      <p className="text-gray-700 whitespace-pre-line">{children}</p>
     </div>
   );
 }
