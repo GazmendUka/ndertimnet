@@ -7,6 +7,18 @@ import { Pencil } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 // import { getMediaUrl } from "../../utils/media";
 
+const INDUSTRY_SHORT_LABELS = {
+  "ndertim-dhe-renovim": "Bygg",
+  "pastrim-dhe-mirembajtje": "Städ",
+  "shperngulje-dhe-transport": "Flytt",
+  "kopsht-dhe-ambient-i-jashtem": "Trädgård",
+  "siguri-dhe-bravari": "Säkerhet",
+  "sherbime-prone-dhe-mirembajtje": "Service",
+};
+
+const getIndustryLabel = (industry) =>
+  INDUSTRY_SHORT_LABELS[industry?.slug] || industry?.name || "Të tjera";
+
 export default function CompanyProfile() {
   const { access, logout, user } = useAuth();
   const navigate = useNavigate();
@@ -588,22 +600,24 @@ export default function CompanyProfile() {
                     Zgjidh kategorinë kryesore
                   </p>
 
-                  <div className="flex flex-wrap gap-2">
-                    {industryOptions.map((industry) => (
-                      <button
-                        key={industry.id}
-                        type="button"
-                        onClick={() => setSelectedIndustryId(industry.id)}
-                        className={`px-3 py-1.5 rounded-full text-sm font-medium 
-                        transition-transform duration-150 hover:scale-[1.02] active:scale-[0.97] ${
-                          String(selectedIndustryId) === String(industry.id)
-                            ? "bg-gray-900 text-white shadow-sm"
-                            : "text-gray-700 hover:text-gray-900 hover:bg-gray-100"
-                        }`}
-                      >
-                        {industry.name}
-                      </button>
-                    ))}
+                  <div className="overflow-x-auto pb-1">
+                    <div className="inline-flex min-w-max items-center rounded-full bg-gray-100 p-1 border border-gray-200">
+                      {industryOptions.map((industry) => (
+                        <button
+                          key={industry.id}
+                          type="button"
+                          title={industry.name}
+                          onClick={() => setSelectedIndustryId(industry.id)}
+                          className={`px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${
+                            String(selectedIndustryId) === String(industry.id)
+                              ? "bg-white text-gray-900 shadow-sm"
+                              : "text-gray-500 hover:text-gray-700"
+                          }`}
+                        >
+                          {getIndustryLabel(industry)}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
 
