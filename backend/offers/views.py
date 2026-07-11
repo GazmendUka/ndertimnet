@@ -2,6 +2,7 @@
 
 from io import BytesIO
 
+from django.db import transaction
 from django.db.models import Q
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
@@ -15,7 +16,7 @@ from accounts.permissions_company_steps import IsCompanyStep2
 from jobrequests.models import JobRequest
 from payments.models import LeadAccess
 
-from .models import Offer, OfferVersion, OfferStatus
+from .models import Offer, OfferReview, OfferVersion, OfferStatus
 from .pdf_contract import build_offer_contract_pdf
 from .serializers import (
     OfferSerializer,
@@ -25,6 +26,7 @@ from .serializers import (
     OfferEarlyChatUnlockSerializer,
     OfferVersionSerializer,
     OfferMessageSerializer,
+    OfferReviewSerializer,
 )
 
 
@@ -493,27 +495,93 @@ class OfferViewSet(viewsets.ModelViewSet):
             serializer = OfferMessageSerializer(qs, many=True)
             return Response(serializer.data)
 
-        # POST → send message
         message_text = request.data.get("message")
-        if not message_text:
+        if not isinstance(message_text, str) or not message_text.strip():
             return Response({"detail": "Message is required"}, status=400)
+        message_text = message_text.strip()
 
-        if getattr(user, "role", None) == "company":
-            message = offer.messages.create(
-                sender_type="company",
-                sender_company=user.company_profile,
-                message=message_text,
-            )
+        # Lock the offer row so review submission and new messages cannot cross.
+        with transaction.atomic():
+            locked_offer = Offer.objects.select_for_update().get(pk=offer.pk)
+            if OfferReview.objects.filter(offer=locked_offer).exists():
+                return Response(
+                    {"detail": "Biseda është mbyllur pasi klienti ka lënë vlerësimin."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
 
-        elif getattr(user, "role", None) == "customer":
-            message = offer.messages.create(
-                sender_type="customer",
-                sender_customer=user.customer_profile,
-                message=message_text,
-            )
+            if getattr(user, "role", None) == "company":
+                message = locked_offer.messages.create(
+                    sender_type="company",
+                    sender_company=user.company_profile,
+                    message=message_text,
+                )
 
-        else:
-            return Response({"detail": "Invalid sender"}, status=403)
+            elif getattr(user, "role", None) == "customer":
+                message = locked_offer.messages.create(
+                    sender_type="customer",
+                    sender_customer=user.customer_profile,
+                    message=message_text,
+                )
+
+            else:
+                return Response({"detail": "Invalid sender"}, status=403)
 
         serializer = OfferMessageSerializer(message)
         return Response(serializer.data, status=201)
+
+    # --------------------------------------------------
+    # CUSTOMER REVIEW
+    # GET /api/offers/{id}/review/
+    # POST /api/offers/{id}/review/
+    # --------------------------------------------------
+    @action(detail=True, methods=["get", "post"], url_path="review")
+    def review(self, request, pk=None):
+        offer = self.get_object()
+
+        if request.method == "GET":
+            review = OfferReview.objects.filter(offer=offer).select_related(
+                "customer", "company"
+            ).first()
+            if not review:
+                return Response({"detail": "Vlerësimi nuk është dorëzuar ende."}, status=404)
+            return Response(OfferReviewSerializer(review, context={"request": request}).data)
+
+        if getattr(request.user, "role", None) != "customer":
+            return Response(
+                {"detail": "Vetëm klienti mund të lërë vlerësim."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if offer.job_request.customer_id != request.user.id:
+            return Response(
+                {"detail": "Kjo ofertë nuk është e juaja."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        if offer.status != OfferStatus.ACCEPTED:
+            return Response(
+                {"detail": "Mund të vlerësoni vetëm një ofertë të pranuar."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        serializer = OfferReviewSerializer(data=request.data, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+
+        # Serialise review creation with message sending. Once this transaction
+        # commits, no later message can be created for the offer.
+        with transaction.atomic():
+            locked_offer = Offer.objects.select_for_update().select_related("company").get(pk=offer.pk)
+            if OfferReview.objects.filter(offer=locked_offer).exists():
+                return Response(
+                    {"detail": "Vlerësimi për këtë punë është dorëzuar tashmë."},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            review = serializer.save(
+                offer=locked_offer,
+                customer=request.user,
+                company=locked_offer.company,
+            )
+        return Response(
+            OfferReviewSerializer(review, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )

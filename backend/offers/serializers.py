@@ -15,6 +15,8 @@ from .models import (
     OfferVersion,
     OfferSignature,
     OfferChatUnlock,
+    OfferMessage,
+    OfferReview,
     OfferStatus,
     UnlockType,
 )
@@ -47,6 +49,8 @@ class OfferSerializer(serializers.ModelSerializer):
     company = CompanySerializer(read_only=True)   # ⭐ FIX
     current_version = OfferVersionSerializer(read_only=True)
     job_request = JobRequestSerializer(read_only=True)
+    review = serializers.SerializerMethodField()
+    chat_locked = serializers.SerializerMethodField()
 
     class Meta:
         model = Offer
@@ -58,8 +62,20 @@ class OfferSerializer(serializers.ModelSerializer):
             "current_version",
             "created_at",
             "updated_at",
+            "review",
+            "chat_locked",
         ]
         read_only_fields = ["id", "status", "created_at", "updated_at"]
+
+    def get_review(self, obj):
+        try:
+            review = obj.review
+        except OfferReview.DoesNotExist:
+            return None
+        return OfferReviewSerializer(review, context=self.context).data
+
+    def get_chat_locked(self, obj):
+        return OfferReview.objects.filter(offer=obj).exists()
 
 
 # ======================================================
@@ -331,7 +347,53 @@ class OfferEarlyChatUnlockSerializer(serializers.Serializer):
 # CHAT MESSAGE SERIALIZER
 # ======================================================
 
-from .models import OfferMessage
+class OfferReviewSerializer(serializers.ModelSerializer):
+    company_name = serializers.CharField(source="company.company_name", read_only=True)
+    customer_name = serializers.SerializerMethodField()
+    image_url = serializers.SerializerMethodField()
+
+    class Meta:
+        model = OfferReview
+        fields = [
+            "id",
+            "rating",
+            "review_text",
+            "image",
+            "image_url",
+            "recommended",
+            "company_name",
+            "customer_name",
+            "created_at",
+        ]
+        read_only_fields = ["id", "image_url", "company_name", "customer_name", "created_at"]
+        extra_kwargs = {
+            "image": {"write_only": True, "required": False, "allow_null": True},
+        }
+
+    def get_customer_name(self, obj):
+        return f"{obj.customer.first_name} {obj.customer.last_name}".strip() or "Klient"
+
+    def get_image_url(self, obj):
+        if not obj.image:
+            return None
+        request = self.context.get("request")
+        return request.build_absolute_uri(obj.image.url) if request else obj.image.url
+
+    def validate_image(self, image):
+        if not image:
+            return image
+        if image.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("Image must be 5 MB or smaller.")
+        allowed_types = {"image/jpeg", "image/png", "image/webp"}
+        if getattr(image, "content_type", None) not in allowed_types:
+            raise serializers.ValidationError("Only JPEG, PNG and WebP images are allowed.")
+        return image
+
+    def validate_review_text(self, value):
+        value = value.strip()
+        if len(value) < 10:
+            raise serializers.ValidationError("Review must contain at least 10 characters.")
+        return value
 
 
 class OfferMessageSerializer(serializers.ModelSerializer):

@@ -16,6 +16,9 @@ import {
   Send,
   Loader2,
   RotateCcw,
+  Lock,
+  Star,
+  ThumbsUp,
 } from "lucide-react";
 
 import StatusBadge from "../../components/ui/StatusBadge";
@@ -128,7 +131,7 @@ export default function OfferDetails() {
 
   const sendMessage = async (content = messageInput, retryId = null) => {
     const trimmed = content.trim();
-    if (!trimmed || isSending) return;
+    if (!trimmed || isSending || offer?.chat_locked) return;
 
     const tempMessage = {
       id: `temp-${Date.now()}`,
@@ -273,6 +276,8 @@ export default function OfferDetails() {
 
   const job = offer?.job_request || null;
   const v = offer?.current_version || null;
+  const review = offer?.review || null;
+  const chatLocked = Boolean(offer?.chat_locked || review);
 
   const statusExplain = useMemo(() => {
     const s = offer?.status;
@@ -400,6 +405,33 @@ export default function OfferDetails() {
         </div>
       </div>
 
+      {/* CUSTOMER REVIEW */}
+
+      {review && (
+        <div className="premium-card overflow-hidden">
+          <div className="border-b border-gray-100 px-6 py-5">
+            <p className="text-label">Vlerësimi i klientit</p>
+            <h3 className="mt-1 text-lg font-semibold">Përvoja pas përfundimit të punës</h3>
+          </div>
+          <div className="p-6">
+            <div className="flex items-center gap-1" aria-label={`${review.rating} nga 5 yje`}>
+              {[1, 2, 3, 4, 5].map((star) => (
+                <Star key={star} size={21} className={star <= review.rating ? "fill-amber-400 text-amber-400" : "text-gray-200"} />
+              ))}
+            </div>
+            <p className="mt-4 whitespace-pre-line text-sm leading-7 text-gray-700">{review.review_text}</p>
+            {review.recommended && (
+              <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700">
+                <ThumbsUp size={14} /> Klienti rekomandon kompaninë tuaj
+              </span>
+            )}
+            {review.image_url && (
+              <img src={review.image_url} alt="Puna e përfunduar" className="mt-5 max-h-80 w-full rounded-2xl object-cover" />
+            )}
+          </div>
+        </div>
+      )}
+
       {/* CHAT */}
 
       <div className="premium-card overflow-hidden">
@@ -409,7 +441,7 @@ export default function OfferDetails() {
           </div>
           <div>
             <h3 className="font-semibold">Komunikimi me klientin</h3>
-            <p className="text-xs text-gray-500">Mesazhet rifreskohen automatikisht</p>
+            <p className="text-xs text-gray-500">{chatLocked ? "Biseda është mbyllur pas vlerësimit" : "Mesazhet rifreskohen automatikisht"}</p>
           </div>
         </div>
 
@@ -470,6 +502,15 @@ export default function OfferDetails() {
           <div ref={chatEndRef} />
         </div>
 
+        {chatLocked ? (
+          <div className="flex items-start gap-3 border-t border-gray-100 bg-gray-50 p-5 text-sm text-gray-600">
+            <Lock className="mt-0.5 shrink-0 text-gray-500" size={18} />
+            <div>
+              <p className="font-semibold text-gray-800">Biseda është mbyllur</p>
+              <p className="mt-1 text-xs leading-5">Klienti ka dorëzuar vlerësimin. Mesazhet e mëparshme mbeten të dukshme, por nuk mund të dërgohen mesazhe të reja.</p>
+            </div>
+          </div>
+        ) : (
         <div className="p-4 md:p-5 border-t border-gray-100 bg-white">
           <div className="flex items-end gap-3">
             <textarea
@@ -493,6 +534,7 @@ export default function OfferDetails() {
           </div>
           <p className="text-[11px] text-gray-400 mt-2">Enter për ta dërguar · Shift + Enter për rresht të ri</p>
         </div>
+        )}
       </div>
 
       {/* VERSION HISTORY */}

@@ -5,6 +5,7 @@ from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 import hashlib
+from django.core.validators import MaxValueValidator, MinValueValidator
 
 
 # =============================================================================
@@ -322,3 +323,59 @@ class OfferMessage(models.Model):
 
     def __str__(self):
         return f"OfferMessage offer={self.offer_id} ({self.sender_type})"
+
+
+# =============================================================================
+# CUSTOMER REVIEW
+# =============================================================================
+
+class OfferReview(models.Model):
+    offer = models.OneToOneField(
+        "offers.Offer",
+        on_delete=models.CASCADE,
+        related_name="review",
+    )
+    customer = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="offer_reviews",
+    )
+    company = models.ForeignKey(
+        "accounts.Company",
+        on_delete=models.CASCADE,
+        related_name="reviews",
+    )
+    rating = models.PositiveSmallIntegerField(
+        validators=[MinValueValidator(1), MaxValueValidator(5)],
+    )
+    review_text = models.TextField(max_length=2000)
+    image = models.ImageField(
+        upload_to="offer_reviews/%Y/%m/",
+        blank=True,
+        null=True,
+    )
+    recommended = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+        indexes = [
+            models.Index(fields=["company", "-created_at"]),
+            models.Index(fields=["company", "rating"]),
+        ]
+
+    def clean(self):
+        if self.offer_id:
+            if self.offer.status != OfferStatus.ACCEPTED:
+                raise ValidationError("Only accepted offers can be reviewed.")
+            if self.company_id != self.offer.company_id:
+                raise ValidationError("Review company must match the offer company.")
+            if self.customer_id != self.offer.job_request.customer_id:
+                raise ValidationError("Review customer must own the job request.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"Review offer={self.offer_id} ({self.rating}/5)"

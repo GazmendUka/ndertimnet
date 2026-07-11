@@ -13,11 +13,15 @@ import {
   Euro,
   FileText,
   Loader2,
+  Lock,
   Mail,
   MessageCircle,
+  ImagePlus,
   Phone,
   Send,
   ShieldCheck,
+  Star,
+  ThumbsUp,
   XCircle,
 } from "lucide-react";
 
@@ -180,6 +184,13 @@ export default function CustomerOfferDetailsPage() {
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [reviewRating, setReviewRating] = useState(0);
+  const [reviewHover, setReviewHover] = useState(0);
+  const [reviewText, setReviewText] = useState("");
+  const [reviewImage, setReviewImage] = useState(null);
+  const [recommended, setRecommended] = useState(false);
+  const [reviewLoading, setReviewLoading] = useState(false);
+  const [reviewError, setReviewError] = useState("");
 
   const fetchMessages = useCallback(async () => {
     try {
@@ -271,7 +282,7 @@ export default function CustomerOfferDetailsPage() {
   };
 
   const handleSendMessage = async () => {
-    if (!messageInput.trim() || sendingMessage) return;
+    if (!messageInput.trim() || sendingMessage || offer?.chat_locked) return;
 
     try {
       setSendingMessage(true);
@@ -285,6 +296,40 @@ export default function CustomerOfferDetailsPage() {
       alert("Mesazhi nuk u dërgua.");
     } finally {
       setSendingMessage(false);
+    }
+  };
+
+  const handleSubmitReview = async (event) => {
+    event.preventDefault();
+    setReviewError("");
+
+    if (!reviewRating) {
+      setReviewError("Ju lutemi zgjidhni nga 1 deri në 5 yje.");
+      return;
+    }
+    if (reviewText.trim().length < 10) {
+      setReviewError("Shkruani të paktën 10 karaktere për përvojën tuaj.");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("rating", reviewRating);
+    formData.append("review_text", reviewText.trim());
+    formData.append("recommended", recommended);
+    if (reviewImage) formData.append("image", reviewImage);
+
+    try {
+      setReviewLoading(true);
+      await api.post(`offers/${id}/review/`, formData, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      await fetchOffer();
+    } catch (err) {
+      const data = err.response?.data;
+      const detail = data?.detail || data?.review_text?.[0] || data?.image?.[0];
+      setReviewError(detail || "Vlerësimi nuk mund të dërgohej. Provoni përsëri.");
+    } finally {
+      setReviewLoading(false);
     }
   };
 
@@ -314,6 +359,8 @@ export default function CustomerOfferDetailsPage() {
   const statusMeta = getStatusMeta(offer?.status);
   const companyName = company?.company_name || "Kompani";
   const companyInitial = companyName.trim().charAt(0).toUpperCase() || "K";
+  const review = offer?.review || null;
+  const chatLocked = Boolean(offer?.chat_locked || review);
 
   if (!user) {
     return (
@@ -444,6 +491,123 @@ export default function CustomerOfferDetailsPage() {
             </button>
           </section>
 
+          {offer.status === "accepted" && (
+            <section className="premium-card overflow-hidden">
+              {review ? (
+                <div className="p-5 sm:p-7">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">
+                      <CheckCircle2 size={22} />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-label">Vlerësimi juaj</p>
+                      <h2 className="mt-1 text-xl font-semibold text-gray-900">Faleminderit për vlerësimin</h2>
+                      <div className="mt-3 flex items-center gap-1" aria-label={`${review.rating} nga 5 yje`}>
+                        {[1, 2, 3, 4, 5].map((star) => (
+                          <Star key={star} size={20} className={star <= review.rating ? "fill-amber-400 text-amber-400" : "text-gray-200"} />
+                        ))}
+                      </div>
+                      <p className="mt-4 whitespace-pre-line text-sm leading-7 text-gray-600">{review.review_text}</p>
+                      {review.recommended && (
+                        <span className="mt-4 inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1.5 text-xs font-semibold text-blue-700">
+                          <ThumbsUp size={14} /> Ju e rekomandoni këtë kompani
+                        </span>
+                      )}
+                      {review.image_url && (
+                        <img src={review.image_url} alt="Puna e përfunduar" className="mt-5 max-h-72 w-full rounded-2xl object-cover" />
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmitReview} className="p-5 sm:p-7">
+                  <p className="text-label">Puna e përfunduar</p>
+                  <h2 className="mt-1 text-xl font-semibold text-gray-900">Si ishte përvoja juaj?</h2>
+                  <p className="mt-2 text-sm leading-6 text-gray-500">
+                    Vlerësimi juaj ndihmon klientët e tjerë të zgjedhin kompaninë e duhur.
+                  </p>
+
+                  <fieldset className="mt-6">
+                    <legend className="text-sm font-semibold text-gray-800">Vlerësimi i përgjithshëm</legend>
+                    <div className="mt-2 flex gap-1">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          type="button"
+                          onMouseEnter={() => setReviewHover(star)}
+                          onMouseLeave={() => setReviewHover(0)}
+                          onFocus={() => setReviewHover(star)}
+                          onBlur={() => setReviewHover(0)}
+                          onClick={() => setReviewRating(star)}
+                          className="rounded-lg p-1 transition hover:scale-110 focus:outline-none focus:ring-2 focus:ring-amber-400"
+                          aria-label={`${star} yje`}
+                        >
+                          <Star
+                            size={32}
+                            className={star <= (reviewHover || reviewRating) ? "fill-amber-400 text-amber-400" : "text-gray-300"}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </fieldset>
+
+                  <label className="mt-5 block text-sm font-semibold text-gray-800" htmlFor="review-text">
+                    Recensioni juaj
+                  </label>
+                  <textarea
+                    id="review-text"
+                    rows={5}
+                    maxLength={2000}
+                    value={reviewText}
+                    onChange={(event) => setReviewText(event.target.value)}
+                    placeholder="Tregoni si shkoi puna, komunikimi dhe rezultati..."
+                    className="premium-input mt-2 resize-y"
+                  />
+                  <p className="mt-1 text-right text-xs text-gray-400">{reviewText.length}/2000</p>
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                    <label className="flex cursor-pointer items-center gap-3 rounded-2xl border border-dashed border-gray-300 p-4 text-sm text-gray-600 transition hover:border-gray-500 hover:bg-gray-50">
+                      <ImagePlus className="shrink-0 text-gray-500" size={21} />
+                      <span className="min-w-0 truncate">{reviewImage ? reviewImage.name : "Shto foto të punës (opsionale)"}</span>
+                      <input
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        className="sr-only"
+                        onChange={(event) => setReviewImage(event.target.files?.[0] || null)}
+                      />
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => setRecommended((value) => !value)}
+                      aria-pressed={recommended}
+                      className={`flex items-center gap-3 rounded-2xl border p-4 text-left text-sm font-medium transition ${
+                        recommended ? "border-blue-300 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-600 hover:bg-gray-50"
+                      }`}
+                    >
+                      <ThumbsUp size={21} className={recommended ? "fill-blue-600" : ""} />
+                      E rekomandoj këtë kompani
+                    </button>
+                  </div>
+
+                  <div className="mt-5 flex gap-3 rounded-2xl bg-amber-50 p-4 text-xs leading-5 text-amber-800">
+                    <Lock className="mt-0.5 shrink-0" size={16} />
+                    Pas dërgimit të vlerësimit, biseda mbyllet përgjithmonë për të dyja palët. Mesazhet e vjetra mbeten të dukshme.
+                  </div>
+
+                  {reviewError && <p className="mt-4 text-sm font-medium text-red-600">{reviewError}</p>}
+                  <button
+                    type="submit"
+                    disabled={reviewLoading}
+                    className="premium-btn btn-dark mt-5 w-full disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                  >
+                    {reviewLoading ? <Loader2 className="animate-spin" size={17} /> : <Star size={17} />}
+                    {reviewLoading ? "Duke dërguar..." : "Dërgo vlerësimin"}
+                  </button>
+                </form>
+              )}
+            </section>
+          )}
+
           <section className="premium-card overflow-hidden">
             <div className="border-b border-gray-100 p-5 sm:p-7">
               <div className="flex items-center gap-3">
@@ -452,7 +616,7 @@ export default function CustomerOfferDetailsPage() {
                 </div>
                 <div>
                   <h2 className="font-semibold text-gray-900">Komunikimi me kompaninë</h2>
-                  <p className="text-xs text-gray-500">Biseda për këtë ofertë</p>
+                  <p className="text-xs text-gray-500">{chatLocked ? "Biseda është mbyllur" : "Biseda për këtë ofertë"}</p>
                 </div>
               </div>
             </div>
@@ -492,6 +656,15 @@ export default function CustomerOfferDetailsPage() {
               )}
             </div>
 
+            {chatLocked ? (
+              <div className="flex items-start gap-3 border-t border-gray-100 bg-gray-50 p-4 text-sm text-gray-600 sm:p-5">
+                <Lock className="mt-0.5 shrink-0 text-gray-500" size={18} />
+                <div>
+                  <p className="font-semibold text-gray-800">Biseda është mbyllur</p>
+                  <p className="mt-1 text-xs leading-5">Vlerësimi është dorëzuar dhe nuk mund të dërgohen më mesazhe.</p>
+                </div>
+              </div>
+            ) : (
             <div className="flex gap-2 border-t border-gray-100 bg-white p-4 sm:p-5">
               <input
                 type="text"
@@ -513,6 +686,7 @@ export default function CustomerOfferDetailsPage() {
                 {sendingMessage ? <Loader2 className="animate-spin" size={17} /> : <Send size={17} />}
               </button>
             </div>
+            )}
           </section>
         </main>
 
