@@ -12,6 +12,9 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import PublicRoutes from "./routes/PublicRoutes";
 import CustomerRoutes from "./routes/CustomerRoutes";
 import CompanyRoutes from "./routes/CompanyRoutes";
+import PrivateRoute from "./components/PrivateRoute";
+import Layout from "./components/layout/Layout";
+import PublicCompanyProfile from "./pages/company/PublicCompanyProfile";
 
 function ScrollToTop() {
   const { pathname, search, hash } = useLocation();
@@ -48,6 +51,12 @@ function App() {
 
             {/* COMPANY */}
             <Route path="/company/*" element={<CompanyRoutes />} />
+
+            <Route element={<PrivateRoute roles={["customer", "company", "admin"]} />}>
+              <Route element={<Layout />}>
+                <Route path="/companies/:companyId" element={<PublicCompanyProfile />} />
+              </Route>
+            </Route>
 
             {/* FALLBACK */}
             <Route

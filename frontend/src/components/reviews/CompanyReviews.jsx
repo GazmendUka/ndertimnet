@@ -25,7 +25,6 @@ export default function CompanyReviews({ companyId, initialLimit = 3, showAll = 
       try {
         const response = await api.get(`/accounts/companies/${companyId}/reviews/`, {
           params: { page, page_size: showAll ? 10 : initialLimit },
-          skipAuth: true,
         });
         if (!active) return;
         setReviews((current) => page === 1 ? response.data.results : [...current, ...response.data.results]);

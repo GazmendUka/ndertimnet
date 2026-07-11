@@ -16,7 +16,7 @@ export default function PublicCompanyProfile() {
     let active = true;
     async function loadCompany() {
       try {
-        const response = await api.get(`/accounts/companies/${companyId}/public/`, { skipAuth: true });
+        const response = await api.get(`/accounts/companies/${companyId}/public/`);
         if (active) setCompany(response.data);
       } catch (requestError) {
         if (active) setError("Kompania nuk u gjet ose profili nuk është publik.");

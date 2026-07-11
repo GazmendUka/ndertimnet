@@ -17,7 +17,6 @@ import AuthRedirect from "../auth/AuthRedirect";
 import ForgotPassword from "../pages/auth/ForgotPassword";
 import ResetPassword from "../pages/auth/ResetPassword";
 import PublicOnlyRoute from "../auth/PublicOnlyRoute";
-import PublicCompanyProfile from "../pages/company/PublicCompanyProfile";
 
 /* ================= CITY SEO ================= */
 import NdertimPrishtine from "../pages/seo/NdertimPrishtine";
@@ -59,7 +58,6 @@ export default function PublicRoutes() {
         <Route path="/perditesime/:slug" element={<PerditesimDetailPage />} />
         <Route path="/updates" element={<Navigate to="/perditesime" replace />} />
         <Route path="/updates/:slug" element={<LegacyUpdateRedirect />} />
-        <Route path="/companies/:companyId" element={<PublicCompanyProfile />} />
 
         {/* ================= CITY PAGES ================= */}
         <Route path="/ndertim/prishtine" element={<NdertimPrishtine />} />

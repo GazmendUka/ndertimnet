@@ -69,8 +69,24 @@ def error(message, code=400):
     }, status=code)
 
 
+def can_view_company_profile(user, company):
+    if not user or not user.is_authenticated:
+        return False
+    if user.is_staff or getattr(user, "role", None) == "admin":
+        return True
+    if getattr(user, "role", None) == "company":
+        return getattr(user, "company_profile", None) == company
+    if getattr(user, "role", None) == "customer":
+        from offers.models import Offer
+        return Offer.objects.filter(
+            company=company,
+            job_request__customer=user,
+        ).exists()
+    return False
+
+
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def public_company_profile(request, company_id):
     company = get_object_or_404(
         Company.objects.prefetch_related("professions", "cities"),
@@ -78,11 +94,13 @@ def public_company_profile(request, company_id):
         is_active=True,
         archived_at__isnull=True,
     )
+    if not can_view_company_profile(request.user, company):
+        return Response({"detail": "Nuk keni qasje në profilin e kësaj kompanie."}, status=403)
     return Response(PublicCompanySerializer(company, context={"request": request}).data)
 
 
 @api_view(["GET"])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])
 def public_company_reviews(request, company_id):
     from offers.models import OfferReview
     from offers.serializers import OfferReviewSerializer
@@ -93,6 +111,8 @@ def public_company_reviews(request, company_id):
         is_active=True,
         archived_at__isnull=True,
     )
+    if not can_view_company_profile(request.user, company):
+        return Response({"detail": "Nuk keni qasje në vlerësimet e kësaj kompanie."}, status=403)
     try:
         page = max(int(request.query_params.get("page", 1)), 1)
         page_size = min(max(int(request.query_params.get("page_size", 10)), 1), 50)

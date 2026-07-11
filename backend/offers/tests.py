@@ -131,6 +131,7 @@ class OfferReviewApiTests(APITestCase):
             recommended=True,
         )
 
+        self.client.force_authenticate(self.customer_user)
         response = self.client.get(f"/api/accounts/companies/{self.company.id}/public/")
 
         self.assertEqual(response.status_code, 200)
@@ -149,6 +150,7 @@ class OfferReviewApiTests(APITestCase):
             moderation_status=OfferReview.ModerationStatus.HIDDEN,
         )
 
+        self.client.force_authenticate(self.customer_user)
         response = self.client.get(f"/api/accounts/companies/{self.company.id}/reviews/")
         profile = self.client.get(f"/api/accounts/companies/{self.company.id}/public/")
 
@@ -170,7 +172,39 @@ class OfferReviewApiTests(APITestCase):
             recommended=True,
         )
 
+        self.client.force_authenticate(self.customer_user)
         response = self.client.get(f"/api/accounts/companies/{self.company.id}/reviews/")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.data["results"][0]["customer_name"], "Anna A.")
+
+    def test_company_profile_requires_offer_relationship(self):
+        stranger = User.objects.create_user(
+            email="stranger@example.com",
+            password="test-pass",
+            role="customer",
+        )
+        Customer.objects.create(user=stranger)
+
+        unauthenticated = self.client.get(
+            f"/api/accounts/companies/{self.company.id}/public/"
+        )
+        self.assertEqual(unauthenticated.status_code, 401)
+
+        self.client.force_authenticate(stranger)
+        forbidden_profile = self.client.get(
+            f"/api/accounts/companies/{self.company.id}/public/"
+        )
+        forbidden_reviews = self.client.get(
+            f"/api/accounts/companies/{self.company.id}/reviews/"
+        )
+
+        self.assertEqual(forbidden_profile.status_code, 403)
+        self.assertEqual(forbidden_reviews.status_code, 403)
+
+    def test_company_can_view_its_own_profile(self):
+        self.client.force_authenticate(self.company_user)
+        response = self.client.get(
+            f"/api/accounts/companies/{self.company.id}/public/"
+        )
+        self.assertEqual(response.status_code, 200)
