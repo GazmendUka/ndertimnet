@@ -34,6 +34,7 @@ from .utils.email_verification import (
 from .emails import (
     send_verification_email,
     send_password_reset_email,
+    send_welcome_email,
 )
 
 User = get_user_model()
@@ -194,6 +195,14 @@ class VerifyEmailView(APIView):
         user.email_verified = True
         user.email_verified_at = timezone.now()
         user.save(update_fields=["email_verified", "email_verified_at", "is_active"])
+
+        if not reactivated and not user.welcome_email_sent_at:
+            try:
+                send_welcome_email(user)
+                user.welcome_email_sent_at = timezone.now()
+                user.save(update_fields=["welcome_email_sent_at"])
+            except Exception as exc:
+                print("WELCOME EMAIL ERROR:", str(exc))
 
         if reactivated:
             return Response(
