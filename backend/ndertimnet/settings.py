@@ -344,6 +344,7 @@ if ENVIRONMENT == "production":
 CRONJOBS = [
     ("0 2 * * *", "django.core.management.call_command", ["cleanup_expired_jobs"]),
     ("30 2 * * *", "django.core.management.call_command", ["check_reopen_jobs"]),
+    ("0 9 * * *", "django.core.management.call_command", ["send_profile_completion_reminders"]),
 ]
 CRONTAB_COMMAND_PREFIX = os.environ.get("CRONTAB_COMMAND_PREFIX", "")
 CRONTAB_COMMAND_SUFFIX = os.environ.get("CRONTAB_COMMAND_SUFFIX", "")
@@ -375,6 +376,11 @@ EMAIL_VERIFICATION_TOKEN_TTL_HOURS = int(os.environ.get("EMAIL_VERIFICATION_TOKE
 FRONTEND_VERIFY_EMAIL_URL = os.environ.get(
     "FRONTEND_VERIFY_EMAIL_URL",
     "http://localhost:3000/verify-email/{token}",
+)
+
+FRONTEND_LOGIN_URL = os.environ.get(
+    "FRONTEND_LOGIN_URL",
+    f"{FRONTEND_URL}/login",
 )
 
 
