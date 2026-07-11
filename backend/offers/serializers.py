@@ -361,17 +361,22 @@ class OfferReviewSerializer(serializers.ModelSerializer):
             "image",
             "image_url",
             "recommended",
+            "moderation_status",
             "company_name",
             "customer_name",
             "created_at",
         ]
-        read_only_fields = ["id", "image_url", "company_name", "customer_name", "created_at"]
+        read_only_fields = ["id", "image_url", "moderation_status", "company_name", "customer_name", "created_at"]
         extra_kwargs = {
             "image": {"write_only": True, "required": False, "allow_null": True},
         }
 
     def get_customer_name(self, obj):
-        return f"{obj.customer.first_name} {obj.customer.last_name}".strip() or "Klient"
+        first_name = (obj.customer.first_name or "").strip()
+        last_name = (obj.customer.last_name or "").strip()
+        if first_name and last_name:
+            return f"{first_name} {last_name[0].upper()}."
+        return first_name or "Klient i verifikuar"
 
     def get_image_url(self, obj):
         if not obj.image:

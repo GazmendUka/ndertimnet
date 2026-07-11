@@ -330,6 +330,11 @@ class OfferMessage(models.Model):
 # =============================================================================
 
 class OfferReview(models.Model):
+    class ModerationStatus(models.TextChoices):
+        PUBLISHED = "published", "Published"
+        PENDING = "pending", "Pending review"
+        HIDDEN = "hidden", "Hidden"
+
     offer = models.OneToOneField(
         "offers.Offer",
         on_delete=models.CASCADE,
@@ -355,6 +360,12 @@ class OfferReview(models.Model):
         null=True,
     )
     recommended = models.BooleanField(default=False)
+    moderation_status = models.CharField(
+        max_length=20,
+        choices=ModerationStatus.choices,
+        default=ModerationStatus.PUBLISHED,
+        db_index=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -362,6 +373,7 @@ class OfferReview(models.Model):
         indexes = [
             models.Index(fields=["company", "-created_at"]),
             models.Index(fields=["company", "rating"]),
+            models.Index(fields=["company", "moderation_status", "-created_at"]),
         ]
 
     def clean(self):

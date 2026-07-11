@@ -11,6 +11,7 @@ from django.utils.encoding import force_bytes, force_str
 from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
+from django.shortcuts import get_object_or_404
 
 from rest_framework import viewsets, status, generics
 from rest_framework.decorators import (
@@ -47,6 +48,7 @@ from .serializers import (
     RegisterCustomerSerializer,
     CustomerProfileSerializer,
     CustomerConsentSerializer,
+    PublicCompanySerializer,
 )
 
 # ======================================================
@@ -65,6 +67,53 @@ def error(message, code=400):
         "success": False,
         "message": message
     }, status=code)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def public_company_profile(request, company_id):
+    company = get_object_or_404(
+        Company.objects.prefetch_related("professions", "cities"),
+        pk=company_id,
+        is_active=True,
+        archived_at__isnull=True,
+    )
+    return Response(PublicCompanySerializer(company, context={"request": request}).data)
+
+
+@api_view(["GET"])
+@permission_classes([AllowAny])
+def public_company_reviews(request, company_id):
+    from offers.models import OfferReview
+    from offers.serializers import OfferReviewSerializer
+
+    company = get_object_or_404(
+        Company,
+        pk=company_id,
+        is_active=True,
+        archived_at__isnull=True,
+    )
+    try:
+        page = max(int(request.query_params.get("page", 1)), 1)
+        page_size = min(max(int(request.query_params.get("page_size", 10)), 1), 50)
+    except (TypeError, ValueError):
+        return Response({"detail": "Invalid pagination parameters."}, status=400)
+
+    reviews = OfferReview.objects.filter(
+        company=company,
+        moderation_status=OfferReview.ModerationStatus.PUBLISHED,
+    ).select_related("company", "customer")
+    total = reviews.count()
+    start = (page - 1) * page_size
+    items = reviews[start:start + page_size]
+
+    return Response({
+        "count": total,
+        "page": page,
+        "page_size": page_size,
+        "has_next": start + page_size < total,
+        "results": OfferReviewSerializer(items, many=True, context={"request": request}).data,
+    })
 
 
 

@@ -18,6 +18,8 @@ from .views import (
     ForgotPasswordView,          
     ResetPasswordConfirmView,
     DeleteAccountView,
+    public_company_profile,
+    public_company_reviews,
 )
 
 
@@ -37,6 +39,8 @@ urlpatterns = [
 
     path("profile/customer/", customer_profile, name="customer-profile"),
     path("profile/company/", company_profile, name="company-profile"),
+    path("companies/<int:company_id>/public/", public_company_profile, name="public-company-profile"),
+    path("companies/<int:company_id>/reviews/", public_company_reviews, name="public-company-reviews"),
 
     # 🔐 JobRequest steg 5 – Consent
     path("customer-consent/", CustomerConsentView.as_view(), name="customer-consent"),
@@ -50,4 +54,3 @@ urlpatterns = [
     path("password/forgot/", ForgotPasswordView.as_view(), name="forgot-password"),
     path("password/reset/", ResetPasswordConfirmView.as_view(), name="reset-password"),
 ]
-

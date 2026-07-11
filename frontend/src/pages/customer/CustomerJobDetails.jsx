@@ -10,6 +10,7 @@ import { toast } from "react-hot-toast";
 import { ArrowLeft, MapPin, Euro, Tag, Users, Clock } from "lucide-react";
 import StatusBadge from "../../components/ui/StatusBadge";
 import DeleteModal from "../../components/ui/DeleteModal";
+import CompanyRatingSummary from "../../components/reviews/CompanyRatingSummary";
 
 export default function CustomerJobDetails() {
   const { id } = useParams();
@@ -417,6 +418,9 @@ export default function CustomerJobDetails() {
                           <h3 className="font-semibold text-gray-900">
                             {offer.company?.company_name || "Kompani"}
                           </h3>
+                          <div className="mt-1">
+                            <CompanyRatingSummary summary={offer.company?.rating_summary} compact />
+                          </div>
                           <p className="text-xs text-gray-500">
                             Dërguar më: {formatDateTime(offer.created_at)}
                           </p>

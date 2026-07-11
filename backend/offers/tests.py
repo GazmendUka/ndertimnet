@@ -5,7 +5,7 @@ from accounts.models import Company, Customer
 from jobrequests.models import JobRequest
 from locations.models import City
 
-from .models import Offer, OfferMessage, OfferStatus, OfferVersion
+from .models import Offer, OfferMessage, OfferReview, OfferStatus, OfferVersion
 
 
 User = get_user_model()
@@ -120,3 +120,57 @@ class OfferReviewApiTests(APITestCase):
             format="multipart",
         )
         self.assertEqual(response.status_code, 403)
+
+    def test_public_company_profile_includes_rating_summary(self):
+        OfferReview.objects.create(
+            offer=self.offer,
+            company=self.company,
+            customer=self.customer_user,
+            rating=5,
+            review_text="Excellent work and clear communication.",
+            recommended=True,
+        )
+
+        response = self.client.get(f"/api/accounts/companies/{self.company.id}/public/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["rating_summary"]["average"], 5.0)
+        self.assertEqual(response.data["rating_summary"]["count"], 1)
+        self.assertEqual(response.data["rating_summary"]["recommended_percentage"], 100)
+
+    def test_hidden_reviews_are_excluded_from_public_results(self):
+        review = OfferReview.objects.create(
+            offer=self.offer,
+            company=self.company,
+            customer=self.customer_user,
+            rating=2,
+            review_text="This review is hidden by moderation.",
+            recommended=False,
+            moderation_status=OfferReview.ModerationStatus.HIDDEN,
+        )
+
+        response = self.client.get(f"/api/accounts/companies/{self.company.id}/reviews/")
+        profile = self.client.get(f"/api/accounts/companies/{self.company.id}/public/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 0)
+        self.assertEqual(profile.data["rating_summary"]["count"], 0)
+        self.assertEqual(review.moderation_status, OfferReview.ModerationStatus.HIDDEN)
+
+    def test_public_review_anonymizes_customer_last_name(self):
+        self.customer_user.first_name = "Anna"
+        self.customer_user.last_name = "Andersson"
+        self.customer_user.save(update_fields=["first_name", "last_name"])
+        OfferReview.objects.create(
+            offer=self.offer,
+            company=self.company,
+            customer=self.customer_user,
+            rating=4,
+            review_text="Good work and a professional result.",
+            recommended=True,
+        )
+
+        response = self.client.get(f"/api/accounts/companies/{self.company.id}/reviews/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["results"][0]["customer_name"], "Anna A.")

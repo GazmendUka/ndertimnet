@@ -10,6 +10,8 @@ import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
 import { Clock4, CheckCircle2, XCircle } from "lucide-react";
 import StatusBadge from "../../components/ui/StatusBadge";
+import CompanyRatingSummary from "../../components/reviews/CompanyRatingSummary";
+import CompanyReviews from "../../components/reviews/CompanyReviews";
 
 export default function CompanyDashboard() {
   const { user, isCompany, access } = useAuth();
@@ -146,6 +148,30 @@ export default function CompanyDashboard() {
       <Header user={user} stats={stats} newLeads={newLeads.length} />
 
       {newLeads.length > 0 && <NewLeadNotification count={newLeads.length} />}
+
+      {company && (
+        <section className="mt-8 premium-section">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-label">Reputacioni juaj</p>
+              <h2 className="mt-1 text-xl font-semibold text-gray-900">Vlerësimet e klientëve</h2>
+            </div>
+            <Link to={`/companies/${company.id}`} className="premium-btn btn-light w-fit">Shiko profilin publik</Link>
+          </div>
+          <div className="mt-6 grid gap-6 lg:grid-cols-[320px_minmax(0,1fr)] lg:items-start">
+            <div className="premium-card p-6">
+              <CompanyRatingSummary summary={company.rating_summary} />
+            </div>
+            <div>
+              <CompanyReviews
+                companyId={company.id}
+                initialLimit={3}
+                emptyMessage="Vlerësimet do të shfaqen këtu sapo një klient të përfundojë një punë të pranuar dhe të ndajë përvojën e tij."
+              />
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="mt-8">
         <LatestOffers offers={leads} loading={loading} />

@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
+import CompanyRatingSummary from "../../components/reviews/CompanyRatingSummary";
 
 import {
   ArrowLeft,
@@ -428,6 +429,15 @@ export default function CustomerOfferDetailsPage() {
                 <div>
                   <p className="text-xs text-gray-400">Dërguar nga</p>
                   <p className="font-semibold">{companyName}</p>
+                  {company?.id && (
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/companies/${company.id}`)}
+                      className="mt-1 text-left hover:opacity-80"
+                    >
+                      <CompanyRatingSummary summary={company.rating_summary} compact inverse />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>

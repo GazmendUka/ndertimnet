@@ -1,6 +1,7 @@
 # backend/accounts/serializers.py
 
 from rest_framework import serializers
+from django.db.models import Avg, Count, Q
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .models import EmailVerificationToken
@@ -60,6 +61,7 @@ class CompanySerializer(serializers.ModelSerializer):
     profile_completion = serializers.SerializerMethodField()
     logo = serializers.ImageField(required=False, allow_null=True)
     logo_url = serializers.SerializerMethodField()
+    rating_summary = serializers.SerializerMethodField()
 
     professions = serializers.PrimaryKeyRelatedField(
         queryset=Profession.objects.filter(is_active=True),
@@ -115,6 +117,7 @@ class CompanySerializer(serializers.ModelSerializer):
             "can_access_marketplace",
             "missing_requirements",
             "recommended_improvements",
+            "rating_summary",
         ]
 
     def to_internal_value(self, data):
@@ -132,10 +135,40 @@ class CompanySerializer(serializers.ModelSerializer):
         if not obj.logo:
             return None
         try:
-            return obj.logo.url
-        except Exception as e:
-            print("LOGO ERROR:", e)
+            request = self.context.get("request")
+            return request.build_absolute_uri(obj.logo.url) if request else obj.logo.url
+        except (ValueError, OSError):
             return None
+
+    def get_rating_summary(self, obj):
+        from offers.models import OfferReview
+
+        cache = self.context.setdefault("_rating_summary_cache", {})
+        if obj.pk in cache:
+            return cache[obj.pk]
+
+        reviews = obj.reviews.filter(
+            moderation_status=OfferReview.ModerationStatus.PUBLISHED,
+        )
+        summary = reviews.aggregate(
+            average=Avg("rating"),
+            count=Count("id"),
+            recommended_count=Count("id", filter=Q(recommended=True)),
+            **{
+                f"star_{star}": Count("id", filter=Q(rating=star))
+                for star in range(1, 6)
+            },
+        )
+        count = summary["count"] or 0
+        recommended_count = summary["recommended_count"] or 0
+        result = {
+            "average": round(float(summary["average"]), 1) if summary["average"] is not None else None,
+            "count": count,
+            "recommended_percentage": round((recommended_count / count) * 100) if count else None,
+            "distribution": {str(star): summary[f"star_{star}"] or 0 for star in range(5, 0, -1)},
+        }
+        cache[obj.pk] = result
+        return result
 
     def get_profile_step(self, obj):
         return get_company_profile_step(obj)
@@ -178,6 +211,38 @@ class CompanySerializer(serializers.ModelSerializer):
         instance.save(update_fields=["profile_step"])
 
         return instance
+
+
+class PublicCompanySerializer(serializers.ModelSerializer):
+    """Public company data only; excludes contact and onboarding documents."""
+
+    logo_url = serializers.SerializerMethodField()
+    rating_summary = serializers.SerializerMethodField()
+    city = CitySerializer(read_only=True)
+    cities_detail = CitySerializer(source="cities", many=True, read_only=True)
+    professions_detail = ProfessionSerializer(source="professions", many=True, read_only=True)
+
+    class Meta:
+        model = Company
+        fields = [
+            "id",
+            "company_name",
+            "description",
+            "website",
+            "logo_url",
+            "city",
+            "cities_detail",
+            "professions_detail",
+            "is_verified",
+            "created_at",
+            "rating_summary",
+        ]
+
+    def get_logo_url(self, obj):
+        return CompanySerializer(context=self.context).get_logo_url(obj)
+
+    def get_rating_summary(self, obj):
+        return CompanySerializer(context=self.context).get_rating_summary(obj)
 
 
 # 🏢 RegisterCompanySerializer (KONTO-REGISTRERING)
