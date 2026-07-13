@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import JobRequest, JobRequestAudit, JobRequestDraft
+from .models import JobRequest, JobRequestAudit, JobRequestDraft, JobRequestModerationEvent
 from accounts.serializers import BasicCustomerSerializer, CompanySerializer
 
 from locations.serializers import CitySerializer
@@ -52,6 +52,12 @@ class JobRequestAuditSerializer(serializers.ModelSerializer):
         fields = ["id", "action", "message", "company", "created_at"]
 
 
+class JobRequestModerationEventSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = JobRequestModerationEvent
+        fields = ["id", "status", "note", "created_at"]
+
+
 # ------------------------------------------------------------
 # 🧾 JOB REQUEST LIST SERIALIZER (COMPANY)
 # ------------------------------------------------------------
@@ -59,6 +65,7 @@ class JobRequestAuditSerializer(serializers.ModelSerializer):
 class JobRequestListSerializer(serializers.ModelSerializer):
     has_offer = serializers.SerializerMethodField()
     customer = serializers.SerializerMethodField()
+    moderation_note = serializers.SerializerMethodField()
 
     city_detail = CitySerializer(source="city", read_only=True)
     profession_detail = ProfessionSerializer(source="profession", read_only=True)
@@ -75,6 +82,10 @@ class JobRequestListSerializer(serializers.ModelSerializer):
             "profession_detail",
             "customer",
             "has_offer",
+            "moderation_status",
+            "moderation_note",
+            "submitted_at",
+            "published_at",
         ]
 
     def _get_company(self):
@@ -100,6 +111,13 @@ class JobRequestListSerializer(serializers.ModelSerializer):
 
         return {"id": obj.customer_id}
 
+    def get_moderation_note(self, obj):
+        request = self.context.get("request")
+        user = getattr(request, "user", None)
+        if user and (user.is_superuser or obj.customer_id == user.id):
+            return obj.moderation_note
+        return ""
+
 
 # ------------------------------------------------------------
 # 🏗️ JOB REQUEST SERIALIZER (MAIN)
@@ -120,6 +138,8 @@ class JobRequestSerializer(serializers.ModelSerializer):
     offers = serializers.SerializerMethodField()
     winner_offer = serializers.SerializerMethodField()
     winner = serializers.SerializerMethodField()
+    moderation_events = serializers.SerializerMethodField()
+    moderation_note = serializers.SerializerMethodField()
 
     city = serializers.PrimaryKeyRelatedField(queryset=City.objects.all(), write_only=True)
     profession = serializers.PrimaryKeyRelatedField(queryset=Profession.objects.all(), write_only=True)
@@ -156,6 +176,12 @@ class JobRequestSerializer(serializers.ModelSerializer):
             "winner_offer",
             "audit_logs",
             "winner",
+            "moderation_status",
+            "moderation_note",
+            "submitted_at",
+            "moderation_updated_at",
+            "published_at",
+            "moderation_events",
         ]
 
         read_only_fields = (
@@ -164,6 +190,12 @@ class JobRequestSerializer(serializers.ModelSerializer):
             "last_offer_at",
             "reopened_at",
             "updated_at",
+            "is_active",
+            "moderation_status",
+            "moderation_note",
+            "submitted_at",
+            "moderation_updated_at",
+            "published_at",
         )
 
     def _get_request_user(self):
@@ -229,6 +261,18 @@ class JobRequestSerializer(serializers.ModelSerializer):
             ).data
 
         return []
+
+    def get_moderation_events(self, obj):
+        user = self._get_request_user()
+        if not user or (getattr(user, "role", None) != "customer" and not user.is_superuser):
+            return []
+        return JobRequestModerationEventSerializer(obj.moderation_events.all(), many=True).data
+
+    def get_moderation_note(self, obj):
+        user = self._get_request_user()
+        if user and (user.is_superuser or obj.customer_id == user.id):
+            return obj.moderation_note
+        return ""
 
     def get_offers_left(self, obj):
         company = self._get_company()
@@ -340,6 +384,11 @@ class JobRequestSerializer(serializers.ModelSerializer):
 
         # FK till USER (inte profile!)
         validated_data["customer"] = user
+        validated_data["moderation_status"] = JobRequest.MODERATION_PENDING
+        validated_data["moderation_note"] = ""
+        validated_data["submitted_at"] = timezone.now()
+        validated_data["is_active"] = False
+        validated_data["expires_at"] = None
 
         return super().create(validated_data)
 

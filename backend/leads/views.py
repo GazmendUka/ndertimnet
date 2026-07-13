@@ -77,6 +77,7 @@ class JobRequestViewSet(viewsets.ModelViewSet):
             if company.professions.exists():
                 return qs.filter(
                     is_active=True,
+                    moderation_status=JobRequest.MODERATION_APPROVED,
                     profession__in=company.professions.all()
                 ).distinct()
             return qs.none()

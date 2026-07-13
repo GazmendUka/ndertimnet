@@ -46,7 +46,7 @@ export default function JobRequestEdit() {
             if (
                 jobData.offers_count > 0 ||
                 jobData.winner_offer ||
-                !jobData.is_active
+                (!jobData.is_active && !["pending", "changes_requested"].includes(jobData.moderation_status))
             ) {
                 setError("Kjo kërkesë nuk mund të përditësohet.");
             }

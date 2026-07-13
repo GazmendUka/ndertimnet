@@ -20,7 +20,7 @@ from main.pagination import AlbanianPagination
 from offers.models import Offer, OfferStatus
 from leads.models import ArchivedJob  # behåll om du vill fortsätta arkivera
 
-from .models import JobRequest, JobRequestAudit, JobRequestDraft
+from .models import JobRequest, JobRequestAudit, JobRequestDraft, JobRequestModerationEvent
 from .serializers import (
     JobRequestAuditSerializer,
     JobRequestDraftSerializer,
@@ -191,7 +191,11 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
                 profession=draft.profession,
                 address=resolved_address,
                 postal_code=draft.postal_code,
-                is_active=True,
+                is_active=False,
+                moderation_status=JobRequest.MODERATION_PENDING,
+                moderation_note="",
+                submitted_at=timezone.now(),
+                expires_at=None,
             )
 
             draft.is_submitted = True
@@ -202,11 +206,16 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
                 action="created_from_draft",
                 message="Kërkesa u krijua nga një draft multi-step.",
             )
+            JobRequestModerationEvent.objects.create(
+                job_request=job,
+                status=JobRequest.MODERATION_PENDING,
+                note="Kërkesa u dërgua për shqyrtim.",
+            )
 
         return Response(
             {
                 "id": job.id,
-                "detail": "Kërkesa u krijua me sukses.",
+                "detail": "Kërkesa u dërgua për shqyrtim.",
             },
             status=status.HTTP_201_CREATED,
         )
@@ -325,6 +334,7 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
                 return (
                     JobRequest.objects.filter(
                         is_active=True,
+                        moderation_status=JobRequest.MODERATION_APPROVED,
                         is_deleted=False
                     )
                     .select_related("customer", "city", "profession")
@@ -344,7 +354,19 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         if not user.is_authenticated or getattr(user, "role", None) != "customer":
             raise ValidationError("Vetëm klientët mund të krijojnë kërkesa.")
 
-        serializer.save(customer=user)
+        job = serializer.save(
+            customer=user,
+            moderation_status=JobRequest.MODERATION_PENDING,
+            moderation_note="",
+            submitted_at=timezone.now(),
+            is_active=False,
+            expires_at=None,
+        )
+        JobRequestModerationEvent.objects.create(
+            job_request=job,
+            status=JobRequest.MODERATION_PENDING,
+            note="Kërkesa u dërgua për shqyrtim.",
+        )
 
     # --------------------------------------------------------
     # ✏️ PATCH /api/jobrequests/{id}/
@@ -359,7 +381,12 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         if job.customer != user:
             raise PermissionDenied("Kjo kërkesë nuk është e juaja.")
 
-        if not job.is_active:
+        editable_moderation_statuses = {
+            JobRequest.MODERATION_PENDING,
+            JobRequest.MODERATION_CHANGES_REQUESTED,
+        }
+
+        if not job.is_active and job.moderation_status not in editable_moderation_statuses:
             raise ValidationError("Kërkesa është mbyllur dhe nuk mund të ndryshohet.")
 
         if job.is_completed or job.winner_offer_id:
@@ -371,13 +398,44 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         if job.offers.exclude(status=OfferStatus.DRAFT).exists():
             raise ValidationError("Kjo kërkesë nuk mund të ndryshohet sepse ka oferta.")
 
-        # ✅ Policy: inom 48 timmar
-        if job.created_at and timezone.now() > job.created_at + timedelta(hours=48):
+        if (
+            job.moderation_status == JobRequest.MODERATION_APPROVED
+            and job.created_at
+            and timezone.now() > job.created_at + timedelta(hours=48)
+        ):
             raise ValidationError("Kjo kërkesë nuk mund të ndryshohet pas 48 orësh.")
 
         response = super().partial_update(request, *args, **kwargs)
 
         updated_job = self.get_object()
+
+        if job.moderation_status in {
+            JobRequest.MODERATION_PENDING,
+            JobRequest.MODERATION_CHANGES_REQUESTED,
+            JobRequest.MODERATION_APPROVED,
+        }:
+            updated_job.moderation_status = JobRequest.MODERATION_PENDING
+            updated_job.moderation_note = ""
+            updated_job.submitted_at = timezone.now()
+            updated_job.moderation_updated_at = None
+            updated_job.is_active = False
+            updated_job.published_at = None
+            updated_job.expires_at = None
+            updated_job.save(update_fields=[
+                "moderation_status",
+                "moderation_note",
+                "submitted_at",
+                "moderation_updated_at",
+                "is_active",
+                "published_at",
+                "expires_at",
+                "updated_at",
+            ])
+            JobRequestModerationEvent.objects.create(
+                job_request=updated_job,
+                status=JobRequest.MODERATION_PENDING,
+                note="Kërkesa e përditësuar u ridërgua për shqyrtim.",
+            )
 
         JobRequestAudit.objects.create(
             job_request=updated_job,

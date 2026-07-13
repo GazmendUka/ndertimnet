@@ -112,7 +112,11 @@ class OfferCreateSerializer(serializers.Serializer):
 
         # 2️⃣ JobRequest måste finnas
         try:
-            job_request = JobRequest.objects.get(id=job_request_id)
+            job_request = JobRequest.objects.get(
+                id=job_request_id,
+                is_active=True,
+                moderation_status=JobRequest.MODERATION_APPROVED,
+            )
         except JobRequest.DoesNotExist:
             raise serializers.ValidationError(
                 "Invalid job request."

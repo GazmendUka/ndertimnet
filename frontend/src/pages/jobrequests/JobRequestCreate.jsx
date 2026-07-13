@@ -576,7 +576,7 @@ export default function JobRequestCreate() {
     if (!draft || !isStep5Valid || submitting) return;
 
     if (!isEmailVerified) {
-      toast.error("Verifikoni email-in tuaj për të qenë në gjendje të publikoni.");
+      toast.error("Verifikoni email-in tuaj për ta dërguar kërkesën për shqyrtim.");
       return;
     }
 
@@ -607,7 +607,7 @@ export default function JobRequestCreate() {
       console.error("Ruajtja e profilit dështoi:", err);
 
       if (isEmailNotVerifiedError(err)) {
-        toast.error("Verifikoni email-in tuaj për të publikuar.");
+        toast.error("Verifikoni email-in tuaj për ta dërguar kërkesën.");
         return;
       }
 
@@ -1082,7 +1082,7 @@ export default function JobRequestCreate() {
             disabled={saving || submitting}
           />
           <span className="text-sm">
-            Pajtohem që kërkesa ime të publikohet dhe të shpërndahet me kompani relevante.
+            Pajtohem që kërkesa ime të shqyrtohet dhe, pas miratimit, të publikohet për kompani relevante.
           </span>
         </label>
 
@@ -1125,7 +1125,7 @@ export default function JobRequestCreate() {
           }
           className="premium-btn btn-dark inline-flex items-center gap-2"
         >
-          Përfundo & publiko
+          Dërgo për shqyrtim
         </button>
       </div>
     </div>

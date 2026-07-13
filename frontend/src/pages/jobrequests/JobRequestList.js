@@ -7,6 +7,7 @@ import { useAuth } from "../../auth/AuthContext";
 
 import { ArrowLeft, MapPin, Euro, Tag, Briefcase, Lock } from "lucide-react";
 import StatusBadge from "../../components/ui/StatusBadge";
+import ModerationBadge from "../../components/ui/ModerationBadge";
 
 export default function JobRequestList() {
   const { user, access, isCompany, isCustomer } = useAuth();
@@ -207,7 +208,11 @@ export default function JobRequestList() {
                       <h2 className="text-lg font-semibold">
                         {req.title}
                       </h2>
-                      <StatusBadge active={req.is_active} />
+                      {isCustomer ? (
+                        <ModerationBadge status={req.moderation_status} compact />
+                      ) : (
+                        <StatusBadge active={req.is_active} />
+                      )}
                     </div>
 
                     {isCompany && req.customer && !req.has_offer && (
@@ -292,4 +297,3 @@ export default function JobRequestList() {
     </div>
   );
 }
-

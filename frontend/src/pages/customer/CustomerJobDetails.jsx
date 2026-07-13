@@ -8,7 +8,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { toast } from "react-hot-toast";
 
 import { ArrowLeft, MapPin, Euro, Tag, Users, Clock } from "lucide-react";
-import StatusBadge from "../../components/ui/StatusBadge";
+import ModerationBadge from "../../components/ui/ModerationBadge";
 import DeleteModal from "../../components/ui/DeleteModal";
 import CompanyRatingSummary from "../../components/reviews/CompanyRatingSummary";
 
@@ -75,12 +75,14 @@ export default function CustomerJobDetails() {
     const within48h =
       now.getTime() - createdAt.getTime() <= 48 * 60 * 60 * 1000;
 
+    const canEditModeration = ["pending", "changes_requested"].includes(job.moderation_status);
+
     return (
-      job.is_active &&
+      (job.is_active || canEditModeration) &&
       !job.is_completed &&
       !hasWinner &&
       !hasOffers &&
-      within48h
+      (canEditModeration || within48h)
     );
   }, [job]);
 
@@ -240,6 +242,37 @@ export default function CustomerJobDetails() {
       </div>
 
       {/* JOB HEADER */}
+      {job.moderation_status !== "approved" && (
+        <section className={`mb-5 rounded-2xl border p-5 sm:p-6 ${
+          job.moderation_status === "changes_requested"
+            ? "border-blue-200 bg-blue-50"
+            : job.moderation_status === "rejected"
+            ? "border-red-200 bg-red-50"
+            : "border-amber-200 bg-amber-50"
+        }`}>
+          <ModerationBadge status={job.moderation_status} />
+          <h2 className="mt-4 font-semibold text-gray-900">
+            {job.moderation_status === "changes_requested"
+              ? "Përditësoni kërkesën tuaj"
+              : job.moderation_status === "pending"
+              ? "Kërkesa po shqyrtohet"
+              : "Kërkesa nuk është publikuar"}
+          </h2>
+          <p className="mt-2 text-sm leading-6 text-gray-700">
+            {job.moderation_note || (
+              job.moderation_status === "pending"
+                ? "Do t'ju njoftojmë sapo kërkesa të miratohet. Kompanitë nuk mund ta shohin ende."
+                : "Kontaktoni mbështetjen nëse keni pyetje për vendimin."
+            )}
+          </p>
+          {job.moderation_status === "changes_requested" && canEdit && (
+            <Link to={`${jobRequestsPath}/${job.id}/edit`} className="premium-btn btn-dark mt-4">
+              Përditëso dhe ridërgo
+            </Link>
+          )}
+        </section>
+      )}
+
       <section className="premium-section mb-5">
         <p className="text-label mb-1">Detajet e kërkesës</p>
 
@@ -298,7 +331,7 @@ export default function CustomerJobDetails() {
           </div>
 
           <div className="flex flex-col items-start sm:items-end gap-2">
-            <StatusBadge active={job.is_active} />
+            <ModerationBadge status={job.moderation_status} />
 
             {acceptedOffer && (
               <p className="text-xs text-green-700 font-medium">
@@ -384,7 +417,11 @@ export default function CustomerJobDetails() {
               </p>
             </div>
 
-            {loadingOffers ? (
+            {job.moderation_status !== "approved" ? (
+              <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 text-sm text-gray-600">
+                Ofertat do të aktivizohen pasi kërkesa të miratohet dhe publikohet.
+              </div>
+            ) : loadingOffers ? (
               <p className="text-dim">🔄 Po ngarkohen ofertat...</p>
             ) : offers.length === 0 ? (
               <div className="premium-card p-6 text-dim">

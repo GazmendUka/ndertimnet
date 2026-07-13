@@ -66,6 +66,18 @@ class JobRequest(models.Model):
         ("completed", "Completed"),
         ("cancelled", "Cancelled"),
     ]
+    MODERATION_PENDING = "pending"
+    MODERATION_APPROVED = "approved"
+    MODERATION_CHANGES_REQUESTED = "changes_requested"
+    MODERATION_REJECTED = "rejected"
+    MODERATION_BLOCKED = "blocked"
+    MODERATION_STATUS_CHOICES = [
+        (MODERATION_PENDING, "Under granskning"),
+        (MODERATION_APPROVED, "Godkänd"),
+        (MODERATION_CHANGES_REQUESTED, "Ändringar krävs"),
+        (MODERATION_REJECTED, "Avslagen"),
+        (MODERATION_BLOCKED, "Blockerad"),
+    ]
 
     customer = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -108,6 +120,18 @@ class JobRequest(models.Model):
         db_index=True,
         verbose_name="Përditësuar më",
     )
+
+    moderation_status = models.CharField(
+        max_length=24,
+        choices=MODERATION_STATUS_CHOICES,
+        default=MODERATION_APPROVED,
+        db_index=True,
+        verbose_name="Granskningsstatus",
+    )
+    moderation_note = models.TextField(blank=True, default="", verbose_name="Meddelande till kunden")
+    submitted_at = models.DateTimeField(null=True, blank=True, verbose_name="Inskickad för granskning")
+    moderation_updated_at = models.DateTimeField(null=True, blank=True, verbose_name="Senaste granskningsbeslut")
+    published_at = models.DateTimeField(null=True, blank=True, db_index=True, verbose_name="Publicerad")
 
     status = models.CharField(
         max_length=20,
@@ -167,9 +191,48 @@ class JobRequest(models.Model):
         ordering = ["-created_at"]
 
     def save(self, *args, **kwargs):
-        if self._state.adding and self.expires_at is None:
+        if (
+            self._state.adding
+            and self.expires_at is None
+            and self.moderation_status == self.MODERATION_APPROVED
+        ):
             self.expires_at = timezone.now() + timedelta(days=40)
         super().save(*args, **kwargs)
+
+    def apply_moderation(self, new_status, moderator=None, note=""):
+        if new_status not in dict(self.MODERATION_STATUS_CHOICES):
+            raise ValueError("Invalid moderation status")
+
+        now = timezone.now()
+        self.moderation_status = new_status
+        self.moderation_note = (note or "").strip()
+        self.moderation_updated_at = now
+
+        if new_status == self.MODERATION_APPROVED:
+            self.is_active = True
+            self.published_at = self.published_at or now
+            self.expires_at = now + timedelta(days=40)
+        else:
+            self.is_active = False
+            self.published_at = None
+            self.expires_at = None
+
+        self.save(update_fields=[
+            "moderation_status",
+            "moderation_note",
+            "moderation_updated_at",
+            "is_active",
+            "published_at",
+            "expires_at",
+            "updated_at",
+        ])
+        JobRequestModerationEvent.objects.create(
+            job_request=self,
+            status=new_status,
+            note=self.moderation_note,
+            moderator=moderator,
+        )
+        return self
 
     def soft_delete(self):
         if self.is_deleted:
@@ -244,3 +307,27 @@ class JobRequestDraft(models.Model):
 
     def __str__(self):
         return f"Draft #{self.pk} – {getattr(self.customer, 'email', 'unknown')} (step {self.current_step})"
+
+
+class JobRequestModerationEvent(models.Model):
+    job_request = models.ForeignKey(
+        JobRequest,
+        on_delete=models.CASCADE,
+        related_name="moderation_events",
+    )
+    status = models.CharField(max_length=24, choices=JobRequest.MODERATION_STATUS_CHOICES)
+    note = models.TextField(blank=True, default="")
+    moderator = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="job_moderation_events",
+    )
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.job_request_id}: {self.status}"

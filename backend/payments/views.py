@@ -36,7 +36,13 @@ class PaymentViewSet(viewsets.ViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        job = get_object_or_404(JobRequest, pk=job_request_id)
+        job = get_object_or_404(
+            JobRequest,
+            pk=job_request_id,
+            is_active=True,
+            is_deleted=False,
+            moderation_status=JobRequest.MODERATION_APPROVED,
+        )
 
         with transaction.atomic():
 

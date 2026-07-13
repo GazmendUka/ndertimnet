@@ -11,6 +11,7 @@ import { FileText, PlusCircle, CheckCircle2, Clock4 } from "lucide-react";
 // UI components
 import StatCard from "../../components/ui/StatCard";
 import StatusBadge from "../../components/ui/StatusBadge";
+import ModerationBadge from "../../components/ui/ModerationBadge";
 
 const jobRequestsPath = "/customer/jobrequests";
 const createJobPath = "/customer/jobrequests/create";
@@ -42,7 +43,7 @@ export default function CustomerDashboard() {
         const jobs = Array.isArray(list) ? list : [];
 
         const total = jobs.length;
-        const active = jobs.filter((j) => j.is_active).length;
+        const active = jobs.filter((j) => j.is_active && j.moderation_status === "approved").length;
         const closed = total - active;
 
         setStats({ total, active, closed });
@@ -201,7 +202,11 @@ function RequestsTable({ latestJobs }) {
               <Td>{job.title || "—"}</Td>
               <Td>{job.city_detail?.name || "Pa qytet"}</Td>
               <Td>
-                <StatusBadge active={job.is_active} />
+                {job.moderation_status ? (
+                  <ModerationBadge status={job.moderation_status} compact />
+                ) : (
+                  <StatusBadge active={job.is_active} />
+                )}
               </Td>
               <Td className="text-right">
                 <Link

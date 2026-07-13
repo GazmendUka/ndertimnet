@@ -194,6 +194,7 @@ class OfferViewSet(viewsets.ModelViewSet):
             JobRequest,
             pk=job_request_id,
             is_active=True,
+            moderation_status=JobRequest.MODERATION_APPROVED,
             is_deleted=False,
         )
 
@@ -403,6 +404,7 @@ class OfferViewSet(viewsets.ModelViewSet):
         job = get_object_or_404(
             JobRequest,
             pk=job_id,
+            moderation_status=JobRequest.MODERATION_APPROVED,
             is_deleted=False,
         )
 
@@ -436,6 +438,7 @@ class OfferViewSet(viewsets.ModelViewSet):
         job = get_object_or_404(
             JobRequest,
             pk=job_id,
+            moderation_status=JobRequest.MODERATION_APPROVED,
             is_deleted=False,
         )
 
