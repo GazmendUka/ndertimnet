@@ -159,7 +159,11 @@ class OfferCreateSerializer(serializers.Serializer):
                 version_number=1,
                 created_by=user,
 
-                presentation_text=validated_data.get("presentation_text", ""),
+                presentation_text=(
+                    validated_data.get("presentation_text")
+                    or company.default_offer_presentation
+                    or ""
+                ),
                 can_start_from=validated_data.get("can_start_from"),
                 duration_text=validated_data.get("duration_text", ""),
 

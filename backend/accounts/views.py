@@ -509,7 +509,7 @@ def customer_profile(request):
 @parser_classes([MultiPartParser, FormParser])  # ✅ HIT SKA DEN
 def company_profile(request):
     user = request.user
-    if not user.email_verified:
+    if request.method in ["PUT", "PATCH"] and not user.email_verified:
         return error(
             "Verifikoni email-in para se të plotësoni profilin.",
             403

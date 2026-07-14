@@ -62,6 +62,9 @@ class CompanySerializer(serializers.ModelSerializer):
     logo = serializers.ImageField(required=False, allow_null=True)
     logo_url = serializers.SerializerMethodField()
     rating_summary = serializers.SerializerMethodField()
+    account_email = serializers.EmailField(source="user.email", read_only=True)
+    email_verified = serializers.BooleanField(source="user.email_verified", read_only=True)
+    profile_sections = serializers.SerializerMethodField()
 
     professions = serializers.PrimaryKeyRelatedField(
         queryset=Profession.objects.filter(is_active=True),
@@ -118,6 +121,10 @@ class CompanySerializer(serializers.ModelSerializer):
             "missing_requirements",
             "recommended_improvements",
             "rating_summary",
+            "account_email",
+            "email_verified",
+            "default_offer_presentation",
+            "profile_sections",
         ]
 
     def to_internal_value(self, data):
@@ -175,6 +182,51 @@ class CompanySerializer(serializers.ModelSerializer):
 
     def get_profile_completion(self, obj):
         return get_company_profile_completion(obj)
+
+    def get_profile_sections(self, obj):
+        user = getattr(obj, "user", None)
+        sections = {
+            "basic": bool(
+                obj.company_name
+                and obj.org_number
+                and obj.phone
+                and obj.address
+                and user
+                and user.email_verified
+            ),
+            "professions": obj.professions.exists(),
+            "service_areas": bool(obj.city_id or obj.cities.exists()),
+            "description": len((obj.description or "").strip()) >= 20,
+            "offer_text": len((obj.default_offer_presentation or "").strip()) >= 10,
+            "verification": bool(obj.registration_document),
+        }
+        completed = sum(1 for complete in sections.values() if complete)
+        return {
+            **sections,
+            "completed": completed,
+            "total": len(sections),
+            "percentage": round((completed / len(sections)) * 100),
+        }
+
+    def validate_logo(self, image):
+        if not image:
+            return image
+        if image.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("Logoja duhet të jetë 5 MB ose më e vogël.")
+        allowed_types = {"image/jpeg", "image/png", "image/webp"}
+        if getattr(image, "content_type", None) not in allowed_types:
+            raise serializers.ValidationError("Logoja duhet të jetë JPG, PNG ose WebP.")
+        return image
+
+    def validate_registration_document(self, document):
+        if not document:
+            return document
+        if document.size > 5 * 1024 * 1024:
+            raise serializers.ValidationError("Dokumenti duhet të jetë 5 MB ose më i vogël.")
+        allowed_types = {"application/pdf", "image/jpeg", "image/png"}
+        if getattr(document, "content_type", None) not in allowed_types:
+            raise serializers.ValidationError("Dokumenti duhet të jetë PDF, JPG ose PNG.")
+        return document
     
     def get_can_access_marketplace(self, obj):
         return obj.can_access_marketplace()

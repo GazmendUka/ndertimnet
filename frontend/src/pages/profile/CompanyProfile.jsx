@@ -1,11 +1,32 @@
-// src/pages/profile/CompanyProfile.jsx
-
-import React, { useEffect, useMemo, useState, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Building2,
+  Check,
+  CheckCircle2,
+  FileCheck2,
+  FileText,
+  ImagePlus,
+  Loader2,
+  MapPin,
+  ShieldCheck,
+  Sparkles,
+  Upload,
+  Wrench,
+} from "lucide-react";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
-import { Pencil } from "lucide-react";
-import { useNavigate } from "react-router-dom";
-// import { getMediaUrl } from "../../utils/media";
+
+const STEPS = [
+  { id: 1, key: "basic", title: "Informacioni bazë", short: "Bazë", icon: Building2 },
+  { id: 2, key: "professions", title: "Specialitetet", short: "Specialitetet", icon: Wrench },
+  { id: 3, key: "service_areas", title: "Zona e shërbimit", short: "Zonat", icon: MapPin },
+  { id: 4, key: "description", title: "Përshkrimi", short: "Përshkrimi", icon: FileText },
+  { id: 5, key: "offer_text", title: "Teksti i ofertës", short: "Oferta", icon: Sparkles },
+  { id: 6, key: "verification", title: "Verifikimi", short: "Verifikimi", icon: ShieldCheck },
+];
 
 const INDUSTRY_SHORT_LABELS = {
   "ndertim-dhe-renovim": "Ndërtim",
@@ -19,958 +40,692 @@ const INDUSTRY_SHORT_LABELS = {
 const getIndustryLabel = (industry) =>
   INDUSTRY_SHORT_LABELS[industry?.slug] || industry?.name || "Të tjera";
 
+const createForm = (company) => ({
+  company_name: company?.company_name || "",
+  org_number: company?.org_number || "",
+  phone: company?.phone || "",
+  website: company?.website || "",
+  address: company?.address || "",
+  description: company?.description || "",
+  default_offer_presentation: company?.default_offer_presentation || "",
+  professions: (company?.professions_detail || []).map((item) => item.id),
+  cities: (company?.cities_detail || []).map((item) => item.id),
+});
+
+const getApiErrorMessage = (error, fallback) => {
+  const response = error.response?.data;
+  const details = response?.message ?? response;
+
+  if (typeof details === "string" && details.trim()) return details;
+  if (details && typeof details === "object") {
+    const value = Object.values(details)
+      .flatMap((item) => (Array.isArray(item) ? item : [item]))
+      .find((item) => typeof item === "string" && item.trim());
+    if (value) return value;
+  }
+
+  return fallback;
+};
+
 export default function CompanyProfile() {
   const { access, logout, user } = useAuth();
   const navigate = useNavigate();
-
-  const [logoFile, setLogoFile] = useState(null);
   const logoInputRef = useRef(null);
-  const fileInputRef = useRef(null);
+  const documentInputRef = useRef(null);
 
   const [company, setCompany] = useState(null);
-  const [form, setForm] = useState(null);
-
+  const [form, setForm] = useState(createForm(null));
   const [professions, setProfessions] = useState([]);
   const [cities, setCities] = useState([]);
+  const [currentStep, setCurrentStep] = useState(1);
   const [selectedCountry, setSelectedCountry] = useState("XK");
   const [selectedIndustryId, setSelectedIndustryId] = useState(null);
-
-  const [isEditing, setIsEditing] = useState(false);
+  const [logoFile, setLogoFile] = useState(null);
+  const [documentFile, setDocumentFile] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
-
+  const [dirtySteps, setDirtySteps] = useState(() => new Set());
+  const [showSummary, setShowSummary] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deletePassword, setDeletePassword] = useState("");
   const [deleteError, setDeleteError] = useState("");
   const [deleting, setDeleting] = useState(false);
 
-  const isLocked = !user?.email_verified;
-  const [file, setFile] = useState(null);
-
-
-  // --------------------------------------------------
-  // DELETE ACCOUNT
-  // --------------------------------------------------
-  const handleDeleteAccount = async () => {
-    if (!deletePassword) {
-      setDeleteError("Ju lutem shkruani fjalëkalimin.");
-      return;
-    }
-
-    setDeleting(true);
-    setDeleteError("");
-
-    try {
-      await api.post("/accounts/delete/", { password: deletePassword });
-      logout();
-      navigate("/");
-    } catch (err) {
-      setDeleteError(
-        err.response?.data?.message ||
-          "Fjalëkalimi është i pasaktë ose ndodhi një gabim."
-      );
-    } finally {
-      setDeleting(false);
-    }
-  };
-
-  // --------------------------------------------------
-  // LOAD PROFILE
-  // --------------------------------------------------
   useEffect(() => {
     if (!access) return;
+    let active = true;
 
-    let alive = true;
-
-    const loadData = async () => {
+    async function loadProfile() {
+      setLoading(true);
       try {
-        const [companyRes, professionsRes, citiesRes] = await Promise.all([
+        const [companyResponse, professionResponse, cityResponse] = await Promise.all([
           api.get("/accounts/profile/company/"),
           api.get("/taxonomy/professions/"),
           api.get("/locations/cities/"),
         ]);
+        if (!active) return;
 
-        if (!alive) return;
-
-        const companyData = companyRes.data?.data || companyRes.data;
-
+        const companyData = companyResponse.data?.data || companyResponse.data;
+        const professionData = professionResponse.data?.results || professionResponse.data || [];
+        const cityData = cityResponse.data?.results || cityResponse.data || [];
         setCompany(companyData);
-        setForm({
-          company_name: companyData.company_name || "",
-          phone: companyData.phone || "",
-          website: companyData.website || "",
-          address: companyData.address || "",
-          description: companyData.description || "",
-          org_number: companyData.org_number || "",
-          professions: (companyData.professions_detail || []).map((p) => p.id),
-          cities: (companyData.cities_detail || []).map((c) => c.id),
-        });
+        setForm(createForm(companyData));
+        setProfessions(professionData);
+        setCities(cityData);
 
-        setProfessions(professionsRes.data?.results || professionsRes.data || []);
-        setCities(citiesRes.data?.results || citiesRes.data || []);
-      } catch (err) {
-        if (!alive) return;
-
-        const status = err.response?.status;
-
-        // 🔒 Email ej verifierad: backend kan svara 403 -> vi visar sidan men låser editing
-        if (status === 403 && !user?.email_verified) {
-          setCompany({
-            company_name: "",
-            phone: "",
-            website: "",
-            address: "",
-            description: "",
-            logo_url: null,
-            professions_detail: [],
-            cities_detail: [],
-            profile_step: 0,
-            org_number: null,
-          });
-          setForm(null);
-          setError("");
-        } else {
-          setError("Profili i kompanisë nuk mund të ngarkohet.");
-        }
+        const firstIncomplete = STEPS.find((step) => !companyData.profile_sections?.[step.key]);
+        setCurrentStep(firstIncomplete?.id || 1);
+        setShowSummary(!firstIncomplete);
+      } catch (requestError) {
+        setError(
+          requestError.response?.status === 403 && !user?.email_verified
+            ? "Verifikoni email-in para se të përditësoni profilin."
+            : "Profili i kompanisë nuk mund të ngarkohet."
+        );
       } finally {
-        if (alive) setLoading(false);
+        if (active) setLoading(false);
       }
-    };
+    }
 
-    loadData();
-    return () => (alive = false);
+    loadProfile();
+    return () => { active = false; };
   }, [access, user?.email_verified]);
 
-  // --------------------------------------------------
-  // SAFE DEFAULTS
-  // --------------------------------------------------
-  const safeCompany =
-    company || {
-      company_name: "",
-      phone: "",
-      website: "",
-      address: "",
-      description: "",
-      logo_url: null,
-      professions_detail: [],
-      cities_detail: [],
-      profile_step: 0,
-      org_number: null,
+  useEffect(() => {
+    const hasUnsavedChanges = dirtySteps.size > 0;
+    const warnBeforeLeaving = (event) => {
+      if (!hasUnsavedChanges) return;
+      event.preventDefault();
+      event.returnValue = "";
     };
+    window.addEventListener("beforeunload", warnBeforeLeaving);
+    return () => window.removeEventListener("beforeunload", warnBeforeLeaving);
+  }, [dirtySteps]);
 
-  const professionList = safeCompany.professions_detail || [];
-  const cityList = safeCompany.cities_detail || [];
-
-  const filteredCities = cities.filter(
-    (c) => String(c.country).toUpperCase() === selectedCountry
+  const logoPreview = useMemo(
+    () => (logoFile ? URL.createObjectURL(logoFile) : company?.logo_url || ""),
+    [company?.logo_url, logoFile]
   );
 
-  const selectedCities = useMemo(
-    () => (form?.cities ? cities.filter((c) => form.cities.includes(c.id)) : []),
-    [cities, form?.cities]
-  );
+  useEffect(() => {
+    return () => {
+      if (logoPreview?.startsWith("blob:")) URL.revokeObjectURL(logoPreview);
+    };
+  }, [logoPreview]);
 
   const selectedProfessions = useMemo(
-    () =>
-      form?.professions
-        ? professions.filter((p) => form.professions.includes(p.id))
-        : [],
-    [form?.professions, professions]
+    () => professions.filter((item) => form.professions.includes(item.id)),
+    [form.professions, professions]
   );
-  const industryOptions = useMemo(() => {
-    const industries = new Map();
-
+  const selectedCities = useMemo(
+    () => cities.filter((item) => form.cities.includes(item.id)),
+    [cities, form.cities]
+  );
+  const filteredCities = useMemo(
+    () => cities.filter((item) => String(item.country).toUpperCase() === selectedCountry),
+    [cities, selectedCountry]
+  );
+  const industries = useMemo(() => {
+    const result = new Map();
     professions.forEach((profession) => {
-      const industry = profession.industry_detail || {
-        id: "uncategorized",
-        name: "Të tjera",
-      };
-
-      if (!industries.has(industry.id)) {
-        industries.set(industry.id, industry);
-      }
+      const industry = profession.industry_detail || { id: "other", name: "Të tjera" };
+      if (!result.has(industry.id)) result.set(industry.id, industry);
     });
-
-    return Array.from(industries.values());
+    return [...result.values()];
   }, [professions]);
   const filteredProfessions = useMemo(
-    () =>
-      selectedIndustryId
-        ? professions.filter(
-            (p) =>
-              String(p.industry_detail?.id || "uncategorized") ===
-              String(selectedIndustryId)
-          )
-        : [],
+    () => professions.filter((item) => String(item.industry_detail?.id || "other") === String(selectedIndustryId)),
     [professions, selectedIndustryId]
   );
 
   useEffect(() => {
-    if (!industryOptions.length || selectedIndustryId) return;
+    if (!selectedIndustryId && industries.length) {
+      const selectedIndustry = selectedProfessions[0]?.industry_detail?.id;
+      setSelectedIndustryId(selectedIndustry || industries[0].id);
+    }
+  }, [industries, selectedIndustryId, selectedProfessions]);
 
-    const firstSelectedProfession = selectedProfessions[0];
-    const firstSelectedIndustryId =
-      firstSelectedProfession?.industry_detail?.id || null;
+  const sectionStatus = useMemo(() => ({
+    basic: Boolean(
+      form.company_name.trim()
+      && form.org_number.trim()
+      && form.phone.trim()
+      && form.address.trim()
+      && company?.email_verified
+    ),
+    professions: form.professions.length > 0,
+    service_areas: form.cities.length > 0 || Boolean(company?.city?.id),
+    description: form.description.trim().length >= 20,
+    offer_text: form.default_offer_presentation.trim().length >= 10,
+    verification: Boolean(company?.registration_document),
+  }), [company?.city?.id, company?.email_verified, company?.registration_document, form]);
 
-    setSelectedIndustryId(firstSelectedIndustryId || industryOptions[0].id);
-  }, [industryOptions, selectedIndustryId, selectedProfessions]);
+  const completedCount = Object.values(sectionStatus).filter(Boolean).length;
+  const progress = Math.round((completedCount / STEPS.length) * 100);
+  const allComplete = completedCount === STEPS.length;
+  const isLocked = !user?.email_verified;
 
-  // --------------------------------------------------
-  // EDIT HANDLERS
-  // --------------------------------------------------
-  const handleChange = (e) => {
-    setForm((prev) =>
-      prev ? { ...prev, [e.target.name]: e.target.value } : prev
-    );
+  const markDirty = (step = currentStep) => {
+    setDirtySteps((current) => new Set([...current, step]));
+    setMessage("");
+    setError("");
   };
 
-  const toggleProfession = (id) => {
-    setForm((prev) => {
-      if (!prev) return prev;
-      const list = prev.professions || [];
+  const updateField = (event) => {
+    const { name, value } = event.target;
+    setForm((current) => ({ ...current, [name]: value }));
+    markDirty();
+  };
+
+  const toggleListValue = (field, id) => {
+    setForm((current) => {
+      const values = current[field];
       return {
-        ...prev,
-        professions: list.includes(id)
-          ? list.filter((p) => p !== id)
-          : [...list, id],
+        ...current,
+        [field]: values.includes(id) ? values.filter((value) => value !== id) : [...values, id],
       };
     });
+    markDirty();
   };
 
-  const toggleCity = (id) => {
-    setForm((prev) => {
-      if (!prev) return prev;
-      const list = prev.cities || [];
-      return {
-        ...prev,
-        cities: list.includes(id)
-          ? list.filter((c) => c !== id)
-          : [...list, id],
-      };
-    });
+  const validateStep = (step) => {
+    if (step === 1) {
+      if (!form.company_name.trim() || !form.org_number.trim() || !form.phone.trim() || !form.address.trim()) {
+        return "Plotësoni emrin, numrin e biznesit, telefonin dhe adresën.";
+      }
+    }
+    if (step === 2 && !form.professions.length) return "Zgjidhni të paktën një specialitet.";
+    if (step === 3 && !form.cities.length && !company?.city?.id) return "Zgjidhni të paktën një qytet.";
+    if (step === 4 && form.description.trim().length < 20) return "Përshkrimi duhet të ketë të paktën 20 karaktere.";
+    if (step === 5 && form.default_offer_presentation.trim().length < 10) return "Teksti i ofertës duhet të ketë të paktën 10 karaktere.";
+    if (step === 6 && !company?.registration_document && !documentFile) return "Zgjidhni dokumentin e regjistrimit.";
+    return "";
   };
 
-  const startEdit = () => {
-    if (!company || isLocked) return;
-
-    setForm({
-      company_name: safeCompany.company_name || "",
-      phone: safeCompany.phone || "",
-      website: safeCompany.website || "",
-      address: safeCompany.address || "",
-      description: safeCompany.description || "",
-      org_number: safeCompany.org_number || "",
-      professions: professionList.map((p) => p.id),
-      cities: cityList.map((c) => c.id),
-    });
-
-    setIsEditing(true);
-    setError("");
-    setMessage("");
-    setSelectedCountry("XK");
-    const firstProfession = professionList[0];
-    setSelectedIndustryId(
-      firstProfession?.industry_detail?.id || industryOptions[0]?.id || null
-    );
+  const buildStepPayload = (step) => {
+    const payload = new FormData();
+    if (step === 1) {
+      const website = form.website.trim() && !/^https?:\/\//i.test(form.website.trim())
+        ? `https://${form.website.trim()}`
+        : form.website.trim();
+      payload.append("company_name", form.company_name.trim());
+      payload.append("org_number", form.org_number.trim());
+      payload.append("phone", form.phone.trim());
+      payload.append("website", website);
+      payload.append("address", form.address.trim());
+      if (logoFile) payload.append("logo", logoFile);
+    }
+    if (step === 2) form.professions.forEach((id) => payload.append("professions", id));
+    if (step === 3) form.cities.forEach((id) => payload.append("cities", id));
+    if (step === 4) payload.append("description", form.description.trim());
+    if (step === 5) payload.append("default_offer_presentation", form.default_offer_presentation.trim());
+    if (step === 6 && documentFile) payload.append("registration_document", documentFile);
+    return payload;
   };
 
-  const cancelEdit = () => {
-    setIsEditing(false);
-    setForm(null);
-    setLogoFile(null);
-    setError("");
-    setMessage("");
-    setSelectedIndustryId(industryOptions[0]?.id || null);
-  };
+  const saveStep = async ({ advance = true } = {}) => {
+    if (isLocked || saving) return;
+    const validationError = validateStep(currentStep);
+    if (validationError) {
+      setError(validationError);
+      return;
+    }
 
-  const saveChanges = async () => {
-    if (!form) return;
+    if (currentStep === 6 && company?.registration_document && !documentFile) {
+      setShowSummary(allComplete);
+      return;
+    }
 
     setSaving(true);
     setError("");
     setMessage("");
-
     try {
-      const normalizedForm = { ...form };
-
-      if (
-        normalizedForm.website &&
-        !normalizedForm.website.startsWith("http://") &&
-        !normalizedForm.website.startsWith("https://")
-      ) {
-        normalizedForm.website = "https://" + normalizedForm.website;
-      }
-
-      // ============================================
-      // 🟢 LOGO FINNS → FormData
-      // ============================================
-      const payload = new FormData();
-
-      Object.entries(normalizedForm).forEach(([key, value]) => {
-        if (Array.isArray(value)) {
-          value.forEach((v) => payload.append(key, v)); // 👈 VIKTIGT: INTE key[]
-        } else if (value !== null && value !== undefined) {
-          payload.append(key, value);
-        }
-      });
-
-      if (logoFile) {
-        payload.append("logo", logoFile);
-      }
-
-      const res = await api.patch(
-        "/accounts/profile/company/",
-        payload,
-      );
-
-      const updated = res.data?.data || res.data;
-
+      const response = await api.patch("/accounts/profile/company/", buildStepPayload(currentStep));
+      const updated = response.data?.data || response.data;
       setCompany(updated);
-      setIsEditing(false);
-      setForm(null);
+      if (currentStep === 1 && form.website && !/^https?:\/\//i.test(form.website)) {
+        setForm((current) => ({ ...current, website: `https://${current.website}` }));
+      }
       setLogoFile(null);
-      setMessage("Profili është përditësua me sukses.");
+      setDocumentFile(null);
+      if (documentInputRef.current) documentInputRef.current.value = "";
+      setDirtySteps((current) => {
+        const next = new Set(current);
+        next.delete(currentStep);
+        return next;
+      });
+      setMessage("Hapi u ruajt me sukses.");
 
-    } catch (err) {
-      console.log("🔥 ERROR DATA:", err.response?.data);
-
+      const updatedComplete = STEPS.every(
+        (step) => updated.profile_sections?.[step.key] ?? sectionStatus[step.key]
+      );
+      if (currentStep === 6 && updatedComplete) {
+        setShowSummary(true);
+      } else if (advance && currentStep < STEPS.length) {
+        setCurrentStep((step) => step + 1);
+      }
+    } catch (requestError) {
       setError(
-        JSON.stringify(err.response?.data) ||
-        "Gabim gjatë ruajtjes së profilit."
+        getApiErrorMessage(
+          requestError,
+          "Ndryshimet nuk mund të ruhen. Provoni përsëri."
+        )
       );
     } finally {
       setSaving(false);
     }
   };
 
-    // ============================================
-    // 🟢 UPLOAD REG.DOCUMENT
-    // ============================================
-
-  const hasDocument = !!company?.registration_document;
-  const handleUpload = async () => {
-    if (!file) return;
-
-    const formData = new FormData();
-    formData.append("registration_document", file);
-
+  const deleteAccount = async () => {
+    if (!deletePassword) return;
+    setDeleting(true);
+    setDeleteError("");
     try {
-      const res = await api.patch(`/accounts/profile/company/`, formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
-
-      const updated = res.data?.data || res.data;
-
-      setCompany(updated);
-      setFile(null);
-      fileInputRef.current.value = "";
-      
-      setError("");
-      setMessage("Dokumenti u ngarkua me sukses.");
-    } catch (err) {
-      console.error(err);
-      setMessage("");
-      setError("Dokumenti nuk mund të ngarkohet.");
+      await api.post("/accounts/delete/", { password: deletePassword });
+      logout();
+      navigate("/");
+    } catch (requestError) {
+      setDeleteError(requestError.response?.data?.message || "Fjalëkalimi është i pasaktë.");
+    } finally {
+      setDeleting(false);
     }
   };
 
-  const handleLogoChange = (e) => {
-    const file = e.target.files?.[0];
-    if (file) setLogoFile(file);
-  };
-
-  // --------------------------------------------------
-  // GUARDS
-  // --------------------------------------------------
-  if (loading) return <div className="p-6">Duke ngarkuar…</div>;
-
-  // --------------------------------------------------
-  // UI
-  // --------------------------------------------------
-  return (
-    <>
-      <div className="premium-container">
-        <div className="premium-section space-y-8">
-
-          {/* HEADER */}
-          <div className="space-y-2">
-            <p className="text-xs uppercase tracking-wide text-gray-400">
-              Profili i kompanisë
-            </p>
-
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl sm:text-3xl font-semibold tracking-tight text-gray-900">
-                {safeCompany.company_name || "—"}
-              </h1>
-
-              {user?.email_verified ? (
-                <span className="px-3 py-1 text-xs font-medium rounded-full bg-green-50 text-green-700 border border-green-200">
-                  Email i verifikuar
-                </span>
-              ) : (
-                <span className="px-3 py-1 text-xs font-medium rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                  Email i paverifikuar
-                </span>
-              )}
-            </div>
-            {isLocked && (
-              <p className="text-sm text-amber-700">
-                Email-i nuk është i verifikuar. Profili është i kyçur derisa ta verifikoni.
-              </p>
-            )}
-          </div>
-
-          {/* CARD: LOGO + DELETE */}
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center justify-between gap-6">
-              <div className="flex items-center gap-4">
-                <div
-                  className={`relative w-20 h-20 rounded-2xl overflow-hidden border border-gray-200 shadow-sm flex items-center justify-center ${
-                    isEditing ? "cursor-pointer" : ""
-                  }`}
-                  onClick={() => isEditing && logoInputRef.current?.click()}
-                  title={isEditing ? "Kliko për ta ndryshuar logon" : undefined}
-                >
-                  {safeCompany.logo_url ? (
-                    <>
-                      <img
-                        src={safeCompany.logo_url}
-                        alt={safeCompany.company_name || "logo"}
-                        className="w-full h-full object-cover"
-                        onError={(e) => {
-                          e.target.style.display = "none";
-                          e.target.nextSibling.style.display = "flex";
-                        }}
-                      />
-                      <div
-                        className="w-full h-full bg-gray-200 flex items-center justify-center text-xl font-bold text-gray-600"
-                        style={{ display: "none" }}
-                      >
-                        {(safeCompany.company_name?.[0] || "C").toUpperCase()}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="w-full h-full bg-gray-200 flex items-center justify-center text-xl font-bold text-gray-600">
-                      {(safeCompany.company_name?.[0] || "C").toUpperCase()}
-                    </div>
-                  )}
-
-                  {isEditing && (
-                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
-                      <Pencil className="text-white" size={24} />
-                    </div>
-                  )}
-
-                  {isEditing && (
-                    <input
-                      ref={logoInputRef}
-                      type="file"
-                      accept="image/*"
-                      className="hidden"
-                      onChange={handleLogoChange}
-                    />
-                  )}
-                </div>
-
-                <div className="space-y-1">
-                  <p className="text-sm font-semibold text-gray-900">
-                    {safeCompany.company_name || "—"}
-                  </p>
-
-                  {isEditing ? (
-                    <p className="text-xs text-gray-500">
-                      Kliko logon për ta ndryshuar
-                      {logoFile?.name ? (
-                        <>
-                          {" "}
-                          • Zgjedhur: <span className="font-medium">{logoFile.name}</span>
-                        </>
-                      ) : null}
-                    </p>
-                  ) : (
-                    <p className="text-xs text-gray-500">
-                      Logo & identiteti i kompanisë
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* CARD: BASIC INFO */}
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-            <h2 className="text-sm font-semibold text-gray-900">
-              Informacion bazë
-            </h2>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <Field
-                label="Emri i kompanisë"
-                name="company_name"
-                isEditing={isEditing}
-                value={isEditing ? form?.company_name : safeCompany.company_name}
-                onChange={handleChange}
-              />
-              <Field
-                label="Numri i biznesit (ORG)"
-                name="org_number"
-                isEditing={isEditing}
-                value={isEditing ? form?.org_number : safeCompany.org_number}
-                onChange={handleChange}
-              />
-              <Field
-                label="Numri i telefonit"
-                name="phone"
-                isEditing={isEditing}
-                value={isEditing ? form?.phone : safeCompany.phone}
-                onChange={handleChange}
-              />
-              <Field
-                label="Faqja e internetit"
-                name="website"
-                isEditing={isEditing}
-                value={isEditing ? form?.website : safeCompany.website}
-                onChange={handleChange}
-                placeholder="https://example.com"
-              />
-              <Field
-                label="Adresa"
-                name="address"
-                isEditing={isEditing}
-                value={isEditing ? form?.address : safeCompany.address}
-                onChange={handleChange}
-                placeholder="Rruga, numri, qyteti"
-              />
-            </div>
-
-            <div>
-              <span className="text-xs text-gray-500">Përshkrimi</span>
-              {isEditing ? (
-                <textarea
-                  name="description"
-                  rows="4"
-                  value={form?.description || ""}
-                  onChange={handleChange}
-                  className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-800"
-                />
-              ) : (
-                <p className="mt-1 text-sm">{safeCompany.description || "—"}</p>
-              )}
-            </div>
-          </div>
-
-          {/* CARD: PROFESSIONS */}
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-            <h2 className="text-sm font-semibold text-gray-900">Specialitetet</h2>
-
-            {isEditing ? (
-              <div className="space-y-5">
-                {selectedProfessions.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs text-gray-500">
-                      Specialitetet e zgjedhura ({selectedProfessions.length})
-                    </p>
-
-                    <div className="flex flex-wrap gap-2">
-                      {selectedProfessions.map((p) => (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => toggleProfession(p.id)}
-                          className="px-3 py-1.5 rounded-full text-sm font-medium 
-                          bg-gray-900 text-white shadow-sm 
-                          hover:opacity-80 transition-all duration-150 active:scale-[0.95]
-                          flex items-center gap-1"
-                        >
-                          {p.name}
-                          <span className="text-xs text-white/70 font-semibold">×</span>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                <div className="space-y-2">
-                  <p className="text-xs text-gray-500">
-                    Zgjidh kategorinë kryesore
-                  </p>
-
-                  <div className="overflow-x-auto pb-1">
-                    <div className="inline-flex min-w-max items-center rounded-full bg-gray-100 p-1 border border-gray-200">
-                      {industryOptions.map((industry) => (
-                        <button
-                          key={industry.id}
-                          type="button"
-                          title={industry.name}
-                          onClick={() => setSelectedIndustryId(industry.id)}
-                          className={`px-3 py-2 rounded-full text-sm font-medium whitespace-nowrap transition ${
-                            String(selectedIndustryId) === String(industry.id)
-                              ? "bg-white text-gray-900 shadow-sm"
-                              : "text-gray-500 hover:text-gray-700"
-                          }`}
-                        >
-                          {getIndustryLabel(industry)}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <p className="text-xs text-gray-500">
-                    Zgjidh specialitetet në këtë kategori
-                  </p>
-
-                  <div className="flex flex-wrap gap-2">
-                    {filteredProfessions.map((p) => {
-                      const isSelected = form?.professions?.includes(p.id);
-
-                      return (
-                        <button
-                          key={p.id}
-                          type="button"
-                          onClick={() => toggleProfession(p.id)}
-                          className={`px-3 py-1.5 rounded-full text-sm font-medium 
-                          transition-transform duration-150 hover:scale-[1.02] active:scale-[0.97] ${
-                            isSelected
-                              ? "bg-gray-900 text-white shadow-sm"
-                              : "text-gray-700 hover:text-gray-900 hover:bg-gray-100"
-                          }`}
-                        >
-                          {p.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">
-                {professionList.length ? (
-                  professionList.map((p) => (
-                    <span
-                      key={p.id}
-                      className="px-3 py-1 bg-gray-100 border border-gray-200 rounded-full text-sm"
-                    >
-                      {p.name}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-sm text-gray-500">—</span>
-                )}
-              </div>
-            )}
-          </div>
-
-          {/* CARD: CITIES */}
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-            <h2 className="text-sm font-semibold text-gray-900">Zona e shërbimit</h2>
-
-            {isEditing ? (
-                <div className="space-y-5">
-                  {/* COUNTRY SELECTOR */}
-                  <div className="inline-flex items-center rounded-full bg-gray-100 p-1 border border-gray-200">
-                    <button
-                      type="button"
-                      onClick={() => setSelectedCountry("XK")}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition ${
-                        selectedCountry === "XK"
-                          ? "bg-white text-gray-900 shadow-sm"
-                          : "text-gray-500 hover:text-gray-700"
-                      }`}
-                    >
-                      Kosovo
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={() => setSelectedCountry("AL")}
-                      className={`px-4 py-2 rounded-full text-sm font-medium transition ${
-                        selectedCountry === "AL"
-                          ? "bg-white text-gray-900 shadow-sm"
-                          : "text-gray-500 hover:text-gray-700"
-                      }`}
-                    >
-                      Shqipëri
-                    </button>
-                  </div>
-
-                  {/* SELECTED CITIES */}
-                  {selectedCities.length > 0 && (
-                    <div className="space-y-2">
-                      <p className="text-xs text-gray-500">
-                        Qytetet e zgjedhura ({selectedCities.length})
-                      </p>
-
-                      <div className="flex flex-wrap gap-2">
-                        {selectedCities.map((c) => (
-                          <button
-                            key={c.id}
-                            type="button"
-                            onClick={() => toggleCity(c.id)}
-                            className="px-3 py-1.5 rounded-full text-sm font-medium 
-                            bg-gray-900 text-white shadow-sm 
-                            hover:opacity-80 transition-all duration-150 active:scale-[0.95]
-                            flex items-center gap-1"
-                          >
-                            {c.name}
-                            <span className="text-xs text-white/70 font-semibold">×</span>
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* FILTERED CITIES */}
-                  <div className="space-y-2">
-                    <p className="text-xs text-gray-500">
-                      Zgjidh qytetet ku kompania juaj vepron
-                    </p>
-
-                    <div className="flex flex-wrap gap-2">
-                      {filteredCities.map((c) => {
-                        const isSelected = form?.cities?.includes(c.id);
-
-                        return (
-                          <button
-                            key={c.id}
-                            type="button"
-                            onClick={() => toggleCity(c.id)}
-                            className={`px-3 py-1.5 rounded-full text-sm font-medium 
-                            transition-transform duration-150 hover:scale-[1.02] active:scale-[0.97] ${
-                              isSelected
-                                ? "bg-gray-900 text-white shadow-sm"
-                                : "text-gray-700 hover:text-gray-900 hover:bg-gray-100"
-                            }`}
-                          >
-                            {c.name}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-              <div className="flex flex-wrap gap-2">
-                {cityList.length ? (
-                  cityList.map((c) => (
-                    <span
-                      key={c.id}
-                      className="px-3 py-1 bg-gray-100 border border-gray-200 rounded-full text-sm"
-                    >
-                      {c.name}
-                    </span>
-                  ))
-                ) : (
-                  <span className="text-sm text-gray-500">—</span>
-                )}
-              </div>
-            )}
-          </div>
-
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm space-y-5">
-          {/* HEADER */}
-          <div className="flex items-start justify-between gap-4">
-            <div>
-              <h2 className="text-sm font-semibold text-gray-900">
-                Verifikimi i kompanisë
-              </h2>
-              <p className="text-xs text-gray-500 mt-1">
-                Ngarko certifikatën për të rritur besueshmërinë dhe për të marrë më shumë klientë
-              </p>
-            </div>
-
-            {hasDocument ? (
-              <span className="px-3 py-1 text-xs font-medium rounded-full bg-green-50 text-green-700 border border-green-200">
-                Verifikuar
-              </span>
-            ) : (
-              <span className="px-3 py-1 text-xs font-medium rounded-full bg-amber-50 text-amber-700 border border-amber-200">
-                Jo e verifikuar
-              </span>
-            )}
-          </div>
-
-          {/* CONTENT */}
-          {hasDocument ? (
-            <div className="p-4 rounded-xl bg-green-50 border border-green-200 text-sm text-green-700">
-              Certifikata e regjistrimit është ngarkuar me sukses.
-            </div>
-          ) : (
-            <div className="space-y-3">
-
-              <div className="p-4 rounded-xl border border-dashed border-gray-300 bg-gray-50 text-sm text-gray-600">
-                Ngarko një dokument (.pdf, .jpg, .png) që vërteton regjistrimin e kompanisë.
-              </div>
-
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept=".pdf,.jpg,.jpeg,.png"
-                onChange={(e) => setFile(e.target.files[0])}
-                className="block w-full text-sm text-gray-600"
-              />
-
-              {file && (
-                <p className="text-xs text-gray-500">
-                  Zgjedhur: <span className="font-medium">{file.name}</span>
-                </p>
-              )}
-
-              <button
-                onClick={handleUpload}
-                disabled={!file}
-                className="px-4 py-2 rounded-full bg-gray-900 text-white text-sm font-medium 
-                shadow-sm hover:shadow-md hover:bg-gray-800 active:scale-[0.98] transition 
-                disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                Ngarko dokumentin
-              </button>
-            </div>
-          )}
-
-        </div>
-
-          {/* ACTIONS (EDIT MODE) */}
-          {isEditing && (
-            <div className="flex gap-3 pt-1">
-              <button
-                onClick={saveChanges}
-                disabled={saving}
-                className="px-4 py-2 rounded-full bg-gray-900 text-white text-sm font-medium 
-                shadow-sm hover:shadow-md hover:bg-black active:scale-[0.98] transition disabled:opacity-40"
-              >
-                {saving ? "Duke ruajtur…" : "Ruaj"}
-              </button>
-
-              <button
-                onClick={cancelEdit}
-                className="px-4 py-2 rounded-full bg-gray-100 text-gray-700 text-sm font-medium 
-                shadow-sm hover:shadow-md active:scale-[0.98] hover:bg-gray-200 transition"
-              >
-                Anulo
-              </button>
-            </div>
-          )}
-
-          {/* BOTTOM ACTION ROW */}
-          {!isEditing && (
-            <div className="flex items-center justify-between pt-6 border-t border-gray-200">
-
-              {/* Left: Edit */}
-              <button
-                onClick={startEdit}
-                disabled={saving || isLocked}
-                className={`inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium transition ${
-                  saving || isLocked
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed"
-                    : "bg-gray-900 text-white shadow-sm hover:bg-black hover:shadow-md active:scale-[0.98]"
-                }`}
-              >
-                <Pencil size={16} />
-                Redakto
-              </button>
-
-              {/* Right: Delete */}
-              <button
-                onClick={() => setShowDeleteModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-full text-sm font-medium 
-                bg-white border border-gray-200 text-gray-700 
-                hover:border-red-300 hover:text-red-600 
-                shadow-sm hover:shadow-md active:scale-[0.98] transition"
-              >
-                Fshi llogarinë
-              </button>
-
-
-            </div>
-          )}
-
-          {message && <p className="text-green-600 text-sm">{message}</p>}
-          {error && <p className="text-red-600 text-sm">{error}</p>}
+  if (loading) {
+    return (
+      <div className="premium-container py-8">
+        <div className="premium-card flex items-center gap-3 p-8 text-gray-500">
+          <Loader2 className="animate-spin" size={20} /> Duke ngarkuar profilin…
         </div>
       </div>
+    );
+  }
 
-      {/* DELETE MODAL */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white w-full max-w-md rounded-2xl p-6 shadow-lg">
-            <h2 className="text-lg font-semibold text-red-600">
-              Konfirmo fshirjen e llogarisë
-            </h2>
+  if (!company) {
+    return <div className="premium-container py-8"><div className="premium-card p-8 text-red-700">{error}</div></div>;
+  }
 
-            <p className="text-sm text-gray-600 mt-2">
-              Ky veprim do të çaktivizojë llogarinë tuaj. Ju lutem shkruani fjalëkalimin për ta konfirmuar.
-            </p>
-
-            <input
-              type="password"
-              placeholder="Fjalëkalimi"
-              value={deletePassword}
-              onChange={(e) => setDeletePassword(e.target.value)}
-              className="mt-4 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-red-500"
-            />
-
-            {deleteError && (
-              <p className="text-red-600 text-sm mt-2">{deleteError}</p>
-            )}
-
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => {
-                  setShowDeleteModal(false);
-                  setDeletePassword("");
-                  setDeleteError("");
-                }}
-                className="px-4 py-2 rounded-full bg-gray-100 text-gray-700 text-sm font-medium 
-                shadow-sm hover:shadow-md active:scale-[0.98] hover:bg-gray-200 transition"
-              >
-                Anulo
-              </button>
-
-              <button
-                onClick={handleDeleteAccount}
-                disabled={deleting || !deletePassword}
-                className="px-4 py-2 rounded-full bg-red-600 text-white text-sm font-medium 
-                shadow-sm hover:shadow-md hover:bg-red-700 active:scale-[0.98] transition disabled:opacity-40 disabled:cursor-not-allowed"
-              >
-                {deleting ? "Duke fshirë..." : "Fshi llogarinë"}
-              </button>
-            </div>
+  return (
+    <div className="premium-container py-6 md:py-8">
+      <header className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="text-label">Profili i kompanisë</p>
+          <h1 className="mt-1 text-2xl font-bold text-gray-900 sm:text-3xl">Plotësoni profilin tuaj</h1>
+          <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-500">
+            Ndiqni gjashtë hapa të qartë. Mund të kaloni në çdo seksion dhe të vazhdoni më vonë.
+          </p>
+        </div>
+        <div className="min-w-[220px] rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+          <div className="flex items-center justify-between text-sm">
+            <span className="font-medium text-gray-700">Progresi i profilit</span>
+            <strong>{progress}%</strong>
           </div>
+          <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-100">
+            <div className="h-full rounded-full bg-gray-900 transition-all duration-500" style={{ width: `${progress}%` }} />
+          </div>
+          <p className="mt-2 text-xs text-gray-500">{completedCount} nga {STEPS.length} hapa të përfunduar</p>
+        </div>
+      </header>
+
+      {isLocked && (
+        <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-800">
+          Verifikoni adresën tuaj të email-it për të ruajtur ndryshimet në profil.
         </div>
       )}
-    </>
+
+      <nav className="mb-6 overflow-x-auto rounded-2xl border border-gray-200 bg-white p-2 shadow-sm" aria-label="Hapat e profilit">
+        <div className="flex min-w-max gap-1 lg:grid lg:min-w-0 lg:grid-cols-6">
+          {STEPS.map((step) => {
+            const Icon = step.icon;
+            const active = currentStep === step.id && !showSummary;
+            const complete = sectionStatus[step.key];
+            return (
+              <button
+                key={step.id}
+                type="button"
+                onClick={() => { setCurrentStep(step.id); setShowSummary(false); setError(""); setMessage(""); }}
+                className={`flex min-w-[145px] items-center gap-3 rounded-xl px-3 py-3 text-left transition lg:min-w-0 ${
+                  active ? "bg-gray-900 text-white shadow-sm" : "text-gray-600 hover:bg-gray-50"
+                }`}
+              >
+                <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                  active ? "bg-white/15" : complete ? "bg-emerald-100 text-emerald-700" : "bg-gray-100"
+                }`}>
+                  {complete ? <Check size={15} /> : <Icon size={15} />}
+                </span>
+                <span className="min-w-0">
+                  <span className={`block text-[10px] uppercase tracking-wide ${active ? "text-gray-300" : "text-gray-400"}`}>Hapi {step.id}</span>
+                  <span className="block truncate text-xs font-semibold">{step.short}</span>
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </nav>
+
+      {showSummary ? (
+        <CompletionSummary company={company} steps={STEPS} sectionStatus={sectionStatus} onEdit={(step) => { setCurrentStep(step); setShowSummary(false); }} />
+      ) : (
+        <section className="premium-card overflow-hidden">
+          <StepHeader step={STEPS[currentStep - 1]} />
+          <div className="p-5 sm:p-7 lg:p-8">
+            {currentStep === 1 && (
+              <BasicStep
+                company={company}
+                form={form}
+                logoPreview={logoPreview}
+                logoFile={logoFile}
+                inputRef={logoInputRef}
+                onChange={updateField}
+                onLogo={(file) => { setLogoFile(file); markDirty(1); }}
+              />
+            )}
+            {currentStep === 2 && (
+              <ProfessionStep
+                industries={industries}
+                selectedIndustryId={selectedIndustryId}
+                setSelectedIndustryId={setSelectedIndustryId}
+                selected={selectedProfessions}
+                professions={filteredProfessions}
+                selectedIds={form.professions}
+                toggle={(id) => toggleListValue("professions", id)}
+              />
+            )}
+            {currentStep === 3 && (
+              <CityStep
+                country={selectedCountry}
+                setCountry={setSelectedCountry}
+                selected={selectedCities}
+                cities={filteredCities}
+                selectedIds={form.cities}
+                toggle={(id) => toggleListValue("cities", id)}
+              />
+            )}
+            {currentStep === 4 && <DescriptionStep form={form} onChange={updateField} />}
+            {currentStep === 5 && <OfferTextStep form={form} onChange={updateField} companyName={form.company_name} />}
+            {currentStep === 6 && (
+              <VerificationStep
+                company={company}
+                file={documentFile}
+                inputRef={documentInputRef}
+                onFile={(selected) => { setDocumentFile(selected); markDirty(6); }}
+              />
+            )}
+
+            {error && <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-medium text-red-700">{error}</div>}
+            {message && <div className="mt-6 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-medium text-emerald-700">{message}</div>}
+
+            <div className="mt-8 flex flex-col-reverse gap-3 border-t border-gray-100 pt-6 sm:flex-row sm:items-center sm:justify-between">
+              <button
+                type="button"
+                onClick={() => setCurrentStep((step) => Math.max(1, step - 1))}
+                disabled={currentStep === 1 || saving}
+                className="premium-btn btn-light inline-flex items-center justify-center gap-2 disabled:opacity-40"
+              >
+                <ArrowLeft size={16} /> Kthehu
+              </button>
+              <div className="flex flex-col gap-3 sm:flex-row">
+                {dirtySteps.has(currentStep) && (
+                  <button type="button" onClick={() => saveStep({ advance: false })} disabled={saving || isLocked} className="premium-btn btn-light disabled:opacity-40">
+                    Ruaj
+                  </button>
+                )}
+                <button type="button" onClick={() => saveStep({ advance: true })} disabled={saving || isLocked} className="premium-btn btn-dark inline-flex items-center justify-center gap-2 disabled:opacity-40">
+                  {saving ? <><Loader2 className="animate-spin" size={16} /> Duke ruajtur…</> : currentStep === 6 ? <><CheckCircle2 size={16} /> Përfundo profilin</> : <>Ruaj dhe vazhdo <ArrowRight size={16} /></>}
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      <section className="mt-8 rounded-2xl border border-red-100 bg-white p-5">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-900">Menaxhimi i llogarisë</h2>
+            <p className="mt-1 text-xs text-gray-500">Çaktivizimi i llogarisë është një veprim i rëndësishëm.</p>
+          </div>
+          <button type="button" onClick={() => setShowDeleteModal(true)} className="text-sm font-semibold text-red-600 hover:text-red-700">Fshi llogarinë</button>
+        </div>
+      </section>
+
+      {showDeleteModal && (
+        <DeleteAccountModal
+          password={deletePassword}
+          setPassword={setDeletePassword}
+          error={deleteError}
+          deleting={deleting}
+          onDelete={deleteAccount}
+          onClose={() => { setShowDeleteModal(false); setDeletePassword(""); setDeleteError(""); }}
+        />
+      )}
+    </div>
   );
 }
 
-function Field({
-  label,
-  name,
-  value,
-  onChange,
-  isEditing,
-  placeholder = "",
-}) {
+function StepHeader({ step }) {
+  const Icon = step.icon;
+  const descriptions = {
+    1: "Plotësoni të dhënat kryesore të kompanisë. Këto informacione ndihmojnë klientët t'ju njohin dhe t'ju kontaktojnë.",
+    2: "Zgjidhni profesionet dhe shërbimet që ofroni. Kjo na ndihmon t'ju dërgojmë kërkesa relevante.",
+    3: "Zgjidhni qytetet ku kompania juaj ofron shërbime. Mund të zgjidhni disa zona.",
+    4: "Prezantoni kompaninë, përvojën dhe mënyrën tuaj të punës për të krijuar besim.",
+    5: "Krijoni një prezantim standard që vendoset automatikisht në ofertat e ardhshme.",
+    6: "Ngarkoni dokumentin që vërteton regjistrimin e kompanisë. Dokumenti nuk shfaqet për klientët.",
+  };
+  return (
+    <div className="border-b border-gray-100 bg-gray-50 px-5 py-5 sm:px-7 lg:px-8">
+      <div className="flex items-start gap-4">
+        <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-gray-900 text-white"><Icon size={20} /></span>
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Hapi {step.id} nga 6</p>
+          <h2 className="mt-1 text-xl font-semibold text-gray-900">{step.title}</h2>
+          <p className="mt-2 max-w-3xl text-sm leading-6 text-gray-600">{descriptions[step.id]}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BasicStep({ company, form, logoPreview, logoFile, inputRef, onChange, onLogo }) {
+  return (
+    <div className="space-y-7">
+      <div className="flex flex-col gap-5 rounded-2xl border border-gray-200 p-5 sm:flex-row sm:items-center">
+        <button type="button" onClick={() => inputRef.current?.click()} className="relative flex h-24 w-24 shrink-0 items-center justify-center overflow-hidden rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 hover:border-gray-500">
+          {logoPreview ? <img src={logoPreview} alt="Logo" className="h-full w-full object-cover" /> : <ImagePlus className="text-gray-400" size={28} />}
+        </button>
+        <div>
+          <h3 className="font-semibold text-gray-900">Logoja e kompanisë</h3>
+          <p className="mt-1 text-sm text-gray-500">PNG, JPG ose WebP. Rekomandohet një imazh katror.</p>
+          <button type="button" onClick={() => inputRef.current?.click()} className="mt-3 text-sm font-semibold text-gray-900 hover:underline">{logoPreview ? "Ndrysho logon" : "Shto logon"}</button>
+          {logoFile && <p className="mt-1 text-xs text-gray-500">Zgjedhur: {logoFile.name}</p>}
+          <input ref={inputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(event) => onLogo(event.target.files?.[0] || null)} />
+        </div>
+      </div>
+      <div className="grid gap-5 sm:grid-cols-2">
+        <Input label="Emri i kompanisë *" name="company_name" value={form.company_name} onChange={onChange} />
+        <Input label="Numri i biznesit (ORG) *" name="org_number" value={form.org_number} onChange={onChange} />
+        <Input label="Email-i i llogarisë" value={company.account_email || ""} readOnly hint={company.email_verified ? "Email i verifikuar" : "Email ende i paverifikuar"} />
+        <Input label="Numri i telefonit *" name="phone" value={form.phone} onChange={onChange} />
+        <Input label="Faqja e internetit" name="website" value={form.website} onChange={onChange} placeholder="https://kompania.com" />
+        <Input label="Adresa e plotë *" name="address" value={form.address} onChange={onChange} placeholder="Rruga, numri, qyteti" />
+      </div>
+    </div>
+  );
+}
+
+function ProfessionStep({ industries, selectedIndustryId, setSelectedIndustryId, selected, professions, selectedIds, toggle }) {
+  return (
+    <ChoiceStep selected={selected} empty="Nuk keni zgjedhur ende specialitete." onRemove={(item) => toggle(item.id)}>
+      <div className="overflow-x-auto pb-2">
+        <div className="inline-flex min-w-max gap-1 rounded-xl bg-gray-100 p-1">
+          {industries.map((industry) => (
+            <button key={industry.id} type="button" onClick={() => setSelectedIndustryId(industry.id)} className={`rounded-lg px-4 py-2 text-sm font-medium ${String(selectedIndustryId) === String(industry.id) ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"}`}>
+              {getIndustryLabel(industry)}
+            </button>
+          ))}
+        </div>
+      </div>
+      <div className="mt-5 flex flex-wrap gap-2">
+        {professions.map((profession) => <ChoiceButton key={profession.id} selected={selectedIds.includes(profession.id)} onClick={() => toggle(profession.id)}>{profession.name}</ChoiceButton>)}
+      </div>
+    </ChoiceStep>
+  );
+}
+
+function CityStep({ country, setCountry, selected, cities, selectedIds, toggle }) {
+  return (
+    <ChoiceStep selected={selected} empty="Nuk keni zgjedhur ende qytete." onRemove={(item) => toggle(item.id)}>
+      <div className="inline-flex rounded-xl bg-gray-100 p-1">
+        {[{ code: "XK", name: "Kosovë" }, { code: "AL", name: "Shqipëri" }].map((item) => (
+          <button key={item.code} type="button" onClick={() => setCountry(item.code)} className={`rounded-lg px-5 py-2 text-sm font-medium ${country === item.code ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"}`}>{item.name}</button>
+        ))}
+      </div>
+      <div className="mt-5 flex flex-wrap gap-2">
+        {cities.map((city) => <ChoiceButton key={city.id} selected={selectedIds.includes(city.id)} onClick={() => toggle(city.id)}>{city.name}</ChoiceButton>)}
+      </div>
+    </ChoiceStep>
+  );
+}
+
+function ChoiceStep({ selected, empty, onRemove, children }) {
+  return (
+    <div>
+      <div className="mb-6 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">Të zgjedhura ({selected.length})</p>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {selected.length ? selected.map((item) => <button key={item.id} type="button" onClick={() => onRemove(item)} className="rounded-full bg-gray-900 px-3 py-1.5 text-sm font-medium text-white">{item.name} <span className="ml-1 text-white/60">×</span></button>) : <p className="text-sm text-gray-500">{empty}</p>}
+        </div>
+      </div>
+      {children}
+    </div>
+  );
+}
+
+function ChoiceButton({ selected, onClick, children }) {
+  return <button type="button" onClick={onClick} className={`rounded-full border px-3.5 py-2 text-sm font-medium transition ${selected ? "border-gray-900 bg-gray-900 text-white" : "border-gray-200 bg-white text-gray-700 hover:border-gray-400"}`}>{children}</button>;
+}
+
+function DescriptionStep({ form, onChange }) {
+  const length = form.description.length;
+  return (
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px]">
+      <label>
+        <span className="text-sm font-semibold text-gray-800">Përshkrimi i kompanisë *</span>
+        <textarea name="description" value={form.description} onChange={onChange} rows={10} maxLength={2000} placeholder="Tregoni për përvojën, ekipin, mënyrën e punës dhe llojet e projekteve që realizoni…" className="premium-input mt-2 resize-y" />
+        <span className={`mt-2 block text-right text-xs ${length >= 20 ? "text-emerald-600" : "text-gray-400"}`}>{length}/2000 · minimumi 20</span>
+      </label>
+      <HelpCard title="Çfarë të përfshini?" items={["Përvojën dhe historikun", "Shërbimet kryesore", "Mënyrën e punës", "Çfarë ju dallon"]} />
+    </div>
+  );
+}
+
+function OfferTextStep({ form, onChange, companyName }) {
+  return (
+    <div className="grid gap-6 lg:grid-cols-2">
+      <label>
+        <span className="text-sm font-semibold text-gray-800">Teksti standard i ofertës *</span>
+        <textarea name="default_offer_presentation" value={form.default_offer_presentation} onChange={onChange} rows={10} maxLength={1500} placeholder="Përshëndetje! Faleminderit për kërkesën tuaj…" className="premium-input mt-2 resize-y" />
+        <span className={`mt-2 block text-right text-xs ${form.default_offer_presentation.trim().length >= 10 ? "text-emerald-600" : "text-gray-400"}`}>{form.default_offer_presentation.length}/1500 · minimumi 10</span>
+      </label>
+      <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
+        <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Parapamja në ofertë</p>
+        <div className="mt-4 rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+          <p className="font-semibold text-gray-900">{companyName || "Kompania juaj"}</p>
+          <p className="mt-3 whitespace-pre-line text-sm leading-7 text-gray-600">{form.default_offer_presentation || "Teksti juaj standard do të shfaqet këtu."}</p>
+        </div>
+        <p className="mt-3 text-xs leading-5 text-gray-500">Ky tekst vendoset automatikisht, por mund të ndryshohet në çdo ofertë.</p>
+      </div>
+    </div>
+  );
+}
+
+function VerificationStep({ company, file, inputRef, onFile }) {
+  const hasDocument = Boolean(company.registration_document);
+  return (
+    <div className="mx-auto max-w-2xl">
+      {hasDocument ? (
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-6 text-center">
+          <FileCheck2 className="mx-auto text-emerald-700" size={36} />
+          <h3 className="mt-3 font-semibold text-emerald-900">Dokumenti është ngarkuar</h3>
+          <p className="mt-2 text-sm text-emerald-700">Dokumenti ruhet në mënyrë private dhe përdoret vetëm për verifikimin e kompanisë.</p>
+        </div>
+      ) : (
+        <button type="button" onClick={() => inputRef.current?.click()} className="flex w-full flex-col items-center rounded-2xl border-2 border-dashed border-gray-300 bg-gray-50 px-6 py-12 text-center hover:border-gray-500 hover:bg-gray-100">
+          <span className="flex h-12 w-12 items-center justify-center rounded-full bg-white text-gray-700 shadow-sm"><Upload size={22} /></span>
+          <span className="mt-4 font-semibold text-gray-900">Zgjidh dokumentin e regjistrimit</span>
+          <span className="mt-2 text-sm text-gray-500">PDF, JPG ose PNG · maksimumi 5 MB</span>
+          {file && <span className="mt-4 rounded-full bg-gray-900 px-3 py-1.5 text-xs font-medium text-white">{file.name}</span>}
+        </button>
+      )}
+      {!hasDocument && <input ref={inputRef} type="file" accept=".pdf,.jpg,.jpeg,.png,application/pdf,image/jpeg,image/png" className="hidden" onChange={(event) => onFile(event.target.files?.[0] || null)} />}
+      <div className="mt-5 rounded-xl bg-blue-50 p-4 text-sm leading-6 text-blue-800">
+        Dokumenti nuk shfaqet në profil dhe nuk ndahet me klientët. Administratorët e përdorin vetëm për të konfirmuar kompaninë.
+      </div>
+    </div>
+  );
+}
+
+function CompletionSummary({ company, steps, sectionStatus, onEdit }) {
+  return (
+    <section className="premium-card overflow-hidden">
+      <div className="bg-gray-900 px-6 py-8 text-center text-white sm:px-10 sm:py-10">
+        <CheckCircle2 className="mx-auto text-emerald-400" size={44} />
+        <h2 className="mt-4 text-2xl font-bold">Profili juaj është i plotë</h2>
+        <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-gray-300">Informacionet janë ruajtur. Mund të ktheheni në çdo hap për t'i përditësuar.</p>
+      </div>
+      <div className="grid gap-3 p-5 sm:grid-cols-2 sm:p-7 lg:grid-cols-3">
+        {steps.map((step) => {
+          const Icon = step.icon;
+          return (
+            <button key={step.id} type="button" onClick={() => onEdit(step.id)} className="flex items-center gap-3 rounded-xl border border-gray-200 p-4 text-left hover:border-gray-400 hover:shadow-sm">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">{sectionStatus[step.key] ? <Check size={17} /> : <Icon size={17} />}</span>
+              <span><span className="block text-xs text-gray-400">Hapi {step.id}</span><span className="block text-sm font-semibold text-gray-900">{step.title}</span></span>
+            </button>
+          );
+        })}
+      </div>
+      <div className="border-t border-gray-100 px-6 py-4 text-center text-sm text-gray-500">{company.company_name}</div>
+    </section>
+  );
+}
+
+function Input({ label, hint, readOnly = false, ...props }) {
   return (
     <label className="block">
-      <span className="text-xs text-gray-500">{label}</span>
-      {isEditing ? (
-        <input
-          name={name}
-          value={value || ""}
-          onChange={onChange}
-          placeholder={placeholder}
-          className="mt-1 w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-1 focus:ring-gray-800"
-        />
-      ) : (
-        <p className="mt-1 text-sm">{value || "—"}</p>
-      )}
+      <span className="text-sm font-semibold text-gray-800">{label}</span>
+      <input {...props} readOnly={readOnly} className={`premium-input mt-2 ${readOnly ? "cursor-not-allowed bg-gray-50 text-gray-500" : ""}`} />
+      {hint && <span className="mt-1.5 block text-xs text-gray-500">{hint}</span>}
     </label>
+  );
+}
+
+function HelpCard({ title, items }) {
+  return (
+    <aside className="rounded-2xl border border-blue-100 bg-blue-50 p-5">
+      <h3 className="font-semibold text-blue-900">{title}</h3>
+      <ul className="mt-3 space-y-2 text-sm text-blue-800">
+        {items.map((item) => <li key={item} className="flex gap-2"><Check size={15} className="mt-0.5 shrink-0" /> {item}</li>)}
+      </ul>
+    </aside>
+  );
+}
+
+function DeleteAccountModal({ password, setPassword, error, deleting, onDelete, onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+        <h2 className="text-lg font-semibold text-red-600">Konfirmo fshirjen e llogarisë</h2>
+        <p className="mt-2 text-sm leading-6 text-gray-600">Shkruani fjalëkalimin për ta çaktivizuar llogarinë.</p>
+        <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Fjalëkalimi" className="premium-input mt-4" />
+        {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
+        <div className="mt-6 flex justify-end gap-3">
+          <button type="button" onClick={onClose} className="premium-btn btn-light">Anulo</button>
+          <button type="button" onClick={onDelete} disabled={deleting || !password} className="premium-btn bg-red-600 text-white disabled:opacity-40">{deleting ? "Duke fshirë…" : "Fshi llogarinë"}</button>
+        </div>
+      </div>
+    </div>
   );
 }

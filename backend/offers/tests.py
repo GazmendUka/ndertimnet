@@ -4,6 +4,7 @@ from rest_framework.test import APITestCase
 from accounts.models import Company, Customer
 from jobrequests.models import JobRequest
 from locations.models import City
+from payments.models import LeadAccess
 
 from .models import Offer, OfferMessage, OfferReview, OfferStatus, OfferVersion
 
@@ -208,3 +209,31 @@ class OfferReviewApiTests(APITestCase):
             f"/api/accounts/companies/{self.company.id}/public/"
         )
         self.assertEqual(response.status_code, 200)
+
+    def test_new_offer_uses_company_default_presentation(self):
+        self.company_user.email_verified = True
+        self.company_user.save(update_fields=["email_verified"])
+        self.company.phone = "+38344111222"
+        self.company.website = "https://example.com"
+        self.company.default_offer_presentation = "Our standard company introduction."
+        self.company.save(update_fields=["phone", "website", "default_offer_presentation"])
+        second_job = JobRequest.objects.create(
+            customer=self.customer_user,
+            title="Bathroom renovation",
+            description="Renovate the bathroom",
+            city=self.city,
+        )
+        LeadAccess.objects.create(company=self.company, job_request=second_job)
+        self.client.force_authenticate(self.company_user)
+
+        response = self.client.post(
+            "/api/offers/",
+            {"job_request": second_job.id},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 201)
+        self.assertEqual(
+            response.data["current_version"]["presentation_text"],
+            "Our standard company introduction.",
+        )

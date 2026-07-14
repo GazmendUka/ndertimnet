@@ -68,40 +68,22 @@ def get_company_profile_completion(company) -> int:
 
     user = getattr(company, "user", None)
 
-    total_points = 7
-    points = 0
-
-    # 1️⃣ Email verifierad
-    if user and user.email_verified:
-        points += 1
-
-    # 2️⃣ Organisationsnummer
-    if company.org_number:
-        points += 1
-
-    # 3️⃣ Företagsnamn
-    if company.company_name:
-        points += 1
-
-    # 4️⃣ Adress
-    if company.address:
-        points += 1
-
-    # 5️⃣ Telefon
-    if company.phone:
-        points += 1
-
-    # 6️⃣ Stad
-    if company.city or company.cities.exists():
-        points += 1
-
-    # 7️⃣ Yrken
-    if company.professions.exists():
-        points += 1
-
-    percentage = int((points / total_points) * 100)
-
-    return percentage
+    sections = [
+        bool(
+            company.company_name
+            and company.org_number
+            and company.phone
+            and company.address
+            and user
+            and user.email_verified
+        ),
+        company.professions.exists(),
+        bool(company.city_id or company.cities.exists()),
+        len((company.description or "").strip()) >= 20,
+        len((company.default_offer_presentation or "").strip()) >= 10,
+        bool(company.registration_document),
+    ]
+    return round((sum(sections) / len(sections)) * 100)
 
 
 # ======================================================
