@@ -200,12 +200,19 @@ class CompanySerializer(serializers.ModelSerializer):
             "offer_text": len((obj.default_offer_presentation or "").strip()) >= 10,
             "verification": bool(obj.registration_document),
         }
-        completed = sum(1 for complete in sections.values() if complete)
+        required_keys = (
+            "basic",
+            "professions",
+            "service_areas",
+            "description",
+            "verification",
+        )
+        completed = sum(1 for key in required_keys if sections[key])
         return {
             **sections,
             "completed": completed,
-            "total": len(sections),
-            "percentage": round((completed / len(sections)) * 100),
+            "total": len(required_keys),
+            "percentage": round((completed / len(required_keys)) * 100),
         }
 
     def validate_logo(self, image):

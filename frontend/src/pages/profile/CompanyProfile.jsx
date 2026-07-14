@@ -24,9 +24,11 @@ const STEPS = [
   { id: 2, key: "professions", title: "Specialitetet", short: "Specialitetet", icon: Wrench },
   { id: 3, key: "service_areas", title: "Zona e shërbimit", short: "Zonat", icon: MapPin },
   { id: 4, key: "description", title: "Përshkrimi", short: "Përshkrimi", icon: FileText },
-  { id: 5, key: "offer_text", title: "Teksti i ofertës", short: "Oferta", icon: Sparkles },
+  { id: 5, key: "offer_text", title: "Teksti i ofertës", short: "Oferta", icon: Sparkles, optional: true },
   { id: 6, key: "verification", title: "Verifikimi", short: "Verifikimi", icon: ShieldCheck },
 ];
+
+const REQUIRED_STEP_KEYS = STEPS.filter((step) => !step.optional).map((step) => step.key);
 
 const INDUSTRY_SHORT_LABELS = {
   "ndertim-dhe-renovim": "Ndërtim",
@@ -115,7 +117,12 @@ export default function CompanyProfile() {
         setProfessions(professionData);
         setCities(cityData);
 
-        const firstIncomplete = STEPS.find((step) => !companyData.profile_sections?.[step.key]);
+        const requiredComplete = REQUIRED_STEP_KEYS.every(
+          (key) => companyData.profile_sections?.[key]
+        );
+        const firstIncomplete = requiredComplete
+          ? null
+          : STEPS.find((step) => !companyData.profile_sections?.[step.key]);
         setCurrentStep(firstIncomplete?.id || 1);
         setShowSummary(!firstIncomplete);
       } catch (requestError) {
@@ -202,9 +209,9 @@ export default function CompanyProfile() {
     verification: Boolean(company?.registration_document),
   }), [company?.city?.id, company?.email_verified, company?.registration_document, form]);
 
-  const completedCount = Object.values(sectionStatus).filter(Boolean).length;
-  const progress = Math.round((completedCount / STEPS.length) * 100);
-  const allComplete = completedCount === STEPS.length;
+  const completedCount = REQUIRED_STEP_KEYS.filter((key) => sectionStatus[key]).length;
+  const progress = Math.round((completedCount / REQUIRED_STEP_KEYS.length) * 100);
+  const allComplete = completedCount === REQUIRED_STEP_KEYS.length;
   const isLocked = !user?.email_verified;
 
   const markDirty = (step = currentStep) => {
@@ -239,7 +246,9 @@ export default function CompanyProfile() {
     if (step === 2 && !form.professions.length) return "Zgjidhni të paktën një specialitet.";
     if (step === 3 && !form.cities.length && !company?.city?.id) return "Zgjidhni të paktën një qytet.";
     if (step === 4 && form.description.trim().length < 20) return "Përshkrimi duhet të ketë të paktën 20 karaktere.";
-    if (step === 5 && form.default_offer_presentation.trim().length < 10) return "Teksti i ofertës duhet të ketë të paktën 10 karaktere.";
+    if (step === 5 && form.default_offer_presentation.trim() && form.default_offer_presentation.trim().length < 10) {
+      return "Shkruani të paktën 10 karaktere ose kaloni këtë hap opsional.";
+    }
     if (step === 6 && !company?.registration_document && !documentFile) return "Zgjidhni dokumentin e regjistrimit.";
     return "";
   };
@@ -298,8 +307,8 @@ export default function CompanyProfile() {
       });
       setMessage("Hapi u ruajt me sukses.");
 
-      const updatedComplete = STEPS.every(
-        (step) => updated.profile_sections?.[step.key] ?? sectionStatus[step.key]
+      const updatedComplete = REQUIRED_STEP_KEYS.every(
+        (key) => updated.profile_sections?.[key] ?? sectionStatus[key]
       );
       if (currentStep === 6 && updatedComplete) {
         setShowSummary(true);
@@ -365,7 +374,7 @@ export default function CompanyProfile() {
           <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-100">
             <div className="h-full rounded-full bg-gray-900 transition-all duration-500" style={{ width: `${progress}%` }} />
           </div>
-          <p className="mt-2 text-xs text-gray-500">{completedCount} nga {STEPS.length} hapa të përfunduar</p>
+          <p className="mt-2 text-xs text-gray-500">{completedCount} nga {REQUIRED_STEP_KEYS.length} hapa të detyrueshëm</p>
         </div>
       </header>
 
@@ -397,7 +406,7 @@ export default function CompanyProfile() {
                 </span>
                 <span className="min-w-0">
                   <span className={`block text-[10px] uppercase tracking-wide ${active ? "text-gray-300" : "text-gray-400"}`}>Hapi {step.id}</span>
-                  <span className="block truncate text-xs font-semibold">{step.short}</span>
+                  <span className="block truncate text-xs font-semibold">{step.short}{step.optional ? " · Opsional" : ""}</span>
                 </span>
               </button>
             );
@@ -473,7 +482,7 @@ export default function CompanyProfile() {
                   </button>
                 )}
                 <button type="button" onClick={() => saveStep({ advance: true })} disabled={saving || isLocked} className="premium-btn btn-dark inline-flex items-center justify-center gap-2 disabled:opacity-40">
-                  {saving ? <><Loader2 className="animate-spin" size={16} /> Duke ruajtur…</> : currentStep === 6 ? <><CheckCircle2 size={16} /> Përfundo profilin</> : <>Ruaj dhe vazhdo <ArrowRight size={16} /></>}
+                  {saving ? <><Loader2 className="animate-spin" size={16} /> Duke ruajtur…</> : currentStep === 6 ? <><CheckCircle2 size={16} /> Përfundo profilin</> : currentStep === 5 && !form.default_offer_presentation.trim() ? <>Kalo këtë hap <ArrowRight size={16} /></> : <>Ruaj dhe vazhdo <ArrowRight size={16} /></>}
                 </button>
               </div>
             </div>
@@ -512,7 +521,7 @@ function StepHeader({ step }) {
     2: "Zgjidhni profesionet dhe shërbimet që ofroni. Kjo na ndihmon t'ju dërgojmë kërkesa relevante.",
     3: "Zgjidhni qytetet ku kompania juaj ofron shërbime. Mund të zgjidhni disa zona.",
     4: "Prezantoni kompaninë, përvojën dhe mënyrën tuaj të punës për të krijuar besim.",
-    5: "Krijoni një prezantim standard që vendoset automatikisht në ofertat e ardhshme.",
+    5: "Ky hap është opsional, por rekomandohet. Krijoni një prezantim standard që vendoset automatikisht në ofertat e ardhshme.",
     6: "Ngarkoni dokumentin që vërteton regjistrimin e kompanisë. Dokumenti nuk shfaqet për klientët.",
   };
   return (
@@ -626,9 +635,9 @@ function OfferTextStep({ form, onChange, companyName }) {
   return (
     <div className="grid gap-6 lg:grid-cols-2">
       <label>
-        <span className="text-sm font-semibold text-gray-800">Teksti standard i ofertës *</span>
+        <span className="text-sm font-semibold text-gray-800">Teksti standard i ofertës <span className="font-normal text-gray-500">(opsional)</span></span>
         <textarea name="default_offer_presentation" value={form.default_offer_presentation} onChange={onChange} rows={10} maxLength={1500} placeholder="Përshëndetje! Faleminderit për kërkesën tuaj…" className="premium-input mt-2 resize-y" />
-        <span className={`mt-2 block text-right text-xs ${form.default_offer_presentation.trim().length >= 10 ? "text-emerald-600" : "text-gray-400"}`}>{form.default_offer_presentation.length}/1500 · minimumi 10</span>
+        <span className={`mt-2 block text-right text-xs ${form.default_offer_presentation.trim().length >= 10 ? "text-emerald-600" : "text-gray-400"}`}>{form.default_offer_presentation.length}/1500 · minimumi 10 nëse e plotësoni</span>
       </label>
       <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
         <p className="text-xs font-semibold uppercase tracking-wide text-gray-400">Parapamja në ofertë</p>
@@ -682,7 +691,7 @@ function CompletionSummary({ company, steps, sectionStatus, onEdit }) {
           return (
             <button key={step.id} type="button" onClick={() => onEdit(step.id)} className="flex items-center gap-3 rounded-xl border border-gray-200 p-4 text-left hover:border-gray-400 hover:shadow-sm">
               <span className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100 text-emerald-700">{sectionStatus[step.key] ? <Check size={17} /> : <Icon size={17} />}</span>
-              <span><span className="block text-xs text-gray-400">Hapi {step.id}</span><span className="block text-sm font-semibold text-gray-900">{step.title}</span></span>
+              <span><span className="block text-xs text-gray-400">Hapi {step.id}{step.optional ? " · Opsional" : ""}</span><span className="block text-sm font-semibold text-gray-900">{step.title}</span></span>
             </button>
           );
         })}

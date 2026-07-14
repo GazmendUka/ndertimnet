@@ -80,7 +80,6 @@ def get_company_profile_completion(company) -> int:
         company.professions.exists(),
         bool(company.city_id or company.cities.exists()),
         len((company.description or "").strip()) >= 20,
-        len((company.default_offer_presentation or "").strip()) >= 10,
         bool(company.registration_document),
     ]
     return round((sum(sections) / len(sections)) * 100)
