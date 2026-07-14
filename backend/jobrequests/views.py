@@ -18,7 +18,7 @@ from accounts.permissions import (
 from main.pagination import AlbanianPagination
 
 from offers.models import Offer, OfferStatus
-from leads.models import ArchivedJob  # behåll om du vill fortsätta arkivera
+from offers.services import OfferAcceptanceError, accept_offer as accept_offer_service
 
 from .models import JobRequest, JobRequestAudit, JobRequestDraft, JobRequestModerationEvent
 from .serializers import (
@@ -500,76 +500,10 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         except Offer.DoesNotExist:
             return Response({"detail": "Oferta nuk u gjet."}, status=status.HTTP_404_NOT_FOUND)
 
-        if offer.status == OfferStatus.REJECTED:
-            return Response(
-                {"detail": "Nuk mund të pranoni një ofertë të refuzuar."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        # Kräver signering innan accept
-        if not offer.current_version or not offer.current_version.is_signed:
-            return Response(
-                {"detail": "Oferta duhet të jetë e nënshkruar para pranimit."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        with transaction.atomic():
-            now = timezone.now()
-
-            # ✅ Accept selected + unlock lead (efter accept ska de alltid ha access)
-            offer.status = OfferStatus.ACCEPTED
-            offer.accepted_at = now
-            offer.lead_unlocked = True
-            offer.save(update_fields=["status", "accepted_at", "lead_unlocked", "updated_at"])
-
-            # ✅ Reject other offers (men rör inte DRAFT)
-            Offer.objects.filter(job_request=job).exclude(id=offer.id).exclude(
-                status__in=[OfferStatus.REJECTED, OfferStatus.DRAFT]
-            ).update(
-                status=OfferStatus.REJECTED,
-                rejected_at=now,
-                updated_at=now,
-            )
-
-            # ✅ Update job fields (för UI/compat)
-            price = offer.current_version.price_amount if offer.current_version else None
-
-            job.winner_company = offer.company
-            job.winner_price = price or job.budget
-            job.winner_offer = offer
-            job.is_completed = True
-            job.is_active = False
-            job.save()
-
-            # Archive (om du vill behålla)
-            ArchivedJob.objects.create(
-                title=job.title,
-                description=job.description,
-                category=job.profession.name if job.profession else "",
-                location=job.city.name,
-                date_accepted=now,
-                price=price or (job.budget or 0),
-                company=offer.company,
-            )
-
-            JobRequestAudit.objects.create(
-                job_request=job,
-                company=offer.company,
-                action="offer_accepted",
-                message="Klienti pranoi ofertën.",
-            )
-            JobRequestAudit.objects.create(
-                job_request=job,
-                company=offer.company,
-                action="winner_selected",
-                message="Kompania u zgjodh si fituese.",
-            )
-            JobRequestAudit.objects.create(
-                job_request=job,
-                company=offer.company,
-                action="job_closed",
-                message="Kërkesa u mbyll pas pranimit të ofertës.",
-            )
+        try:
+            _, job = accept_offer_service(offer_id=offer.id, customer=user)
+        except OfferAcceptanceError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         serializer = self.get_serializer(job, context={"request": request})
         return Response(serializer.data, status=status.HTTP_200_OK)

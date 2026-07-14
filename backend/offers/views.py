@@ -341,10 +341,10 @@ class OfferViewSet(viewsets.ModelViewSet):
         )
 
         serializer.is_valid(raise_exception=True)
-        serializer.save()
+        decided_offer = serializer.save()
 
         return Response(
-            {"success": True, "status": offer.status},
+            {"success": True, "status": decided_offer.status},
             status=200,
         )
 

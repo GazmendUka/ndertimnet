@@ -2,11 +2,20 @@ from django.contrib.auth import get_user_model
 from rest_framework.test import APITestCase
 
 from accounts.models import Company, Customer
-from jobrequests.models import JobRequest
+from jobrequests.models import JobRequest, JobRequestAudit
+from leads.models import ArchivedJob
 from locations.models import City
 from payments.models import LeadAccess
 
-from .models import Offer, OfferMessage, OfferReview, OfferStatus, OfferVersion
+from .models import (
+    Offer,
+    OfferChatUnlock,
+    OfferMessage,
+    OfferReview,
+    OfferStatus,
+    OfferVersion,
+    UnlockType,
+)
 
 
 User = get_user_model()
@@ -237,3 +246,127 @@ class OfferReviewApiTests(APITestCase):
             response.data["current_version"]["presentation_text"],
             "Our standard company introduction.",
         )
+
+
+class OfferAcceptanceFlowTests(APITestCase):
+    def setUp(self):
+        self.customer_user = User.objects.create_user(
+            email="acceptance-customer@example.com",
+            password="test-pass",
+            role="customer",
+            email_verified=True,
+        )
+        Customer.objects.create(user=self.customer_user)
+        self.city = City.objects.create(
+            name="Prishtinë Acceptance",
+            slug="prishtine-acceptance",
+            country="XK",
+        )
+        self.job = JobRequest.objects.create(
+            customer=self.customer_user,
+            title="Roof renovation",
+            description="Replace the complete roof.",
+            budget="2500.00",
+            city=self.city,
+            is_active=True,
+        )
+
+        self.winner_user = User.objects.create_user(
+            email="winner@example.com", password="test-pass", role="company"
+        )
+        self.winner_company = Company.objects.create(
+            user=self.winner_user, company_name="Winner Company"
+        )
+        self.loser_user = User.objects.create_user(
+            email="loser@example.com", password="test-pass", role="company"
+        )
+        self.loser_company = Company.objects.create(
+            user=self.loser_user, company_name="Other Company"
+        )
+
+        self.winning_offer = self._create_signed_offer(self.winner_company, self.winner_user, "2200.00")
+        self.other_offer = self._create_signed_offer(self.loser_company, self.loser_user, "2300.00")
+
+    def _create_signed_offer(self, company, user, price):
+        offer = Offer.objects.create(company=company, job_request=self.job)
+        version = OfferVersion.objects.create(
+            offer=offer,
+            version_number=1,
+            price_amount=price,
+            is_signed=True,
+            created_by=user,
+        )
+        offer.current_version = version
+        offer.status = OfferStatus.SIGNED
+        offer.save()
+        return offer
+
+    def test_offer_decision_accepts_winner_and_removes_job_from_other_company(self):
+        self.client.force_authenticate(self.customer_user)
+        response = self.client.post(
+            f"/api/offers/{self.winning_offer.id}/decision/",
+            {"decision": "accept"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["status"], OfferStatus.ACCEPTED)
+
+        self.job.refresh_from_db()
+        self.winning_offer.refresh_from_db()
+        self.other_offer.refresh_from_db()
+        self.assertFalse(self.job.is_active)
+        self.assertTrue(self.job.is_completed)
+        self.assertEqual(self.job.status, "completed")
+        self.assertEqual(self.job.winner_offer_id, self.winning_offer.id)
+        self.assertEqual(self.job.winner_company_id, self.winner_company.id)
+        self.assertEqual(self.winning_offer.status, OfferStatus.ACCEPTED)
+        self.assertEqual(self.other_offer.status, OfferStatus.REJECTED)
+        self.assertTrue(self.winning_offer.lead_unlocked)
+        self.assertTrue(
+            OfferChatUnlock.objects.filter(
+                offer=self.winning_offer,
+                unlock_type=UnlockType.AFTER_ACCEPT,
+            ).exists()
+        )
+
+        self.client.force_authenticate(self.loser_user)
+        losing_offer_response = self.client.get(f"/api/offers/{self.other_offer.id}/")
+        self.assertEqual(losing_offer_response.status_code, 404)
+
+        self.client.force_authenticate(self.winner_user)
+        winning_offer_response = self.client.get(f"/api/offers/{self.winning_offer.id}/")
+        self.assertEqual(winning_offer_response.status_code, 200)
+
+    def test_acceptance_retry_is_idempotent(self):
+        self.client.force_authenticate(self.customer_user)
+        url = f"/api/offers/{self.winning_offer.id}/decision/"
+        first = self.client.post(url, {"decision": "accept"}, format="json")
+        second = self.client.post(url, {"decision": "accept"}, format="json")
+
+        self.assertEqual(first.status_code, 200)
+        self.assertEqual(second.status_code, 200)
+        self.assertEqual(ArchivedJob.objects.filter(company=self.winner_company).count(), 1)
+        self.assertEqual(
+            JobRequestAudit.objects.filter(
+                job_request=self.job,
+                action="offer_accepted",
+            ).count(),
+            1,
+        )
+
+    def test_job_request_accept_route_uses_the_same_closing_flow(self):
+        self.client.force_authenticate(self.customer_user)
+        response = self.client.post(
+            f"/api/jobrequests/{self.job.id}/accept-offer/",
+            {"offer_id": self.winning_offer.id},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.job.refresh_from_db()
+        self.other_offer.refresh_from_db()
+        self.assertFalse(self.job.is_active)
+        self.assertTrue(self.job.is_completed)
+        self.assertEqual(self.job.winner_offer_id, self.winning_offer.id)
+        self.assertEqual(self.other_offer.status, OfferStatus.REJECTED)

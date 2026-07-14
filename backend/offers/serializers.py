@@ -20,6 +20,7 @@ from .models import (
     OfferStatus,
     UnlockType,
 )
+from .services import OfferAcceptanceError, accept_offer
 
 
 
@@ -300,25 +301,19 @@ class OfferDecisionSerializer(serializers.Serializer):
             raise serializers.ValidationError("Offer must be signed before decision.")
 
         if decision == "accept":
-            offer.status = OfferStatus.ACCEPTED
-            offer.accepted_at = timezone.now()
-
-            # Auto unlock chat (gratis)
-            OfferChatUnlock.objects.get_or_create(
-                offer=offer,
-                unlock_type=UnlockType.AFTER_ACCEPT,
-                defaults={
-                    "amount": 0,
-                    "currency": "EUR",
-                    "created_by": self.context["request"].user,
-                },
-            )
+            try:
+                offer, _ = accept_offer(
+                    offer_id=offer.id,
+                    customer=self.context["request"].user,
+                )
+            except OfferAcceptanceError as exc:
+                raise serializers.ValidationError(str(exc)) from exc
 
         else:
             offer.status = OfferStatus.REJECTED
             offer.rejected_at = timezone.now()
+            offer.save()
 
-        offer.save()
         return offer
 
 
