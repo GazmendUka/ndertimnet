@@ -3,6 +3,7 @@ from django.db import transaction
 
 from .emails import send_job_moderation_email
 from .models import JobRequest, JobRequestModerationEvent
+from offers.models import Offer
 
 
 class JobRequestModerationEventInline(admin.TabularInline):
@@ -16,6 +17,33 @@ class JobRequestModerationEventInline(admin.TabularInline):
 
     def has_change_permission(self, request, obj=None):
         return False
+
+
+class OfferInline(admin.TabularInline):
+    model = Offer
+    extra = 0
+    can_delete = True
+    fields = (
+        "id",
+        "company",
+        "status",
+        "round_number",
+        "lead_unlocked",
+        "current_version",
+        "accepted_at",
+        "rejected_at",
+        "created_at",
+    )
+    readonly_fields = fields
+    show_change_link = True
+    verbose_name = "Ofertë"
+    verbose_name_plural = "Ofertat"
+
+    def has_add_permission(self, request, obj=None):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return True
 
 
 @admin.register(JobRequest)
@@ -49,7 +77,7 @@ class JobRequestAdmin(admin.ModelAdmin):
             "created_at", "updated_at",
         )}),
     )
-    inlines = (JobRequestModerationEventInline,)
+    inlines = (OfferInline, JobRequestModerationEventInline)
     actions = ("approve_jobs", "request_changes", "reject_jobs", "block_jobs")
 
     def get_queryset(self, request):
