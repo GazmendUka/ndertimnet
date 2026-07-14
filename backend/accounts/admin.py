@@ -50,15 +50,111 @@ class CustomerAdmin(admin.ModelAdmin):
 
 @admin.register(Company)
 class CompanyAdmin(admin.ModelAdmin):
-    list_display = ("id", "company_name", "org_number", "phone")
-    search_fields = ("company_name", "org_number", "phone")
+    list_display = (
+        "id",
+        "company_name",
+        "user_email",
+        "org_number",
+        "phone",
+        "city",
+        "is_verified",
+        "is_active",
+        "free_leads_remaining",
+        "marketplace_access",
+    )
+    search_fields = (
+        "company_name",
+        "org_number",
+        "phone",
+        "user__email",
+        "city__name",
+    )
+    list_filter = (
+        "is_verified",
+        "is_active",
+        "vat_registered",
+        "city",
+        "professions",
+    )
     ordering = ("id",)
+    filter_horizontal = ("cities", "professions")
+    readonly_fields = (
+        "created_at",
+        "updated_at",
+        "marketplace_access",
+        "can_send_offers_display",
+        "can_unlock_leads_display",
+        "can_be_verified_display",
+    )
 
     fieldsets = (
-        ("🏢 Informacioni i Kompanisë", {
-            "fields": ("user", "company_name", "org_number", "phone")
+        ("Informacioni i Kompanisë", {
+            "fields": (
+                "user",
+                "company_name",
+                "description",
+                "phone",
+                "website",
+                "address",
+                "city",
+                "cities",
+                "professions",
+                "logo",
+            )
+        }),
+        ("Organizata", {
+            "fields": (
+                "org_number",
+                "organization_form",
+                "vat_registered",
+                "registration_document",
+            )
+        }),
+        ("Verifikimi dhe Statusi", {
+            "fields": (
+                "is_verified",
+                "verified_at",
+                "is_active",
+                "archived_at",
+                "profile_step",
+            )
+        }),
+        ("Leads och åtkomst", {
+            "fields": (
+                "free_leads_remaining",
+                "marketplace_access",
+                "can_send_offers_display",
+                "can_unlock_leads_display",
+                "can_be_verified_display",
+            )
+        }),
+        ("Offerter", {
+            "fields": ("default_offer_presentation",)
+        }),
+        ("System", {
+            "fields": ("created_at", "updated_at")
         }),
     )
+
+    @admin.display(description="Email")
+    def user_email(self, obj):
+        return obj.user.email
+
+    @admin.display(boolean=True, description="Marketplace access")
+    def marketplace_access(self, obj):
+        return obj.can_access_marketplace()
+
+    @admin.display(boolean=True, description="Can send offers")
+    def can_send_offers_display(self, obj):
+        return obj.can_send_offers()
+
+    @admin.display(boolean=True, description="Can unlock leads")
+    def can_unlock_leads_display(self, obj):
+        return obj.can_unlock_leads()
+
+    @admin.display(boolean=True, description="Can be verified")
+    def can_be_verified_display(self, obj):
+        return obj.can_be_verified()
 
     class Meta:
         verbose_name = "Kompani"
