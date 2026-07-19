@@ -428,7 +428,15 @@ export default function CustomerOfferDetailsPage() {
                 </div>
                 <div>
                   <p className="text-xs text-gray-400">Dërguar nga</p>
-                  <p className="font-semibold">{companyName}</p>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold">{companyName}</p>
+                    {company?.is_verified && (
+                      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-400/15 px-2.5 py-1 text-xs font-semibold text-emerald-300">
+                        <ShieldCheck size={14} />
+                        Kompani e verifikuar
+                      </span>
+                    )}
+                  </div>
                   {company?.id && (
                     <button
                       type="button"

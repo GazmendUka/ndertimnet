@@ -113,6 +113,7 @@ class CompanySerializer(serializers.ModelSerializer):
             "professions_detail",
             "profile_step",
             "profile_completion",
+            "is_verified",
             "is_active",
             "created_at",
             "updated_at",

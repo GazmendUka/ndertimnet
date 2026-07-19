@@ -7,7 +7,7 @@ import { useAuth } from "../../auth/AuthContext";
 
 import { toast } from "react-hot-toast";
 
-import { ArrowLeft, MapPin, Euro, Tag, Users, Clock } from "lucide-react";
+import { ArrowLeft, MapPin, Euro, Tag, Users, Clock, ShieldCheck } from "lucide-react";
 import ModerationBadge from "../../components/ui/ModerationBadge";
 import DeleteModal from "../../components/ui/DeleteModal";
 import CompanyRatingSummary from "../../components/reviews/CompanyRatingSummary";
@@ -452,9 +452,17 @@ export default function CustomerJobDetails() {
                     >
                       <div className="flex justify-between mb-2">
                         <div>
-                          <h3 className="font-semibold text-gray-900">
-                            {offer.company?.company_name || "Kompani"}
-                          </h3>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <h3 className="font-semibold text-gray-900">
+                              {offer.company?.company_name || "Kompani"}
+                            </h3>
+                            {offer.company?.is_verified && (
+                              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                                <ShieldCheck size={12} />
+                                Kompani e verifikuar
+                              </span>
+                            )}
+                          </div>
                           <div className="mt-1">
                             <CompanyRatingSummary summary={offer.company?.rating_summary} compact />
                           </div>
