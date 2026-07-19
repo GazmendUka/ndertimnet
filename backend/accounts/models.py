@@ -93,6 +93,10 @@ class User(AbstractBaseUser, PermissionsMixin):
         blank=True
     )
 
+    profile_completion_reminder_count = models.PositiveSmallIntegerField(
+        default=0
+    )
+
     welcome_email_sent_at = models.DateTimeField(
         null=True,
         blank=True

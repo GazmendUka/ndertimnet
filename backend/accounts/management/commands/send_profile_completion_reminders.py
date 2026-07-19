@@ -1,4 +1,5 @@
 from django.core.management.base import BaseCommand
+from django.db.models import Q
 from django.utils import timezone
 
 from accounts.emails import send_profile_completion_reminder_email
@@ -41,43 +42,73 @@ def user_profile_is_complete(user):
 
 
 class Command(BaseCommand):
-    help = "Send one-time email reminders to users with incomplete profiles"
+    help = "Dërgon email rikujtues për përdoruesit me profil të paplotësuar"
 
     def add_arguments(self, parser):
         parser.add_argument(
             "--hours",
             type=int,
             default=12,
-            help="Only remind users created at least this many hours ago.",
+            help="Dërgo rikujtim vetëm për përdoruesit e krijuar para kaq orësh.",
+        )
+        parser.add_argument(
+            "--interval-days",
+            type=int,
+            default=3,
+            help="Sa ditë duhet të kalojnë mes dy rikujtimeve.",
+        )
+        parser.add_argument(
+            "--max-reminders",
+            type=int,
+            default=3,
+            help="Numri maksimal i rikujtimeve për një përdorues.",
+        )
+        parser.add_argument(
+            "--role",
+            choices=["company", "customer"],
+            default=None,
+            help="Kufizo rikujtimet vetëm për një rol.",
         )
         parser.add_argument(
             "--limit",
             type=int,
             default=200,
-            help="Maximum number of reminders to send.",
+            help="Numri maksimal i rikujtimeve për këtë ekzekutim.",
         )
         parser.add_argument(
             "--dry-run",
             action="store_true",
-            help="List users that would receive a reminder without sending emails.",
+            help="Shfaq përdoruesit pa dërguar email.",
         )
 
     def handle(self, *args, **options):
         cutoff = timezone.now() - timezone.timedelta(hours=options["hours"])
+        reminder_cutoff = timezone.now() - timezone.timedelta(days=options["interval_days"])
+        max_reminders = options["max_reminders"]
         limit = options["limit"]
         dry_run = options["dry_run"]
+        role = options["role"]
 
         users = (
             User.objects
             .filter(
                 is_active=True,
                 date_joined__lte=cutoff,
-                profile_completion_reminder_sent_at__isnull=True,
+                profile_completion_reminder_count__lt=max_reminders,
+            )
+            .filter(
+                Q(profile_completion_reminder_sent_at__isnull=True)
+                | Q(profile_completion_reminder_sent_at__lte=reminder_cutoff)
             )
             .exclude(role="admin")
             .select_related("customer_profile", "company_profile")
-            .order_by("date_joined")[:limit]
+            .order_by("date_joined")
         )
+
+        if role:
+            users = users.filter(role=role)
+
+        users = users[:limit]
 
         sent = 0
         skipped = 0
@@ -89,24 +120,30 @@ class Command(BaseCommand):
                 continue
 
             if dry_run:
-                self.stdout.write(f"Would remind: {user.email} ({user.role})")
+                self.stdout.write(
+                    f"Do të rikujtohej: {user.email} ({user.role})"
+                )
                 sent += 1
                 continue
 
             try:
                 send_profile_completion_reminder_email(user)
                 user.profile_completion_reminder_sent_at = timezone.now()
-                user.save(update_fields=["profile_completion_reminder_sent_at"])
+                user.profile_completion_reminder_count += 1
+                user.save(update_fields=[
+                    "profile_completion_reminder_sent_at",
+                    "profile_completion_reminder_count",
+                ])
                 sent += 1
                 self.stdout.write(self.style.SUCCESS(
-                    f"Reminder sent: {user.email}"
+                    f"Rikujtimi u dërgua: {user.email}"
                 ))
             except Exception as exc:
                 failed += 1
                 self.stdout.write(self.style.ERROR(
-                    f"Reminder failed for {user.email}: {exc}"
+                    f"Rikujtimi dështoi për {user.email}: {exc}"
                 ))
 
         self.stdout.write(
-            f"Done. Sent: {sent}. Skipped complete: {skipped}. Failed: {failed}."
+            f"Përfundoi. Dërguar: {sent}. Të plota: {skipped}. Dështuan: {failed}."
         )

@@ -254,7 +254,23 @@ def send_welcome_email(user):
 
 
 def send_profile_completion_reminder_email(user):
-    login_url = settings.FRONTEND_LOGIN_URL
+    profile_url = (
+        f"{settings.FRONTEND_URL}/company/profile"
+        if user.role == "company"
+        else f"{settings.FRONTEND_URL}/customer/profile"
+    )
+    email_step = (
+        "Së pari verifikoni email-in tuaj, pastaj plotësoni profilin."
+        if not user.email_verified
+        else "Profili juaj është gati për t'u plotësuar."
+    )
+    profile_reason = (
+        "Një profil i plotë ju ndihmon të merrni kërkesa më të përshtatshme "
+        "dhe të dërgoni oferta me më shumë besueshmëri."
+        if user.role == "company"
+        else "Një profil i plotë e bën më të lehtë krijimin e kërkesave "
+        "dhe pranimin e ofertave nga kompanitë."
+    )
 
     html_content = f"""
     <!DOCTYPE html>
@@ -277,13 +293,16 @@ def send_profile_completion_reminder_email(user):
                     por profili juaj nuk është plotësuar ende.
                   </p>
 
+                  <p style="margin:0 0 16px 0;">
+                    {email_step}
+                  </p>
+
                   <p style="margin:0 0 24px 0;">
-                    Plotësimi i profilit ju ndihmon të përdorni më lehtë platformën
-                    dhe të merrni më shumë nga shërbimet tona.
+                    {profile_reason}
                   </p>
 
                   <p style="text-align:center;margin:30px 0;">
-                    <a href="{login_url}"
+                    <a href="{profile_url}"
                        style="background:#111827;color:#ffffff;text-decoration:none;
                               padding:12px 22px;border-radius:8px;font-weight:600;
                               display:inline-block;">
