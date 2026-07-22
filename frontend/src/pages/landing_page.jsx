@@ -3,7 +3,8 @@
 // Ndertimnet landing page
 // ===========================================
 
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import {
   ArrowRight,
@@ -25,6 +26,16 @@ import {
   Wrench,
   Zap,
 } from "lucide-react";
+import api from "../api/axios";
+
+const defaultHero = {
+  title: "Platforma ku klientët gjejnë kompani ndërtimi dhe renovimi.",
+  subtitle:
+    "Publiko projektin, merr oferta nga kompani serioze dhe zgjidh ekipin e duhur me më shumë qartësi. Për kompanitë, Ndertimnet sjell kërkesa reale nga klientë që duan të fillojnë.",
+  imageUrl:
+    "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=2200&q=82",
+  imageAlt: "Kantier ndërtimi dhe renovimi",
+};
 
 const services = [
   { name: "Ndërtim", to: "/ndertime", icon: Hammer },
@@ -128,6 +139,32 @@ function SecondaryButton({ to, children }) {
   );
 }
 
+function HeroAdvertisementButton({ advertisement }) {
+  const className =
+    "inline-flex min-h-[48px] items-center justify-center gap-2 rounded-lg bg-[#ef7d22] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#d96814] sm:px-6";
+
+  if (advertisement.link_type === "external") {
+    return (
+      <a
+        href={advertisement.target_url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className={className}
+      >
+        Mëso më shumë
+        <ArrowRight size={17} />
+      </a>
+    );
+  }
+
+  return (
+    <Link to={advertisement.target_url} className={className}>
+      Mëso më shumë
+      <ArrowRight size={17} />
+    </Link>
+  );
+}
+
 function SectionIntro({ eyebrow, title, text }) {
   return (
     <div className="max-w-3xl">
@@ -144,6 +181,72 @@ function SectionIntro({ eyebrow, title, text }) {
 }
 
 export default function LandingPage() {
+  const navigate = useNavigate();
+  const [heroAdvertisement, setHeroAdvertisement] = useState(null);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadHeroAdvertisement = async () => {
+      try {
+        const response = await api.get("reklama/hero/", { skipAuth: true });
+
+        if (isMounted && response.data) {
+          setHeroAdvertisement(response.data);
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV !== "production") {
+          console.warn("Hero advertisement could not be loaded.", error);
+        }
+      }
+    };
+
+    loadHeroAdvertisement();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  const hero = heroAdvertisement
+    ? {
+        title: heroAdvertisement.title,
+        subtitle: heroAdvertisement.subtitle,
+        imageUrl: heroAdvertisement.background_image_url,
+        imageAlt: heroAdvertisement.title,
+      }
+    : defaultHero;
+
+  const openHeroAdvertisement = () => {
+    if (!heroAdvertisement?.target_url) {
+      return;
+    }
+
+    if (heroAdvertisement.link_type === "external") {
+      window.open(heroAdvertisement.target_url, "_blank", "noopener,noreferrer");
+      return;
+    }
+
+    navigate(heroAdvertisement.target_url);
+  };
+
+  const handleHeroClick = (event) => {
+    if (!heroAdvertisement || event.target.closest("a")) {
+      return;
+    }
+
+    openHeroAdvertisement();
+  };
+
+  const handleHeroKeyDown = (event) => {
+    if (!heroAdvertisement || !["Enter", " "].includes(event.key)) {
+      return;
+    }
+
+    event.preventDefault();
+    openHeroAdvertisement();
+  };
+
   return (
     <>
       <Helmet>
@@ -217,10 +320,17 @@ export default function LandingPage() {
       </Helmet>
 
       <div className="bg-white text-[#12251b]">
-        <section className="relative overflow-hidden bg-[#12251b]">
+        <section
+          className={`relative overflow-hidden bg-[#12251b] ${heroAdvertisement ? "cursor-pointer" : ""}`}
+          role={heroAdvertisement ? "link" : undefined}
+          tabIndex={heroAdvertisement ? 0 : undefined}
+          onClick={handleHeroClick}
+          onKeyDown={handleHeroKeyDown}
+          aria-label={heroAdvertisement ? `Hap reklamën: ${heroAdvertisement.title}` : undefined}
+        >
           <img
-            src="https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=2200&q=82"
-            alt="Kantier ndërtimi dhe renovimi"
+            src={hero.imageUrl}
+            alt={hero.imageAlt}
             className="absolute inset-0 h-full w-full object-cover"
           />
           <div className="absolute inset-0 bg-[#12251b]/70" />
@@ -230,30 +340,36 @@ export default function LandingPage() {
             <div className="max-w-4xl pt-4">
               <div className="mb-5 inline-flex items-center gap-2 rounded-md bg-white/10 px-3 py-2 text-sm font-semibold text-white backdrop-blur">
                 <MapPin size={16} />
-                Kosovë dhe Shqipëri
+                {heroAdvertisement ? "Reklamë" : "Kosovë dhe Shqipëri"}
               </div>
 
               <h1 className="max-w-4xl text-[36px] font-semibold leading-[1.05] text-white sm:text-[58px] lg:text-[72px]">
-                Platforma ku klientët gjejnë kompani ndërtimi dhe renovimi.
+                {hero.title}
               </h1>
 
-              <p className="mt-6 max-w-2xl text-base leading-7 text-white/85 sm:text-lg sm:leading-8">
-                Publiko projektin, merr oferta nga kompani serioze dhe zgjidh ekipin
-                e duhur me më shumë qartësi. Për kompanitë, Ndertimnet sjell
-                kërkesa reale nga klientë që duan të fillojnë.
-              </p>
+              {hero.subtitle && (
+                <p className="mt-6 max-w-2xl text-base leading-7 text-white/85 sm:text-lg sm:leading-8">
+                  {hero.subtitle}
+                </p>
+              )}
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                <PrimaryButton to="/login">Publiko projekt</PrimaryButton>
-                <SecondaryButton to="/register/company">
-                  Regjistro kompaninë
-                </SecondaryButton>
-                <a
-                  href="#si-funksionon"
-                  className="inline-flex min-h-[48px] items-center justify-center rounded-lg px-5 py-3 text-sm font-semibold text-white underline-offset-4 hover:underline sm:px-6"
-                >
-                  Shiko si funksionon
-                </a>
+                {heroAdvertisement ? (
+                  <HeroAdvertisementButton advertisement={heroAdvertisement} />
+                ) : (
+                  <>
+                    <PrimaryButton to="/login">Publiko projekt</PrimaryButton>
+                    <SecondaryButton to="/register/company">
+                      Regjistro kompaninë
+                    </SecondaryButton>
+                    <a
+                      href="#si-funksionon"
+                      className="inline-flex min-h-[48px] items-center justify-center rounded-lg px-5 py-3 text-sm font-semibold text-white underline-offset-4 hover:underline sm:px-6"
+                    >
+                      Shiko si funksionon
+                    </a>
+                  </>
+                )}
               </div>
 
               <div className="mt-8 hidden flex-wrap gap-2 sm:flex">
