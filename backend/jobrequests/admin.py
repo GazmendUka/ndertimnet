@@ -1,9 +1,18 @@
-from django.contrib import admin, messages
-from django.db import transaction
+import logging
 
-from .emails import send_job_moderation_email
+from django.contrib import admin, messages
+from django.core.exceptions import PermissionDenied
+from django.db import transaction
+from django.shortcuts import redirect
+from django.template.response import TemplateResponse
+from django.urls import path, reverse
+
+from .emails import send_job_approval_preview_email, send_job_moderation_email
 from .models import JobRequest, JobRequestModerationEvent
 from offers.models import Offer
+
+
+logger = logging.getLogger(__name__)
 
 
 class JobRequestModerationEventInline(admin.TabularInline):
@@ -48,6 +57,7 @@ class OfferInline(admin.TabularInline):
 
 @admin.register(JobRequest)
 class JobRequestAdmin(admin.ModelAdmin):
+    change_list_template = "admin/jobrequests/jobrequest/change_list.html"
     list_display = (
         "id", "title", "customer", "city", "moderation_status",
         "is_active", "submitted_at", "published_at",
@@ -79,6 +89,68 @@ class JobRequestAdmin(admin.ModelAdmin):
     )
     inlines = (OfferInline, JobRequestModerationEventInline)
     actions = ("approve_jobs", "request_changes", "reject_jobs", "block_jobs")
+
+    def get_urls(self):
+        custom_urls = [
+            path(
+                "send-customer-email-preview/",
+                self.admin_site.admin_view(self.send_customer_email_preview),
+                name="jobrequests_jobrequest_send_customer_email_preview",
+            ),
+        ]
+        return custom_urls + super().get_urls()
+
+    def send_customer_email_preview(self, request):
+        if not request.user.is_superuser:
+            raise PermissionDenied
+
+        recipient_email = (request.user.email or "").strip()
+        if request.method == "POST":
+            if not recipient_email:
+                self.message_user(
+                    request,
+                    "Superadministratörens konto saknar e-postadress.",
+                    messages.ERROR,
+                )
+            else:
+                try:
+                    status_code = send_job_approval_preview_email(
+                        recipient_email,
+                        first_name=request.user.first_name or "Testkund",
+                    )
+                    if status_code and 200 <= status_code < 300:
+                        self.message_user(
+                            request,
+                            f"Förhandsvisningen skickades till {recipient_email}.",
+                            messages.SUCCESS,
+                        )
+                    else:
+                        self.message_user(
+                            request,
+                            "Mejlet kunde inte skickas. Kontrollera SendGrid-konfigurationen.",
+                            messages.ERROR,
+                        )
+                except Exception:
+                    logger.exception("Could not send customer approval email preview")
+                    self.message_user(
+                        request,
+                        "Mejlet kunde inte skickas. Kontrollera SendGrid-loggarna.",
+                        messages.ERROR,
+                    )
+            return redirect("admin:jobrequests_jobrequest_changelist")
+
+        context = {
+            **self.admin_site.each_context(request),
+            "opts": self.model._meta,
+            "title": "Skicka förhandsvisning av kundmejl",
+            "recipient_email": recipient_email,
+            "changelist_url": reverse("admin:jobrequests_jobrequest_changelist"),
+        }
+        return TemplateResponse(
+            request,
+            "admin/jobrequests/jobrequest/send_customer_email_preview.html",
+            context,
+        )
 
     def get_queryset(self, request):
         return super().get_queryset(request).select_related("customer", "city", "profession")

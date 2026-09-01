@@ -13,6 +13,16 @@ SUBJECTS = {
     "blocked": "Kërkesa juaj u bllokua – Ndërtimnet",
 }
 
+STATUS_TEXTS = {
+    "approved": (
+        "Faleminderit që dërguat kërkesën tuaj për ofertë në Ndërtimnet. "
+        "Kërkesa juaj është miratuar dhe tani është publikuar në platformën tonë."
+    ),
+    "changes_requested": "Duhet të përditësoni disa të dhëna përpara publikimit.",
+    "rejected": "Kërkesa juaj nuk mund të publikohet.",
+    "blocked": "Kërkesa juaj është bllokuar. Kontaktoni mbështetjen nëse mendoni se ky është një gabim.",
+}
+
 
 def send_new_job_review_notification(job):
     recipient_emails = [
@@ -68,31 +78,26 @@ def send_new_job_review_notification(job):
     return SendGridAPIClient(api_key).send(message).status_code
 
 
-def send_job_moderation_email(job):
-    if job.moderation_status not in SUBJECTS or not job.customer.email:
-        return None
-
-    detail_url = f"{settings.FRONTEND_URL}/customer/jobrequests/{job.id}"
+def build_job_moderation_email_html(
+    *,
+    moderation_status,
+    first_name,
+    job_title,
+    detail_url,
+    moderation_note="",
+):
     note_html = ""
-    if job.moderation_note:
+    if moderation_note:
         note_html = (
             '<div style="margin:20px 0;padding:16px;background:#f3f4f6;border-radius:10px;">'
-            f"{escape(job.moderation_note)}"
+            f"{escape(moderation_note)}"
             "</div>"
         )
 
-    status_text = {
-        "approved": (
-            "Faleminderit që dërguat kërkesën tuaj për ofertë në Ndërtimnet. "
-            "Kërkesa juaj është miratuar dhe tani është publikuar në platformën tonë."
-        ),
-        "changes_requested": "Duhet të përditësoni disa të dhëna përpara publikimit.",
-        "rejected": "Kërkesa juaj nuk mund të publikohet.",
-        "blocked": "Kërkesa juaj është bllokuar. Kontaktoni mbështetjen nëse mendoni se ky është një gabim.",
-    }[job.moderation_status]
+    status_text = STATUS_TEXTS[moderation_status]
 
     approved_message_html = ""
-    if job.moderation_status == "approved":
+    if moderation_status == "approved":
         approved_message_html = """
         <div style="margin:20px 0;padding:16px;background:#f9fafb;border:1px solid #e5e7eb;border-radius:10px;">
           <p style="margin:0 0 10px;line-height:1.6;"><strong>Ju falënderojmë për durimin.</strong></p>
@@ -105,14 +110,14 @@ def send_job_moderation_email(job):
         </div>
         """
 
-    customer_name = escape(job.customer.first_name or "")
-    job_title = escape(job.title)
+    customer_name = escape(first_name or "")
+    escaped_job_title = escape(job_title)
 
-    html_content = f"""
+    return f"""
     <div style="background:#f5f6f8;padding:36px;font-family:Arial,sans-serif;color:#111827;">
       <div style="max-width:560px;margin:auto;background:#fff;padding:32px;border-radius:14px;">
         <p>Përshëndetje {customer_name},</p>
-        <h2 style="margin:18px 0 8px;">{job_title}</h2>
+        <h2 style="margin:18px 0 8px;">{escaped_job_title}</h2>
         <p style="line-height:1.6;">{status_text}</p>
         {approved_message_html}
         {note_html}
@@ -121,6 +126,20 @@ def send_job_moderation_email(job):
       </div>
     </div>
     """
+
+
+def send_job_moderation_email(job):
+    if job.moderation_status not in SUBJECTS or not job.customer.email:
+        return None
+
+    detail_url = f"{settings.FRONTEND_URL}/customer/jobrequests/{job.id}"
+    html_content = build_job_moderation_email_html(
+        moderation_status=job.moderation_status,
+        first_name=job.customer.first_name,
+        job_title=job.title,
+        detail_url=detail_url,
+        moderation_note=job.moderation_note,
+    )
     message = Mail(
         from_email=settings.DEFAULT_FROM_EMAIL,
         to_emails=job.customer.email,
@@ -130,4 +149,24 @@ def send_job_moderation_email(job):
     api_key = os.environ.get("SENDGRID_API_KEY")
     if not api_key:
         return None
+    return SendGridAPIClient(api_key).send(message).status_code
+
+
+def send_job_approval_preview_email(to_email, *, first_name="Testkund"):
+    api_key = os.environ.get("SENDGRID_API_KEY")
+    if not api_key or not to_email:
+        return None
+
+    html_content = build_job_moderation_email_html(
+        moderation_status="approved",
+        first_name=first_name,
+        job_title="TEST – Shembull i kërkesës për ofertë",
+        detail_url=f"{settings.FRONTEND_URL}/customer/jobrequests",
+    )
+    message = Mail(
+        from_email=settings.DEFAULT_FROM_EMAIL,
+        to_emails=to_email,
+        subject=f"[TEST] {SUBJECTS['approved']}",
+        html_content=html_content,
+    )
     return SendGridAPIClient(api_key).send(message).status_code

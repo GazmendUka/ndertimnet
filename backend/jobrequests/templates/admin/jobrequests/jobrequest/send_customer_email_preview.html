@@ -1,0 +1,28 @@
+{% extends "admin/base_site.html" %}
+
+{% block breadcrumbs %}
+  <div class="breadcrumbs">
+    <a href="{% url 'admin:index' %}">Hem</a>
+    &rsaquo; <a href="{{ changelist_url }}">Offertförfrågningar</a>
+    &rsaquo; Förhandsvisning
+  </div>
+{% endblock %}
+
+{% block content %}
+  <div id="content-main">
+    <h1>{{ title }}</h1>
+    <p>
+      Ett testmärkt exemplar av kundens godkännandemejl skickas till
+      <strong>{{ recipient_email|default:"ingen e-postadress angiven" }}</strong>.
+    </p>
+    <p>Ingen offertförfrågan skapas och ingenting skrivs till databasen.</p>
+
+    <form method="post">
+      {% csrf_token %}
+      <div class="submit-row">
+        <a href="{{ changelist_url }}" class="closelink">Avbryt</a>
+        <input type="submit" value="Skicka förhandsvisning" class="default">
+      </div>
+    </form>
+  </div>
+{% endblock %}
