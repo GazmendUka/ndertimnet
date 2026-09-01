@@ -1,5 +1,6 @@
 # backend/jobrequests/views.py
 
+import logging
 from datetime import timedelta
 
 from django.db import transaction
@@ -20,6 +21,7 @@ from main.pagination import AlbanianPagination
 from offers.models import Offer, OfferStatus
 from offers.services import OfferAcceptanceError, accept_offer as accept_offer_service
 
+from .emails import send_new_job_review_notification
 from .models import JobRequest, JobRequestAudit, JobRequestDraft, JobRequestModerationEvent
 from .serializers import (
     JobRequestAuditSerializer,
@@ -28,6 +30,17 @@ from .serializers import (
     JobRequestSerializer,
     JobRequestUpdateSerializer,
 )
+
+
+logger = logging.getLogger(__name__)
+
+
+def _send_new_job_review_notification_safely(job):
+    try:
+        send_new_job_review_notification(job)
+    except Exception:
+        # A notification failure must not undo a successfully submitted request.
+        logger.exception("Could not send review notification for job request %s", job.pk)
 
 
 # ------------------------------------------------------------
@@ -210,6 +223,9 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
                 job_request=job,
                 status=JobRequest.MODERATION_PENDING,
                 note="Kërkesa u dërgua për shqyrtim.",
+            )
+            transaction.on_commit(
+                lambda job=job: _send_new_job_review_notification_safely(job)
             )
 
         return Response(

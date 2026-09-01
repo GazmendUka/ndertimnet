@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework.request import Request
@@ -73,6 +75,18 @@ class JobRequestModerationTests(APITestCase):
                 status=JobRequest.MODERATION_PENDING,
             ).exists()
         )
+
+    @patch("jobrequests.views.send_new_job_review_notification")
+    def test_new_job_submission_sends_review_notification_after_commit(
+        self,
+        send_notification,
+    ):
+        with self.captureOnCommitCallbacks(execute=True):
+            job = self.submit_draft()
+
+        send_notification.assert_called_once()
+        notified_job = send_notification.call_args.args[0]
+        self.assertEqual(notified_job.pk, job.pk)
 
     def test_pending_job_is_hidden_from_company_then_visible_after_approval(self):
         job = self.submit_draft()
