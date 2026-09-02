@@ -254,9 +254,10 @@ def send_welcome_email(user):
 
 
 def send_profile_completion_reminder_email(user):
+    is_company = user.role == "company"
     profile_url = (
         f"{settings.FRONTEND_URL}/company/profile"
-        if user.role == "company"
+        if is_company
         else f"{settings.FRONTEND_URL}/customer/profile"
     )
     email_step = (
@@ -267,9 +268,34 @@ def send_profile_completion_reminder_email(user):
     profile_reason = (
         "Një profil i plotë ju ndihmon të merrni kërkesa më të përshtatshme "
         "dhe të dërgoni oferta me më shumë besueshmëri."
-        if user.role == "company"
+        if is_company
         else "Një profil i plotë e bën më të lehtë krijimin e kërkesave "
         "dhe pranimin e ofertave nga kompanitë."
+    )
+    account_intro = (
+        "Faleminderit që jeni bërë pjesë e <strong>Ndërtimnet.com</strong>. "
+        "Profili i kompanisë suaj nuk është plotësuar ende."
+        if is_company
+        else "Ju keni krijuar një llogari në <strong>Ndërtimnet.com</strong>, "
+        "por profili juaj nuk është plotësuar ende."
+    )
+    company_growth_prompt = (
+        """
+        <p style="margin:0 0 16px 0;">
+          Ju ftojmë të hyni në llogarinë tuaj dhe të shikoni profilin e kompanisë.
+          Komuniteti ynë po rritet me gjithnjë e më shumë anëtarë dhe kërkesat e
+          reja nga klientët kanë filluar të vijnë. Plotësoni profilin tuaj që të
+          jeni gati për mundësitë e reja.
+        </p>
+        """
+        if is_company
+        else ""
+    )
+    button_text = "Hyr, shiko dhe plotëso profilin" if is_company else "Hyr dhe plotëso profilin"
+    subject = (
+        "Faleminderit që jeni pjesë e Ndërtimnet – plotësoni profilin"
+        if is_company
+        else "Plotësoni profilin tuaj – Ndërtimnet"
     )
 
     html_content = f"""
@@ -289,13 +315,14 @@ def send_profile_completion_reminder_email(user):
                   </p>
 
                   <p style="margin:0 0 16px 0;">
-                    Ju keni krijuar një llogari në <strong>Ndërtimnet.com</strong>,
-                    por profili juaj nuk është plotësuar ende.
+                    {account_intro}
                   </p>
 
                   <p style="margin:0 0 16px 0;">
                     {email_step}
                   </p>
+
+                  {company_growth_prompt}
 
                   <p style="margin:0 0 24px 0;">
                     {profile_reason}
@@ -306,7 +333,7 @@ def send_profile_completion_reminder_email(user):
                        style="background:#111827;color:#ffffff;text-decoration:none;
                               padding:12px 22px;border-radius:8px;font-weight:600;
                               display:inline-block;">
-                       Hyr dhe plotëso profilin
+                       {button_text}
                     </a>
                   </p>
 
@@ -339,7 +366,7 @@ def send_profile_completion_reminder_email(user):
     message = Mail(
         from_email=settings.DEFAULT_FROM_EMAIL,
         to_emails=user.email,
-        subject="Plotësoni profilin tuaj – Ndërtimnet",
+        subject=subject,
         html_content=html_content,
     )
 
