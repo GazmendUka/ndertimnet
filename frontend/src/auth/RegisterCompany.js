@@ -4,7 +4,8 @@
 
 import React, { useState } from "react";
 import api from "../api/axios";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { AlertCircle, ArrowLeft, Building2, Eye, EyeOff, Loader2, Mail, Phone } from "lucide-react";
 
 export default function RegisterCompany() {
   const navigate = useNavigate();
@@ -33,18 +34,13 @@ export default function RegisterCompany() {
     setError("");
 
     try {
-      const res = await api.post(
+      await api.post(
         "accounts/register/company/",
         formData,
         { skipAuth: true }
       );
-      console.log("✅ Kompania u regjistrua me sukses!", res.data);
-
-
       navigate("/register/success", { state: { type: "company" } });
     } catch (err) {
-      console.error("❌ Gabim gjatë regjistrimit:", err);
-
       const data = err.response?.data;
       const fieldError =
         data &&
@@ -63,68 +59,57 @@ export default function RegisterCompany() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-2xl">
-        <h1 className="text-2xl font-bold text-center mb-6 text-gray-800">
-          🏢 Krijo llogarinë e kompanisë
-        </h1>
+    <main className="flex min-h-screen items-center justify-center bg-[#f7f4ee] px-4 py-6 sm:px-6">
+      <section className="w-full max-w-2xl rounded-2xl border border-[#e5e0d5] bg-white p-5 shadow-sm sm:p-8">
+        <div className="mb-7 flex items-center justify-between gap-4">
+          <img src="/ndertimnet-logo-full-width/ndertimnet-logo-search-transparent.png" alt="Ndertimnet" className="h-10 w-auto" />
+          <Link to="/register" className="inline-flex min-h-[44px] items-center gap-2 rounded-lg px-3 text-sm font-semibold text-[#5f6f66] hover:bg-[#f7f4ee]">
+            <ArrowLeft size={18} /> Kthehu
+          </Link>
+        </div>
+
+        <p className="text-sm font-semibold text-[#17643f]">Për kompani</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#12251b]">Krijo llogarinë e kompanisë</h1>
+        <p className="mt-3 text-sm leading-6 text-[#5f6f66]">Krijoni profilin bazë tani. Të dhënat e tjera mund t'i plotësoni më vonë.</p>
 
         {error && (
-          <p className="text-red-600 text-center mb-4">{error}</p>
+          <div className="mt-5 flex gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">
+            <AlertCircle className="mt-0.5 shrink-0" size={19} /><p>{error}</p>
+          </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* 🔹 Konto-information */}
-          <div className="grid md:grid-cols-2 gap-4">
-            <div className="md:col-span-2">
-              <label className="block text-gray-700 mb-1">
-                Emri i kompanisë *
-              </label>
-              <input
-                type="text"
-                name="company_name"
-                value={formData.company_name}
-                onChange={handleChange}
-                required
-                autoComplete="organization"
-                className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400 outline-none"
-              />
+        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div className="sm:col-span-2">
+              <label htmlFor="company-name" className="block text-sm font-medium text-[#12251b]">Emri i kompanisë</label>
+              <div className="relative mt-2">
+                <Building2 className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8a958f]" size={19} />
+                <input id="company-name" type="text" name="company_name" value={formData.company_name} onChange={handleChange} required autoComplete="organization" className="min-h-[48px] w-full rounded-xl border border-[#d7d0c2] bg-white py-3 pl-10 pr-3 text-base outline-none transition focus:border-[#17643f] focus:ring-2 focus:ring-[#17643f]/10" />
+              </div>
             </div>
 
-            <div className="md:col-span-2">
-              <label className="block text-gray-700 mb-1">
-                Numri i telefonit
-              </label>
-              <input
-                type="text"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                autoComplete="tel"
-                className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400 outline-none"
-              />
+            <div className="sm:col-span-2">
+              <label htmlFor="company-phone" className="block text-sm font-medium text-[#12251b]">Numri i telefonit <span className="font-normal text-[#8a958f]">(opsional)</span></label>
+              <div className="relative mt-2">
+                <Phone className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8a958f]" size={19} />
+                <input id="company-phone" type="tel" name="phone" value={formData.phone} onChange={handleChange} autoComplete="tel" inputMode="tel" className="min-h-[48px] w-full rounded-xl border border-[#d7d0c2] bg-white py-3 pl-10 pr-3 text-base outline-none transition focus:border-[#17643f] focus:ring-2 focus:ring-[#17643f]/10" />
+              </div>
             </div>
 
             <div>
-              <label className="block text-gray-700 mb-1">Email *</label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                required
-                autoComplete="email"
-                className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-blue-400 outline-none"
-              />
+              <label htmlFor="company-email" className="block text-sm font-medium text-[#12251b]">Email</label>
+              <div className="relative mt-2">
+                <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8a958f]" size={19} />
+                <input id="company-email" type="email" name="email" value={formData.email} onChange={handleChange} required autoComplete="email" inputMode="email" className="min-h-[48px] w-full rounded-xl border border-[#d7d0c2] bg-white py-3 pl-10 pr-3 text-base outline-none transition focus:border-[#17643f] focus:ring-2 focus:ring-[#17643f]/10" />
+              </div>
             </div>
 
             <div>
-              <label className="block text-gray-700 mb-1">
-                Fjalëkalimi *
-              </label>
+              <label htmlFor="company-password" className="block text-sm font-medium text-[#12251b]">Fjalëkalimi</label>
 
-              <div className="relative">
+              <div className="relative mt-2">
                 <input
+                  id="company-password"
                   type={showPassword ? "text" : "password"}
                   name="password"
                   value={formData.password}
@@ -132,20 +117,20 @@ export default function RegisterCompany() {
                   required
                   minLength={6}
                   autoComplete="new-password"
-                  className="w-full border rounded-lg p-2 pr-10 focus:ring-2 focus:ring-blue-400 outline-none"
+                  className="min-h-[48px] w-full rounded-xl border border-[#d7d0c2] bg-white px-3 py-3 pr-12 text-base outline-none transition focus:border-[#17643f] focus:ring-2 focus:ring-[#17643f]/10"
                 />
 
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                  className="absolute inset-y-0 right-1 flex w-11 items-center justify-center rounded-lg text-[#5f6f66] hover:bg-[#f7f4ee]"
                   aria-label={
                     showPassword
                       ? "Fshih fjalëkalimin"
                       : "Shfaq fjalëkalimin"
                   }
                 >
-                  {showPassword ? "🙈" : "👁️"}
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                 </button>
               </div>
             </div>
@@ -155,23 +140,18 @@ export default function RegisterCompany() {
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-2 rounded-lg text-white font-medium transition ${
+            className={`inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white transition ${
               loading
                 ? "bg-gray-400 cursor-not-allowed"
-                : "bg-blue-600 hover:bg-blue-700"
+                : "bg-[#17643f] hover:bg-[#0f4f31]"
             }`}
           >
+            {loading && <Loader2 className="animate-spin" size={19} />}
             {loading ? "Duke u dërguar..." : "Regjistro kompaninë"}
           </button>
-
-          <p
-            onClick={() => navigate("/register")}
-            className="text-center text-blue-600 hover:text-blue-800 mt-4 cursor-pointer"
-          >
-            ← Kthehu mbrapa
-          </p>
         </form>
-      </div>
-    </div>
+        <p className="mt-6 text-center text-sm text-[#5f6f66]">Ke tashmë llogari? <Link to="/login" className="font-semibold text-[#17643f] hover:underline">Kyçu</Link></p>
+      </section>
+    </main>
   );
 }

@@ -1,13 +1,13 @@
 // frontent/src/auth/RegisterSucess.js
 
 import React, { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { useAuth } from "./AuthContext";
-import { CheckCircle } from "lucide-react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { CheckCircle2 } from "lucide-react";
 
 export default function RegisterSuccess() {
   const navigate = useNavigate();
-  const { isCompany, user } = useAuth();
+  const location = useLocation();
+  const accountType = location.state?.type;
 
   const [seconds, setSeconds] = useState(4);
   const [visible, setVisible] = useState(false);
@@ -20,76 +20,57 @@ export default function RegisterSuccess() {
     }, 1000);
 
     const timeout = setTimeout(() => {
-      navigate(
-        isCompany ? "/company/profile" : "/customer/profile",
-        { replace: true }
-      );
+      navigate("/login", { replace: true });
     }, 4000);
 
     return () => {
       clearInterval(interval);
       clearTimeout(timeout);
     };
-  }, [navigate, isCompany]);
-
-  const companyName =
-    isCompany && user?.company_name
-      ? user.company_name
-      : null;
+  }, [navigate]);
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
+    <main className="flex min-h-screen items-center justify-center bg-[#f7f4ee] px-4 py-6">
       <div
         className={`
-          w-full max-w-lg bg-white border rounded-2xl p-10 shadow-sm text-center
+          w-full max-w-lg rounded-2xl border border-[#e5e0d5] bg-white p-5 text-center shadow-sm sm:p-9
           transform transition-all duration-500
           ${visible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"}
         `}
       >
         <div className="flex justify-center mb-6">
-          <CheckCircle
-            className="text-green-600 animate-pulse"
-            size={64}
+          <CheckCircle2
+            className="text-[#17643f]"
+            size={60}
             strokeWidth={1.5}
           />
         </div>
 
-        <h1 className="text-2xl font-semibold mb-3">
+        <h1 className="mb-3 text-2xl font-semibold text-[#12251b]">
           Regjistrimi u krye me sukses!
         </h1>
 
-        <p className="text-gray-700">
-          Llogaria juaj u krijua me sukses.
+        <p className="leading-7 text-[#5f6f66]">
+          {accountType === "company"
+            ? "Llogaria e kompanisë u krijua me sukses."
+            : "Llogaria juaj u krijua me sukses."}
         </p>
 
-        {companyName && (
-          <p className="mt-2 text-gray-800 font-medium">
-            Mirë se vini, {companyName}
-          </p>
-        )}
-
-        <p className="mt-4 text-gray-600">
-          Një email verifikimi ju është dërguar.
+        <p className="mt-4 rounded-xl bg-[#f4f9f6] p-4 text-sm leading-6 text-[#315c46]">
+          Kontrolloni emailin dhe hapni linkun e verifikimit. Pastaj mund të kyçeni në llogarinë tuaj.
         </p>
 
         <p className="mt-4 text-sm text-gray-500">
-          Do të ridrejtoheni pas <strong>{seconds}</strong> sekondash…
+          Do të kaloni te kyçja pas <strong>{seconds}</strong> sekondash…
         </p>
 
         <button
-          onClick={() =>
-            navigate(
-              isCompany
-                ? "/company/profile"
-                : "/customer/profile",
-              { replace: true }
-            )
-          }
-          className="mt-8 w-full bg-black text-white rounded-xl py-3 hover:opacity-90 transition"
+          onClick={() => navigate("/login", { replace: true })}
+          className="mt-8 min-h-[48px] w-full rounded-xl bg-[#17643f] px-5 py-3 font-semibold text-white transition hover:bg-[#0f4f31]"
         >
-          Vazhdo tani
+          Shko te kyçja
         </button>
       </div>
-    </div>
+    </main>
   );
 }

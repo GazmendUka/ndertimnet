@@ -224,7 +224,7 @@ export default function CustomerJobDetails() {
   return (
     <div className="premium-container">
       {/* HEADER NAV */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button
           onClick={() => navigate(jobRequestsPath)}
           className="premium-btn btn-light inline-flex items-center"

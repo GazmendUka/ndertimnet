@@ -39,7 +39,7 @@ export default function CustomerProfile() {
     }
 
     try {
-      await api.post("/accounts/delete/", {
+      await api.post("/accounts/account/delete/", {
         password,
         refresh,
       });
@@ -152,40 +152,55 @@ export default function CustomerProfile() {
   // UI
   // --------------------------------------------------
   return (
-    <div className="max-w-xl mx-auto bg-white p-6 rounded-xl shadow">
-      <h2 className="text-2xl font-bold mb-4">Profili i Klientit</h2>
+    <div className="premium-container max-w-2xl">
+      <section className="premium-section">
+      <p className="text-label">Llogaria ime</p>
+      <h2 className="page-title mt-1">Profili i klientit</h2>
+      <p className="mt-2 text-sm leading-6 text-gray-500">Mbani të dhënat tuaja të sakta për komunikim më të lehtë me kompanitë.</p>
 
-      {message && <p className="text-green-600 mb-3">{message}</p>}
-      {error && <p className="text-red-600 mb-3">{error}</p>}
+      {message && <p className="mt-5 rounded-xl border border-green-200 bg-green-50 p-4 text-sm text-green-800" role="status">{message}</p>}
+      {error && <p className="mt-5 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">{error}</p>}
 
-      <form onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="mt-6 space-y-5">
 
+        <div className="grid gap-5 sm:grid-cols-2">
+        <div>
+        <label htmlFor="customer-first-name" className="mb-2 block text-sm font-medium text-gray-800">Emri</label>
         <input
+          id="customer-first-name"
           disabled={saving}
-          className="w-full border p-2 rounded"
+          className="premium-input"
           name="first_name"
           value={form.first_name}
           onChange={handleChange}
-          placeholder="Emri"
+          autoComplete="given-name"
         />
+        </div>
 
+        <div>
+        <label htmlFor="customer-last-name" className="mb-2 block text-sm font-medium text-gray-800">Mbiemri</label>
         <input
+          id="customer-last-name"
           disabled={saving}
-          className="w-full border p-2 rounded"
+          className="premium-input"
           name="last_name"
           value={form.last_name}
           onChange={handleChange}
-          placeholder="Mbiemri"
+          autoComplete="family-name"
         />
+        </div>
+        </div>
 
         {/* Email (read-only) */}
         <div>
+          <label htmlFor="customer-profile-email" className="mb-2 block text-sm font-medium text-gray-800">Email</label>
           <input
-            className="w-full border p-2 rounded bg-gray-100"
+            id="customer-profile-email"
+            className="premium-input bg-gray-100 text-gray-600"
             value={form.email}
             disabled={true}
           />
-          <p className="text-sm mt-1">
+          <p className="mt-2 text-sm text-gray-600">
             Statusi i emailit:{" "}
             {form.email_verified ? (
               <span className="text-green-600 font-medium">i verifikuar</span>
@@ -195,34 +210,50 @@ export default function CustomerProfile() {
           </p>
         </div>
 
+        <div>
+        <label htmlFor="customer-phone" className="mb-2 block text-sm font-medium text-gray-800">Numri i telefonit</label>
         <input
+          id="customer-phone"
+          type="tel"
           disabled={saving}
-          className="w-full border p-2 rounded"
+          className="premium-input"
           name="phone"
           value={form.phone || ""}
           onChange={handleChange}
-          placeholder="Numri i telefonit"
+          autoComplete="tel"
+          inputMode="tel"
         />
+        </div>
 
+        <div>
+        <label htmlFor="customer-address" className="mb-2 block text-sm font-medium text-gray-800">Adresa</label>
         <input
+          id="customer-address"
           disabled={saving}
-          className="w-full border p-2 rounded"
+          className="premium-input"
           name="address"
           value={form.address || ""}
           onChange={handleChange}
-          placeholder="Adresa *"
+          autoComplete="street-address"
           required
         />
+        </div>
 
+        <div>
+        <label htmlFor="customer-postal-code" className="mb-2 block text-sm font-medium text-gray-800">Kodi postar</label>
         <input
+          id="customer-postal-code"
           disabled={saving}
-          className="w-full border p-2 rounded"
+          className="premium-input"
           name="postal_code"
           value={form.postal_code || ""}
           onChange={handleChange}
-          placeholder="Kodi postar"
+          autoComplete="postal-code"
         />
+        </div>
 
+        <div>
+        <label className="mb-2 block text-sm font-medium text-gray-800">Qyteti</label>
         <SearchableSelect
           disabled={saving}
           options={cities}
@@ -235,23 +266,25 @@ export default function CustomerProfile() {
         />
 
         {form.city && (
-          <p className="text-sm text-gray-500 mt-1">
+          <p className="mt-2 text-sm text-gray-500">
             Zgjedhur: {cities.find(c => c.id === form.city)?.name || "—"}
           </p>
         )}
+        </div>
 
         <button
           disabled={loading || saving}
-          className="w-full bg-gray-900 text-white hover:bg-gray-800 p-2 rounded disabled:opacity-50"
+          className="premium-btn btn-dark w-full disabled:opacity-50 sm:w-auto"
         >
           {saving ? "Duke ruajtur..." : "Ruaj ndryshimet"}
         </button>
       </form>
+      </section>
       {/* ========================================= */}
       {/* 🔴 Danger Zone */}
       {/* ========================================= */}
 
-      <div className="mt-12 border-t pt-8">
+      <section className="rounded-2xl border border-red-100 bg-red-50/50 p-4 sm:p-6">
         <h3 className="text-lg font-semibold mb-2">
           Çaktivizo llogarinë
         </h3>
@@ -267,17 +300,19 @@ export default function CustomerProfile() {
           setPassword("");
           setShowDeactivate(true);
         }}
-          className="px-4 py-2 bg-white text-red-600 border border-red-200 hover:bg-red-50 rounded-lg"
+          className="inline-flex min-h-[44px] items-center rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
         >
           Çaktivizo llogarinë
         </button>
-      </div>
+      </section>
 
       {showDeactivate && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl w-full max-w-md">
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="deactivate-title">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl sm:p-6">
             <h3 className="text-lg font-semibold mb-4">
+              <span id="deactivate-title">
               Konfirmo fjalëkalimin
+              </span>
             </h3>
 
             <input
@@ -286,14 +321,15 @@ export default function CustomerProfile() {
               placeholder="Fjalëkalimi"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2 mb-4"
+              autoComplete="current-password"
+              className="premium-input mb-4"
             />
 
             <div className="flex justify-end gap-2">
               <button
                 disabled={saving}
                 onClick={() => setShowDeactivate(false)}
-                className="px-3 py-2 bg-gray-200 rounded-lg"
+                className="min-h-[44px] rounded-lg bg-gray-100 px-4 py-2 text-sm font-semibold"
               >
                 Anulo
               </button>
@@ -301,7 +337,7 @@ export default function CustomerProfile() {
               <button
                 onClick={handleDeactivate}
                 disabled={!password.trim() || saving}
-                className={`px-3 py-2 rounded-lg text-white ${
+                className={`min-h-[44px] rounded-lg px-4 py-2 text-sm font-semibold text-white ${
                   password.trim()
                     ? "bg-red-600 hover:bg-red-700"
                     : "bg-red-300 cursor-not-allowed"

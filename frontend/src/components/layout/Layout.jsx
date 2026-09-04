@@ -1,6 +1,7 @@
 // src/components/layout
 
 import React, { useState, useRef, useEffect } from "react";
+import { Capacitor } from "@capacitor/core";
 import Sidebar from "./Sidebar";
 import MobileNav from "./MobileNav";
 import { Outlet, useNavigate } from "react-router-dom";
@@ -16,6 +17,7 @@ export default function Layout() {
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
   const navigate = useNavigate();
+  const isNativeApp = Capacitor.isNativePlatform();
 
   // 🔒 Close dropdown when clicking outside
   useEffect(() => {
@@ -51,7 +53,7 @@ export default function Layout() {
     <div className="flex min-h-screen bg-gray-50">
 
       {/* SIDEBAR — Desktop */}
-      <div className="hidden lg:block">
+      <div className={isNativeApp ? "hidden" : "hidden lg:block"}>
         <Sidebar />
       </div>
 
@@ -62,34 +64,34 @@ export default function Layout() {
         <header
           className="
             premium-header sticky top-0 z-20
-            px-6 md:px-10 py-4
+            min-h-[68px] px-4 sm:px-6 md:px-10 py-3
             flex items-center justify-between
           "
         >
 
           {/* LEFT TITLE */}
-          <h1 className="text-lg font-semibold text-gray-800 tracking-tight">
+          <h1 className="min-w-0 truncate pr-3 text-base font-semibold text-gray-800 tracking-tight sm:text-lg">
             {user?.role === "company"
               ? "Panel i Kompanisë"
               : "Panel i Klientit"}
           </h1>
 
           {/* RIGHT USER / COMPANY INFO */}
-          <div className="flex items-center gap-4">
+          <div className="flex shrink-0 items-center gap-3 sm:gap-4">
 
             {/* Name Section */}
-            <div className="text-right">
+            <div className="hidden max-w-[15rem] text-right sm:block">
 
               {user?.role === "company" ? (
                 <>
-                  <p className="font-medium text-gray-800">
+                  <p className="truncate font-medium text-gray-800">
                     {user?.company?.company_name || "Company"}
                   </p>
                   <p className="text-xs text-gray-400">Kompani</p>
                 </>
               ) : (
                 <>
-                  <p className="font-medium text-gray-800">
+                  <p className="truncate font-medium text-gray-800">
                     {user?.first_name} {user?.last_name}
                   </p>
                 </>
@@ -100,14 +102,17 @@ export default function Layout() {
             {/* Avatar + Dropdown */}
             <div className="relative" ref={dropdownRef}>
 
-              <div
+              <button
+                type="button"
                 onClick={() => setDropdownOpen(!dropdownOpen)}
                 className="
                   w-10 h-10 rounded-full overflow-hidden
                   bg-gray-200 flex items-center justify-center
                   text-gray-600 font-semibold
-                  cursor-pointer
+                  cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef7d22]
                 "
+                aria-label="Hap menynë e profilit"
+                aria-expanded={dropdownOpen}
               >
 
                 {user?.role === "company" ? (
@@ -132,7 +137,7 @@ export default function Layout() {
 
                 )}
 
-              </div>
+              </button>
 
               {/* DROPDOWN */}
               {dropdownOpen && (
@@ -183,7 +188,7 @@ export default function Layout() {
         </header>
 
         {/* PAGE CONTENT */}
-        <main className="flex-1 px-6 md:px-10 pt-6 pb-28">
+        <main className="flex-1 px-4 sm:px-6 md:px-10 pt-4 sm:pt-6 pb-32 lg:pb-10">
 
           <div className="max-w-6xl mx-auto space-y-8">
 
@@ -214,8 +219,8 @@ export default function Layout() {
       </div>
 
       {/* MOBILE NAV */}
-      <div className="lg:hidden">
-        <MobileNav />
+      <div className={isNativeApp ? "block" : "lg:hidden"}>
+        <MobileNav alwaysVisible={isNativeApp} />
       </div>
 
     </div>

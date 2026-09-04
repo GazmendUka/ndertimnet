@@ -1,15 +1,11 @@
 // src/api/axios.js
 
 import axios from "axios";
+import { API_BASE_URL } from "../config/api";
 
 // ============================================================
 // 🌐 BASE URL
 // ============================================================
-
-const BASE_URL =
-  process.env.REACT_APP_API_BASE_URL ||
-  "https://ndertimnet-r5dt.onrender.com/api/";
-
 
 // ============================================================
 // 🔄 Helper: get tokens (local OR session)
@@ -44,7 +40,7 @@ const clearTokens = () => {
 // ============================================================
 
 const refreshApi = axios.create({
-  baseURL: BASE_URL,
+  baseURL: API_BASE_URL,
   headers: {
     Accept: "application/json",
   },
@@ -56,7 +52,7 @@ const refreshApi = axios.create({
 // ============================================================
 
 const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: API_BASE_URL,
   headers: {
     Accept: "application/json",
   },

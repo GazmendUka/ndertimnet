@@ -25,6 +25,10 @@ def env_list(key: str, default=None, sep=","):
         return default
     return [x.strip() for x in val.split(sep) if x.strip()]
 
+
+def env_url(key: str, default: str = "") -> str:
+    return os.environ.get(key, default).rstrip("/")
+
 # ======================================================
 # CORE SECURITY
 # ======================================================
@@ -116,6 +120,7 @@ INSTALLED_APPS = [
     "jobrequests",
     "payments",
     "offers",
+    "pushnotifications",
 
     # Local apps
     "accounts.apps.AccountsConfig",
@@ -229,6 +234,28 @@ SIMPLE_JWT = {
 
 
 # ======================================================
+# RAIACCEPT PAYMENTS
+# ======================================================
+RAIACCEPT_MODE = os.environ.get("RAIACCEPT_MODE", "sandbox").lower()
+RAIACCEPT_SANDBOX_USERNAME = os.environ.get("RAIACCEPT_SANDBOX_USERNAME", "")
+RAIACCEPT_SANDBOX_PASSWORD = os.environ.get("RAIACCEPT_SANDBOX_PASSWORD", "")
+RAIACCEPT_PRODUCTION_USERNAME = os.environ.get("RAIACCEPT_PRODUCTION_USERNAME", "")
+RAIACCEPT_PRODUCTION_PASSWORD = os.environ.get("RAIACCEPT_PRODUCTION_PASSWORD", "")
+RAIACCEPT_MERCHANT_ACCOUNT_ID = os.environ.get("RAIACCEPT_MERCHANT_ACCOUNT_ID", "")
+RAIACCEPT_DEFAULT_COUNTRY = os.environ.get("RAIACCEPT_DEFAULT_COUNTRY", "XKX")
+# Keep customer charges disabled until acquiring, settlement and refund handling
+# have been approved with the bank for the production merchant account.
+CUSTOMER_JOB_PAYMENTS_ENABLED = env_bool("CUSTOMER_JOB_PAYMENTS_ENABLED", False)
+
+FRONTEND_BASE_URL = env_url("FRONTEND_BASE_URL", "http://localhost:3000")
+BACKEND_BASE_URL = env_url("BACKEND_BASE_URL", "")
+
+# Push delivery stays disabled until Firebase credentials are configured.
+PUSH_NOTIFICATIONS_ENABLED = env_bool("PUSH_NOTIFICATIONS_ENABLED", False)
+FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "")
+
+
+# ======================================================
 # AUTHENTICATION BACKENDS (EMAIL LOGIN)
 # ======================================================
 AUTHENTICATION_BACKENDS = [
@@ -298,6 +325,12 @@ else:
         default=["http://localhost:3000"]
     )
     CORS_ALLOW_ALL_ORIGINS = True
+
+# Capacitor serves bundled app assets from these local origins. API requests
+# still use JWT authentication and the same production permission checks.
+for mobile_origin in ("capacitor://localhost", "http://localhost"):
+    if mobile_origin not in CORS_ALLOWED_ORIGINS:
+        CORS_ALLOWED_ORIGINS.append(mobile_origin)
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_HEADERS = [

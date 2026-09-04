@@ -148,16 +148,16 @@ export default function NdertimTirane() {
 
             <div className="flex flex-wrap gap-4 text-sm">
 
-              <Link to="/renovim-banese" className="text-orange-500 hover:underline">
-                Renovim banese
+              <Link to="/renovime" className="text-orange-500 hover:underline">
+                Renovime
               </Link>
 
-              <Link to="/kategori/elektricist" className="text-orange-500 hover:underline">
+              <Link to="/elektricist" className="text-orange-500 hover:underline">
                 Elektricist
               </Link>
 
-              <Link to="/kategori/hidraulik" className="text-orange-500 hover:underline">
-                Hidraulik
+              <Link to="/renovim-banjo" className="text-orange-500 hover:underline">
+                Renovim banjo
               </Link>
 
             </div>

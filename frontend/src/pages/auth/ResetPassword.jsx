@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import api from "../../api/axios";
+import { ArrowLeft, Loader2 } from "lucide-react";
 
 export default function ResetPassword() {
   const { uid, token } = useParams();
@@ -68,7 +69,7 @@ export default function ResetPassword() {
     setMessageType(null);
 
     try {
-      const res = await api.post("/accounts/reset-password/", {
+      const res = await api.post("/accounts/password/reset/", {
         uid,
         token,
         password,
@@ -105,18 +106,22 @@ export default function ResetPassword() {
       : "bg-red-50 text-red-800 border border-red-200";
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
-      <div className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center mb-2">
+    <main className="flex min-h-screen items-center justify-center bg-[#f7f4ee] px-4 py-6">
+      <section className="w-full max-w-md rounded-2xl border border-[#e5e0d5] bg-white p-5 shadow-sm sm:p-8">
+        <Link to="/login" className="mb-7 inline-flex min-h-[44px] items-center gap-2 rounded-lg px-2 text-sm font-semibold text-[#5f6f66] hover:bg-[#f7f4ee]">
+          <ArrowLeft size={18} /> Kthehu
+        </Link>
+        <p className="text-sm font-semibold text-[#17643f]">Siguria e llogarisë</p>
+        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-[#12251b]">
           Vendos fjalëkalim të ri
         </h2>
 
-        <p className="text-center text-gray-600 mb-6">
+        <p className="mb-6 mt-3 text-sm leading-6 text-[#5f6f66]">
           Shkruani fjalëkalimin tuaj të ri
         </p>
 
         {/* Tydliga direktiv / regler */}
-        <div className="mb-4 text-sm text-gray-700 bg-gray-50 border border-gray-200 p-3 rounded">
+        <div className="mb-4 rounded-xl border border-[#e5e0d5] bg-[#f7f4ee] p-4 text-sm leading-6 text-[#5f6f66]">
           <p className="font-semibold mb-1">Kërkesat për fjalëkalim:</p>
           <ul className="list-disc pl-5 space-y-1">
             <li>Mos përdorni emrin tuaj (p.sh. “Gazmend”).</li>
@@ -127,7 +132,8 @@ export default function ResetPassword() {
 
         {message && (
           <div
-            className={`mb-4 text-sm p-3 rounded text-center whitespace-pre-line ${messageBoxClass}`}
+            className={`mb-4 whitespace-pre-line rounded-xl p-4 text-sm leading-6 ${messageBoxClass}`}
+            role={messageType === "error" ? "alert" : "status"}
           >
             {formatMessage(message)}
             {messageType === "success" && countdown !== null && countdown > 0 && (
@@ -138,44 +144,51 @@ export default function ResetPassword() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+          <label htmlFor="reset-password" className="block text-sm font-medium text-[#12251b]">Fjalëkalimi i ri</label>
           <input
+            id="reset-password"
             type="password"
             required
             disabled={loading}
-            placeholder="Fjalëkalimi i ri"
-            className="w-full px-4 py-2 border rounded-lg focus:ring focus:ring-blue-200 disabled:opacity-60"
+            className="mt-2 min-h-[48px] w-full rounded-xl border border-[#d7d0c2] px-4 py-3 text-base outline-none focus:border-[#17643f] focus:ring-2 focus:ring-[#17643f]/10 disabled:opacity-60"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             autoComplete="new-password"
           />
+          </div>
 
+          <div>
+          <label htmlFor="reset-password-confirm" className="block text-sm font-medium text-[#12251b]">Konfirmo fjalëkalimin</label>
           <input
+            id="reset-password-confirm"
             type="password"
             required
             disabled={loading}
-            placeholder="Konfirmo fjalëkalimin"
-            className="w-full px-4 py-2 border rounded-lg focus:ring focus:ring-blue-200 disabled:opacity-60"
+            className="mt-2 min-h-[48px] w-full rounded-xl border border-[#d7d0c2] px-4 py-3 text-base outline-none focus:border-[#17643f] focus:ring-2 focus:ring-[#17643f]/10 disabled:opacity-60"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             autoComplete="new-password"
           />
+          </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold transition disabled:opacity-60"
+            className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-[#17643f] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0f4f31] disabled:opacity-60"
           >
+            {loading && <Loader2 className="animate-spin" size={19} />}
             {loading ? "Duke ruajtur..." : "Ruaj fjalëkalimin"}
           </button>
         </form>
 
         <div className="mt-6 text-sm text-center">
-          <Link to="/login" className="text-blue-600 hover:underline font-medium">
+          <Link to="/login" className="font-semibold text-[#17643f] hover:underline">
             Kthehu te hyrja
           </Link>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }

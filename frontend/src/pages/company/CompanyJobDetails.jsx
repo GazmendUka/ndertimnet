@@ -9,6 +9,8 @@ import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
 import StatusBadge from "../../components/ui/StatusBadge";
 import { toast } from "react-hot-toast";
+import { openPaymentUrl } from "../../platform/mobile";
+import paymentService from "../../services/paymentService";
 
 import {
   ArrowLeft,
@@ -40,6 +42,7 @@ export default function CompanyJobDetails() {
   const [loadingJob, setLoadingJob] = useState(true);
   const [loadingOffer, setLoadingOffer] = useState(true);
   const [unlocking, setUnlocking] = useState(false);
+  const [paymentFeedback, setPaymentFeedback] = useState(null);
   const [error, setError] = useState("");
 
   // ------------------------------
@@ -90,6 +93,57 @@ export default function CompanyJobDetails() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [jobId, access]);
 
+  useEffect(() => {
+    if (!access || !jobId) return undefined;
+    if (new URLSearchParams(window.location.search).get("payment") !== "return") {
+      return undefined;
+    }
+
+    let disposed = false;
+    let timer;
+    let attempt = 0;
+
+    const checkPayment = async () => {
+      attempt += 1;
+      try {
+        const response = await paymentService.getLeadUnlockStatus(jobId);
+        if (disposed) return;
+        const payment = response.data;
+
+        if (payment.lead_unlocked || payment.status === "paid") {
+          setPaymentFeedback({ type: "success", text: "Pagesa u konfirmua dhe lead-i u hap." });
+          setJob((previous) => previous ? { ...previous, lead_unlocked: true } : previous);
+          await checkOffer();
+          return;
+        }
+
+        if (payment.status === "failed") {
+          setPaymentFeedback({ type: "error", text: "Pagesa dështoi. Mund të provoni përsëri." });
+          return;
+        }
+
+        if (payment.status === "canceled") {
+          setPaymentFeedback({ type: "warning", text: "Pagesa u anulua. Asnjë tarifë nuk u konfirmua." });
+          return;
+        }
+
+        setPaymentFeedback({ type: "pending", text: "Pagesa po verifikohet…" });
+        if (attempt < 6) timer = window.setTimeout(checkPayment, 1500);
+      } catch {
+        if (!disposed) {
+          setPaymentFeedback({ type: "error", text: "Statusi i pagesës nuk mund të verifikohej." });
+        }
+      }
+    };
+
+    checkPayment();
+    return () => {
+      disposed = true;
+      window.clearTimeout(timer);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [access, jobId]);
+
   // ------------------------------
   // GUARDS
   // ------------------------------
@@ -132,9 +186,17 @@ export default function CompanyJobDetails() {
     try {
       setUnlocking(true);
 
-      const res = await api.post("/payments/unlock-lead/", {
-        job_request: jobId,
-      });
+      setPaymentFeedback(null);
+      const res = await paymentService.unlockLead(jobId);
+
+      if (res.data.requires_payment && res.data.payment_url) {
+        toast.success("Po ju dërgojmë te pagesa...");
+        await openPaymentUrl(
+          res.data.payment_url,
+          `/company/jobrequests/${jobId}?payment=return`
+        );
+        return;
+      }
 
       toast.success(
         res.data.used_free_lead
@@ -152,7 +214,17 @@ export default function CompanyJobDetails() {
       // Efter unlock: refresh offer-exists (så UI direkt blir korrekt)
       await checkOffer();
     } catch (e) {
-      toast.error("Nuk u arrit të hapet lead.");
+      const code = e.response?.data?.code;
+      if (code === "store_billing_required") {
+        const text = "Blerja e lead-it në aplikacion do të aktivizohet pasi pagesa e dyqanit të miratohet.";
+        setPaymentFeedback({ type: "warning", text });
+        toast.error(text);
+      } else if (code === "payment_initializing") {
+        setPaymentFeedback({ type: "pending", text: "Pagesa po përgatitet. Provoni përsëri pas pak." });
+      } else {
+        setPaymentFeedback({ type: "error", text: "Nuk u arrit të hapet lead. Provoni përsëri." });
+        toast.error("Nuk u arrit të hapet lead.");
+      }
     } finally {
       setUnlocking(false);
     }
@@ -164,7 +236,7 @@ export default function CompanyJobDetails() {
   return (
     <div className="premium-container">
       {/* TOP NAV */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button
           onClick={() => navigate("/company/jobrequests")}
           className="premium-btn btn-light inline-flex items-center"
@@ -194,6 +266,21 @@ export default function CompanyJobDetails() {
           <StatusBadge active={job.is_active} />
         </div>
       </section>
+
+      {paymentFeedback && (
+        <div
+          role="status"
+          className={`mb-4 rounded-xl border p-4 text-sm ${
+            paymentFeedback.type === "success"
+              ? "border-green-200 bg-green-50 text-green-800"
+              : paymentFeedback.type === "error"
+                ? "border-red-200 bg-red-50 text-red-800"
+                : "border-amber-200 bg-amber-50 text-amber-900"
+          }`}
+        >
+          {paymentFeedback.text}
+        </div>
+      )}
 
       {/* CONTENT */}
       <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">

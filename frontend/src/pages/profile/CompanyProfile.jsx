@@ -332,7 +332,7 @@ export default function CompanyProfile() {
     setDeleting(true);
     setDeleteError("");
     try {
-      await api.post("/accounts/delete/", { password: deletePassword });
+      await api.post("/accounts/account/delete/", { password: deletePassword });
       logout();
       navigate("/");
     } catch (requestError) {

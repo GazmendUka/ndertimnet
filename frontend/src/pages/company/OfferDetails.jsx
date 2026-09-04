@@ -39,6 +39,11 @@ function formatMessageTime(value) {
   }
 }
 
+function createClientMessageId() {
+  return window.crypto?.randomUUID?.()
+    || `msg-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
 function messageDateKey(value) {
   if (!value) return "";
   const date = new Date(value);
@@ -122,6 +127,12 @@ export default function OfferDetails() {
         ...serverMessages,
         ...current.filter((message) => String(message.id).startsWith("temp-")),
       ]);
+      if (
+        document.visibilityState === "visible"
+        && serverMessages.some((message) => message.sender_type === "customer" && !message.read_at)
+      ) {
+        await api.post(`/offers/${id}/messages/read/`);
+      }
     } catch (err) {
       console.error("Chat load error:", err);
     } finally {
@@ -129,10 +140,11 @@ export default function OfferDetails() {
     }
   }, [id]);
 
-  const sendMessage = async (content = messageInput, retryId = null) => {
+  const sendMessage = async (content = messageInput, retryMessage = null) => {
     const trimmed = content.trim();
     if (!trimmed || isSending || offer?.chat_locked) return;
 
+    const clientMessageId = retryMessage?.client_message_id || createClientMessageId();
     const tempMessage = {
       id: `temp-${Date.now()}`,
       message: trimmed,
@@ -140,12 +152,13 @@ export default function OfferDetails() {
       sender_type: "company",
       created_at: new Date().toISOString(),
       delivery_status: "sending",
+      client_message_id: clientMessageId,
     };
 
     shouldAutoScrollRef.current = true;
     setIsSending(true);
     setMessages((prev) => [
-      ...prev.filter((message) => message.id !== retryId),
+      ...prev.filter((message) => message.id !== retryMessage?.id),
       tempMessage,
     ]);
     setMessageInput("");
@@ -153,6 +166,7 @@ export default function OfferDetails() {
     try {
       const res = await api.post(`/offers/${id}/messages/`, {
         message: trimmed,
+        client_message_id: clientMessageId,
       });
 
       if (res.data) {
@@ -188,6 +202,9 @@ export default function OfferDetails() {
     if (!access || !id) return;
 
     let alive = true;
+    setMessages([]);
+    setChatLoading(true);
+    shouldAutoScrollRef.current = true;
 
     async function loadOffer() {
       setLoading(true);
@@ -246,10 +263,18 @@ export default function OfferDetails() {
     if (!id) return;
 
     const interval = setInterval(() => {
-      fetchMessages();
-    }, 5000);
+      if (document.visibilityState === "visible") fetchMessages();
+    }, 3000);
 
-    return () => clearInterval(interval);
+    const handlePush = (event) => {
+      if (String(event.detail?.offer_id || "") === String(id)) fetchMessages();
+    };
+    window.addEventListener("ndertimnet:push", handlePush);
+
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener("ndertimnet:push", handlePush);
+    };
   }, [id, fetchMessages]);
 
   // ===============================
@@ -487,11 +512,17 @@ export default function OfferDetails() {
                     <div className="font-semibold text-xs mb-1 opacity-70">{msg.sender_name}</div>
                     <div className="whitespace-pre-wrap break-words">{msg.message}</div>
                     <div className="text-[10px] opacity-60 mt-1 text-right">
-                      {msg.delivery_status === "sending" ? "Duke u dërguar…" : formatMessageTime(msg.created_at)}
+                      {msg.delivery_status === "sending"
+                        ? "Duke u dërguar…"
+                        : isCompany
+                          ? msg.read_at
+                            ? `Lexuar · ${formatMessageTime(msg.read_at)}`
+                            : `Dërguar · ${formatMessageTime(msg.created_at)}`
+                          : formatMessageTime(msg.created_at)}
                     </div>
                   </div>
                   {msg.delivery_status === "failed" && (
-                    <button type="button" onClick={() => sendMessage(msg.message, msg.id)} className="mt-1 ml-auto flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-700">
+                    <button type="button" onClick={() => sendMessage(msg.message, msg)} className="mt-1 ml-auto flex items-center gap-1 text-xs font-medium text-red-600 hover:text-red-700">
                       <RotateCcw size={12} /> Provo përsëri
                     </button>
                   )}
@@ -516,6 +547,7 @@ export default function OfferDetails() {
             <textarea
               ref={inputRef}
               rows={2}
+              maxLength={2000}
               value={messageInput}
               onChange={(event) => setMessageInput(event.target.value)}
               onKeyDown={(event) => {
@@ -533,6 +565,7 @@ export default function OfferDetails() {
             </button>
           </div>
           <p className="text-[11px] text-gray-400 mt-2">Enter për ta dërguar · Shift + Enter për rresht të ri</p>
+          <p className="mt-1 text-right text-[11px] text-gray-400">{messageInput.length}/2000</p>
         </div>
         )}
       </div>

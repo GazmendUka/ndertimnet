@@ -263,7 +263,7 @@ function LatestOffers({ offers, loading }) {
         </h2>
 
         <Link
-          to="/leads/mine"
+          to="/company/leads/mine"
           className="text-xs font-medium text-gray-500 hover:text-gray-900"
         >
           Shiko të gjitha

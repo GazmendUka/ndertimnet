@@ -19,3 +19,15 @@ db.sqlite3
 # =========================
 *.log
 
+# =========================
+# Environment
+# =========================
+.env
+*.env
+!*.env.example
+
+# Local Firebase app configuration
+frontend/android/app/google-services.json
+frontend/ios/App/App/GoogleService-Info.plist
+*service-account*.json
+*firebase-adminsdk*.json

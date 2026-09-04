@@ -25,7 +25,7 @@ export default function CompanyOnboardingBanner({
   profileCompletion = null, // optional override
   totalSteps = 2,
   profileTarget = 100,
-  profileRoute = "/profile/company",
+  profileRoute = "/company/profile",
   resendVerificationEndpoint = null, // e.g. "/accounts/resend-verification/"
   className = "",
 }) {
@@ -198,7 +198,7 @@ export default function CompanyOnboardingBanner({
             disabled={ui.ctaAction === "resend" ? resendLoading : false}
             className={[
               "inline-flex items-center justify-center gap-2 rounded-xl",
-              "bg-amber-600 px-4 py-2 text-sm font-semibold text-white",
+              "min-h-[44px] bg-amber-600 px-4 py-2 text-sm font-semibold text-white",
               "hover:bg-amber-700 disabled:opacity-60 disabled:cursor-not-allowed",
               "transition",
             ].join(" ")}

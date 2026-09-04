@@ -94,7 +94,7 @@ export default function JobRequestForm({
     <form onSubmit={handleSubmit} className="space-y-6">
 
       {error && (
-        <div className="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700" role="alert">
           {error}
         </div>
       )}
@@ -108,7 +108,7 @@ export default function JobRequestForm({
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          className="w-full border rounded-lg px-3 py-2"
+          className="premium-input"
           disabled={loading}
         />
       </div>
@@ -122,7 +122,7 @@ export default function JobRequestForm({
           rows="4"
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          className="w-full border rounded-lg px-3 py-2"
+          className="premium-input min-h-[120px]"
           disabled={loading}
         />
       </div>
@@ -136,7 +136,7 @@ export default function JobRequestForm({
           type="number"
           value={budget}
           onChange={(e) => setBudget(e.target.value)}
-          className="w-full border rounded-lg px-3 py-2"
+          className="premium-input"
           disabled={loading}
         />
       </div>
@@ -152,7 +152,7 @@ export default function JobRequestForm({
             setIndustry(e.target.value);
             setProfession("");
           }}
-          className="w-full border rounded-lg px-3 py-2"
+          className="premium-input"
           disabled={loading}
         >
           <option value="">Zgjidh kategorinë</option>
@@ -172,7 +172,7 @@ export default function JobRequestForm({
         <select
           value={profession}
           onChange={(e) => setProfession(e.target.value)}
-          className="w-full border rounded-lg px-3 py-2"
+          className="premium-input"
           disabled={loading || !industry}
         >
           <option value="">Zgjidh specialitetin</option>
@@ -187,7 +187,7 @@ export default function JobRequestForm({
       <button
         type="submit"
         disabled={loading}
-        className="bg-blue-600 text-white px-5 py-2 rounded-lg hover:bg-blue-700 transition"
+        className="premium-btn btn-dark w-full sm:w-auto"
       >
         {loading
           ? "Duke ruajtur..."

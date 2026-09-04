@@ -1,4 +1,5 @@
 import React from "react";
+import { Link } from "react-router-dom";
 
 export default function ProfileGate({
   profileStep,
@@ -18,12 +19,12 @@ export default function ProfileGate({
         Për të përdorur këtë funksion, duhet të plotësoni profilin e kompanisë.
       </p>
 
-      <a
-        href="/profile/company"
-        className="inline-block mt-2 px-4 py-2 bg-red-600 text-white rounded"
+      <Link
+        to="/company/profile"
+        className="mt-2 inline-flex min-h-[44px] items-center rounded-lg bg-red-600 px-4 py-2 text-white"
       >
         Plotëso profilin
-      </a>
+      </Link>
     </div>
   );
 }

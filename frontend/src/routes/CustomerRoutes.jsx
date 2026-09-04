@@ -9,6 +9,8 @@ import OnboardingGuard from "./OnboardingGuard";
 import CustomerDashboard from "../pages/customer/CustomerDashboard";
 import CustomerProfile from "../pages/profile/CustomerProfile";
 import CustomerOfferDetailsPage from "../pages/customer/CustomerOfferDetailsPage";
+import PaymentHistory from "../pages/company/PaymentHistory";
+import NotificationSettings from "../pages/NotificationSettings";
 
 import JobRequestList from "../pages/jobrequests/JobRequestList";
 import JobRequestCreate from "../pages/jobrequests/JobRequestCreate";
@@ -32,6 +34,8 @@ export default function CustomerRoutes() {
 
             <Route path="jobrequests/:id" element={<RoleBasedJobRequestDetail />} />
             <Route path="offers/:id" element={<CustomerOfferDetailsPage />} />
+            <Route path="payments" element={<PaymentHistory />} />
+            <Route path="notifications" element={<NotificationSettings />} />
 
           </Route>
         </Route>

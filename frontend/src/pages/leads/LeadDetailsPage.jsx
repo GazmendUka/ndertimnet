@@ -146,9 +146,9 @@ export default function LeadDetailsPage() {
   return (
     <div className="premium-container mt-4">
       {/* TOP NAV */}
-      <div className="flex justify-between items-center mb-6">
+      <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button
-          onClick={() => navigate("/myleads")}
+          onClick={() => navigate("/company/leads/mine")}
           className="premium-btn btn-light inline-flex items-center"
         >
           <ArrowLeft size={18} /> Kthehu te ofertat
@@ -156,7 +156,7 @@ export default function LeadDetailsPage() {
 
         {job && (
           <Link
-            to={`/jobrequests/${job.id}`}
+            to={`/company/jobrequests/${job.id}`}
             className="premium-btn btn-light"
           >
             Shiko detajet e punës

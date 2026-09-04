@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import api from "../api/axios";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { AlertCircle, ArrowLeft, Eye, EyeOff, Loader2, Mail } from "lucide-react";
 
 export default function RegisterCustomer() {
   const navigate = useNavigate();
@@ -37,7 +38,7 @@ export default function RegisterCustomer() {
     }
 
     try {
-      const res = await api.post("accounts/register/customer/", {
+      await api.post("accounts/register/customer/", {
         email: formData.email,
         password: formData.password,
 
@@ -46,13 +47,9 @@ export default function RegisterCustomer() {
         last_name: "",
       });
 
-      console.log("✅ Klienti u regjistrua me sukses!", res.data);
-
       navigate("/register/success", { state: { type: "customer" } });
 
     } catch (err) {
-      console.error("❌ Gabim gjatë regjistrimit:", err);
-
       setError(
         err.response?.data?.message ||
         err.response?.data?.detail ||
@@ -64,80 +61,114 @@ export default function RegisterCustomer() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
-      <div className="bg-white rounded-2xl shadow-lg p-8 w-full max-w-md">
+    <main className="flex min-h-screen items-center justify-center bg-[#f7f4ee] px-4 py-6 sm:px-6">
+      <section className="w-full max-w-md rounded-2xl border border-[#e5e0d5] bg-white p-5 shadow-sm sm:p-8">
+        <div className="mb-7 flex items-center justify-between gap-4">
+          <img
+            src="/ndertimnet-logo-full-width/ndertimnet-logo-search-transparent.png"
+            alt="Ndertimnet"
+            className="h-10 w-auto"
+          />
+          <Link
+            to="/register"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-lg px-3 text-sm font-semibold text-[#5f6f66] hover:bg-[#f7f4ee]"
+          >
+            <ArrowLeft size={18} />
+            Kthehu
+          </Link>
+        </div>
 
-        <h1 className="text-2xl font-bold text-center mb-6 text-gray-800">
-          👤 Krijo llogarinë
+        <p className="text-sm font-semibold text-[#ef7d22]">Për klientë</p>
+        <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#12251b]">
+          Krijo llogarinë tënde
         </h1>
+        <p className="mt-3 text-sm leading-6 text-[#5f6f66]">
+          Publiko projektin dhe merr oferta nga kompani të interesuara.
+        </p>
 
         {error && (
-          <p className="text-red-600 text-center mb-4">
-            {error}
-          </p>
+          <div className="mt-5 flex gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">
+            <AlertCircle className="mt-0.5 shrink-0" size={19} />
+            <p>{error}</p>
+          </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="mt-6 space-y-5">
 
           {/* ✉️ Email */}
           <div>
-            <label className="block text-gray-700 mb-1">Email *</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              required
-              className="w-full border rounded-lg p-2 focus:ring-2 focus:ring-green-400 outline-none"
-            />
+            <label htmlFor="customer-email" className="block text-sm font-medium text-[#12251b]">Email</label>
+            <div className="relative mt-2">
+              <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8a958f]" size={19} />
+              <input
+                id="customer-email"
+                type="email"
+                name="email"
+                value={formData.email}
+                onChange={handleChange}
+                required
+                autoComplete="email"
+                inputMode="email"
+                placeholder="shembull@mail.com"
+                className="min-h-[48px] w-full rounded-xl border border-[#d7d0c2] bg-white py-3 pl-10 pr-3 text-base outline-none transition focus:border-[#17643f] focus:ring-2 focus:ring-[#17643f]/10"
+              />
+            </div>
           </div>
 
           {/* 🔐 Password */}
           <div>
-            <label className="block text-gray-700 mb-1">Fjalëkalimi *</label>
+            <label htmlFor="customer-password" className="block text-sm font-medium text-[#12251b]">Fjalëkalimi</label>
 
             <div className="relative">
               <input
+                id="customer-password"
                 type={showPassword ? "text" : "password"}
                 name="password"
                 value={formData.password}
                 onChange={handleChange}
                 required
-                className="w-full border rounded-lg p-2 pr-10 focus:ring-2 focus:ring-green-400 outline-none"
+                minLength={6}
+                autoComplete="new-password"
+                className="mt-2 min-h-[48px] w-full rounded-xl border border-[#d7d0c2] bg-white px-3 py-3 pr-12 text-base outline-none transition focus:border-[#17643f] focus:ring-2 focus:ring-[#17643f]/10"
               />
 
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                className="absolute inset-y-0 right-1 top-2 flex w-11 items-center justify-center rounded-lg text-[#5f6f66] hover:bg-[#f7f4ee]"
+                aria-label={showPassword ? "Fshih fjalëkalimin" : "Shfaq fjalëkalimin"}
               >
-                👁
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
           </div>
 
           {/* 🔐 Confirm Password */}
           <div>
-            <label className="block text-gray-700 mb-1">
-              Konfirmo fjalëkalimin *
+            <label htmlFor="customer-password-confirm" className="block text-sm font-medium text-[#12251b]">
+              Konfirmo fjalëkalimin
             </label>
 
             <div className="relative">
               <input
+                id="customer-password-confirm"
                 type={showPassword ? "text" : "password"}
                 name="confirm_password"
                 value={formData.confirm_password}
                 onChange={handleChange}
                 required
-                className="w-full border rounded-lg p-2 pr-10 focus:ring-2 focus:ring-green-400 outline-none"
+                minLength={6}
+                autoComplete="new-password"
+                className="mt-2 min-h-[48px] w-full rounded-xl border border-[#d7d0c2] bg-white px-3 py-3 pr-12 text-base outline-none transition focus:border-[#17643f] focus:ring-2 focus:ring-[#17643f]/10"
               />
 
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500"
+                className="absolute inset-y-0 right-1 top-2 flex w-11 items-center justify-center rounded-lg text-[#5f6f66] hover:bg-[#f7f4ee]"
+                aria-label={showPassword ? "Fshih fjalëkalimin" : "Shfaq fjalëkalimin"}
               >
-                👁
+                {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
           </div>
@@ -146,25 +177,20 @@ export default function RegisterCustomer() {
           <button
             type="submit"
             disabled={loading}
-            className={`w-full py-2 rounded-lg text-white font-medium transition ${
+            className={`inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white transition ${
               loading
                 ? "bg-gray-400 cursor-not-allowed"
-                : "bg-green-600 hover:bg-green-700"
+                : "bg-[#17643f] hover:bg-[#0f4f31]"
             }`}
           >
+            {loading && <Loader2 className="animate-spin" size={19} />}
             {loading ? "Duke u dërguar..." : "Regjistrohu"}
           </button>
-
-          {/* 🔙 Back */}
-          <p
-            onClick={() => navigate("/register")}
-            className="text-center text-green-600 hover:text-green-800 mt-4 cursor-pointer"
-          >
-            ← Kthehu mbrapa
-          </p>
-
         </form>
-      </div>
-    </div>
+        <p className="mt-6 text-center text-sm text-[#5f6f66]">
+          Ke tashmë llogari? <Link to="/login" className="font-semibold text-[#17643f] hover:underline">Kyçu</Link>
+        </p>
+      </section>
+    </main>
   );
 }

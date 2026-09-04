@@ -6,7 +6,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import api from "../../api/axios";
 
-import { Home, User, LogOut, Briefcase, FileText } from "lucide-react";
+import { Bell, Home, User, LogOut, Briefcase, FileText, ReceiptText } from "lucide-react";
 
 const logoSrc = "/ndertimnet-logo-full-width/ndertimnet-logo-search-transparent.png";
 
@@ -15,6 +15,7 @@ export default function Sidebar() {
   const navigate = useNavigate();
 
   const [newJobsCount, setNewJobsCount] = useState(0);
+  const [unreadMessages, setUnreadMessages] = useState(0);
 
   // ============================================================
   // LOAD NEW LEADS COUNT (ONLY FOR COMPANY)
@@ -51,6 +52,30 @@ export default function Sidebar() {
 
     fetchNewJobs();
   }, [isCompany, access]);
+
+  useEffect(() => {
+    if (!access || (!isCustomer && !isCompany)) return undefined;
+    let active = true;
+
+    const fetchUnread = async () => {
+      try {
+        const response = await api.get("/offers/unread-count/");
+        if (active) setUnreadMessages(Number(response.data?.total) || 0);
+      } catch {
+        // The menu remains available if the counter cannot be refreshed.
+      }
+    };
+
+    const handlePush = () => fetchUnread();
+    fetchUnread();
+    const interval = window.setInterval(fetchUnread, 15000);
+    window.addEventListener("ndertimnet:push", handlePush);
+    return () => {
+      active = false;
+      window.clearInterval(interval);
+      window.removeEventListener("ndertimnet:push", handlePush);
+    };
+  }, [access, isCompany, isCustomer]);
 
 
   // ============================================================
@@ -97,7 +122,9 @@ export default function Sidebar() {
         {isCustomer && (
           <>
             <SidebarLink to="/customer"             icon={<Home size={18} />} text="Dashboard" />
-            <SidebarLink to="/customer/jobrequests" icon={<FileText size={18} />} text="Kërkesat e mia" />
+            <SidebarLink to="/customer/jobrequests" icon={<FileText size={18} />} text="Kërkesat e mia" badge={unreadMessages} />
+            <SidebarLink to="/customer/payments"     icon={<ReceiptText size={18} />} text="Pagesat dhe konfirmimet" />
+            <SidebarLink to="/customer/notifications" icon={<Bell size={18} />} text="Njoftimet" />
             <SidebarLink to="/customer/profile"     icon={<User size={18} />} text="Profili" />
           </>
         )}
@@ -107,7 +134,9 @@ export default function Sidebar() {
           <>
             <SidebarLink to="/company"              icon={<Home size={18} />} text="Dashboard" />
             <SidebarLink to="/company/jobrequests"  icon={<Briefcase size={18} />} text="Kërkesat e punës" badge={newJobsCount} />
-            <SidebarLink to="/company/leads/mine"   icon={<FileText size={18} />} text="Ofertat e mia" />
+            <SidebarLink to="/company/leads/mine"   icon={<FileText size={18} />} text="Ofertat e mia" badge={unreadMessages} />
+            <SidebarLink to="/company/payments"     icon={<ReceiptText size={18} />} text="Pagesat dhe konfirmimet" />
+            <SidebarLink to="/company/notifications" icon={<Bell size={18} />} text="Njoftimet" />
             <SidebarLink to="/company/profile"      icon={<User size={18} />} text="Profili" />
           </>
         )}

@@ -282,7 +282,7 @@ export default function JobRequestList() {
                     </p>
 
                     <Link
-                      to="/profile/company"
+                      to="/company/profile"
                       className="inline-block mt-3 text-sm font-medium text-gray-900 underline"
                     >
                       Plotëso profilin →

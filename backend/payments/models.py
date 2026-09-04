@@ -1,6 +1,7 @@
 # backend/payments/models
 
 from django.db import models
+from django.conf import settings
 from django.utils import timezone
 
 from accounts.models import Company
@@ -14,17 +15,20 @@ from offers.models import Offer
 class PaymentType(models.TextChoices):
     UNLOCK_LEAD = "unlock_lead", "Unlock lead"
     UNLOCK_CHAT = "unlock_chat", "Unlock chat"
+    JOB_PAYMENT = "job_payment", "Job payment"
 
 
 class PaymentStatus(models.TextChoices):
     PENDING = "pending", "Pending"
     PAID = "paid", "Paid"
     FAILED = "failed", "Failed"
+    CANCELED = "canceled", "Canceled"
     REFUNDED = "refunded", "Refunded"
 
 
 class PaymentProvider(models.TextChoices):
     INTERNAL = "internal", "Internal"
+    RAIACCEPT = "raiaccept", "RaiAccept"
     STRIPE = "stripe", "Stripe"
     MANUAL = "manual", "Manual"
 
@@ -67,6 +71,7 @@ class Payment(models.Model):
     One payment = one business action:
     - Unlock lead
     - Unlock chat
+    - Pay an accepted fixed-price job
 
     Payments are ALWAYS linked to an Offer.
     """
@@ -75,6 +80,15 @@ class Payment(models.Model):
         Company,
         on_delete=models.CASCADE,
         related_name="payments",
+    )
+
+    payer_user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="payments_made",
+        help_text="User who initiated the payment, when applicable.",
     )
 
     offer = models.ForeignKey(
@@ -117,7 +131,13 @@ class Payment(models.Model):
         help_text="Reference ID from payment provider (Stripe session ID, etc.)"
     )
 
+    provider_session_id = models.CharField(max_length=255, blank=True)
+    provider_transaction_id = models.CharField(max_length=255, blank=True)
+    checkout_url = models.URLField(max_length=1000, blank=True)
+    failure_code = models.CharField(max_length=64, blank=True)
+
     created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
     paid_at = models.DateTimeField(null=True, blank=True)
 
     class Meta:
@@ -141,17 +161,35 @@ class Payment(models.Model):
         - free unlocks
         - webhook confirmations
         """
-        self.status = PaymentStatus.PAID
-        self.paid_at = timezone.now()
+        if self.status != PaymentStatus.PAID:
+            self.status = PaymentStatus.PAID
+            self.paid_at = timezone.now()
 
         if provider_reference:
             self.provider_reference = provider_reference
 
-        self.save(update_fields=["status", "paid_at", "provider_reference"])
+        self.failure_code = ""
+        self.save(update_fields=[
+            "status",
+            "paid_at",
+            "provider_reference",
+            "failure_code",
+            "updated_at",
+        ])
 
-    def mark_failed(self):
+    def mark_failed(self, failure_code: str = ""):
+        if self.status == PaymentStatus.PAID:
+            return
         self.status = PaymentStatus.FAILED
-        self.save(update_fields=["status"])
+        self.failure_code = (failure_code or "")[:64]
+        self.save(update_fields=["status", "failure_code", "updated_at"])
+
+    def mark_canceled(self, failure_code: str = "canceled"):
+        if self.status == PaymentStatus.PAID:
+            return
+        self.status = PaymentStatus.CANCELED
+        self.failure_code = (failure_code or "canceled")[:64]
+        self.save(update_fields=["status", "failure_code", "updated_at"])
 
     def is_paid(self) -> bool:
         return self.status == PaymentStatus.PAID
@@ -165,6 +203,11 @@ class Payment(models.Model):
         Whether this payment grants access (lead or chat).
         """
         return self.is_paid()
+
+    @property
+    def receipt_number(self) -> str:
+        year = self.created_at.year if self.created_at else timezone.now().year
+        return f"NDT-{year}-{self.pk:08d}" if self.pk else ""
 
     def __str__(self):
         return (

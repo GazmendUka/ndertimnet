@@ -319,11 +319,11 @@ class Company(models.Model):
 
     def has_service_area(self):
         return bool(
-            self.city_id or self.cities.exists()
+            self.city_id or (self.pk and self.cities.exists())
         )
 
     def has_professions(self):
-        return self.professions.exists()
+        return bool(self.pk and self.professions.exists())
 
     def has_portfolio(self):
         """

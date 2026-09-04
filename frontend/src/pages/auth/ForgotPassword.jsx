@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import api from "../../api/axios";
 import { Link } from "react-router-dom";
+import { ArrowLeft, Loader2, Mail } from "lucide-react";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -18,7 +19,7 @@ export default function ForgotPassword() {
     setMessage(null);
 
     try {
-      const res = await api.post("/accounts/forgot-password/", {
+      const res = await api.post("/accounts/password/forgot/", {
         email,
       });
 
@@ -39,51 +40,54 @@ export default function ForgotPassword() {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50 px-4">
-      <div className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center mb-2">
+    <main className="flex min-h-screen items-center justify-center bg-[#f7f4ee] px-4 py-6">
+      <section className="w-full max-w-md rounded-2xl border border-[#e5e0d5] bg-white p-5 shadow-sm sm:p-8">
+        <Link to="/login" className="mb-7 inline-flex min-h-[44px] items-center gap-2 rounded-lg px-2 text-sm font-semibold text-[#5f6f66] hover:bg-[#f7f4ee]">
+          <ArrowLeft size={18} /> Kthehu
+        </Link>
+        <p className="text-sm font-semibold text-[#17643f]">Siguria e llogarisë</p>
+        <h2 className="mt-2 text-3xl font-semibold tracking-tight text-[#12251b]">
           Rivendos fjalëkalimin
         </h2>
 
-        <p className="text-center text-gray-600 mb-6">
+        <p className="mb-6 mt-3 text-sm leading-6 text-[#5f6f66]">
           Shkruani email-in tuaj për të marrë linkun e rivendosjes
         </p>
 
         {message && (
-          <div className="mb-4 text-sm text-gray-700 bg-gray-100 p-3 rounded text-center">
+          <div className="mb-4 rounded-xl border border-[#d8e5dd] bg-[#f4f9f6] p-4 text-sm leading-6 text-[#315c46]" role="status">
             {message}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="email"
-            required
-            disabled={loading}
-            placeholder="Email-i juaj"
-            className="w-full px-4 py-2 border rounded-lg focus:ring focus:ring-blue-200 disabled:opacity-60"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <div>
+            <label htmlFor="forgot-email" className="block text-sm font-medium text-[#12251b]">Email</label>
+            <div className="relative mt-2">
+              <Mail className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#8a958f]" size={19} />
+              <input id="forgot-email" type="email" required disabled={loading} placeholder="shembull@mail.com" autoComplete="email" inputMode="email" className="min-h-[48px] w-full rounded-xl border border-[#d7d0c2] bg-white py-3 pl-10 pr-3 text-base outline-none focus:border-[#17643f] focus:ring-2 focus:ring-[#17643f]/10 disabled:opacity-60" value={email} onChange={(e) => setEmail(e.target.value)} />
+            </div>
+          </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 rounded-lg font-semibold transition disabled:opacity-60"
+            className="inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl bg-[#17643f] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#0f4f31] disabled:opacity-60"
           >
+            {loading && <Loader2 className="animate-spin" size={19} />}
             {loading ? "Duke dërguar..." : "Dërgo linkun"}
           </button>
         </form>
 
-        <div className="mt-6 text-sm text-center">
+        <div className="mt-6 text-center text-sm">
           <Link
             to="/login"
-            className="text-blue-600 hover:underline font-medium"
+            className="font-semibold text-[#17643f] hover:underline"
           >
             Kthehu te hyrja
           </Link>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   );
 }

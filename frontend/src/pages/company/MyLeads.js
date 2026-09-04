@@ -165,7 +165,7 @@ export default function MyLeads() {
       {/* HEADER */}
       <div className="flex justify-between items-center mb-6">
         <button
-          onClick={() => navigate("/dashboard/company")}
+          onClick={() => navigate("/company")}
           className="premium-btn btn-light inline-flex items-center"
         >
           <ArrowLeft size={18} />

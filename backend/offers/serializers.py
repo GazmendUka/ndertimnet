@@ -412,11 +412,14 @@ class OfferMessageSerializer(serializers.ModelSerializer):
         model = OfferMessage
         fields = [
             "id",
+            "client_message_id",
             "sender_type",
             "sender_name",
             "message",
             "created_at",
+            "read_at",
         ]
+        read_only_fields = fields
 
     def get_sender_name(self, obj):
 

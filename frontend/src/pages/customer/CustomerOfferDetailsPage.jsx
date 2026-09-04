@@ -1,8 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
 import CompanyRatingSummary from "../../components/reviews/CompanyRatingSummary";
+import paymentService from "../../services/paymentService";
+import { openPaymentUrl } from "../../platform/mobile";
 
 import {
   ArrowLeft,
@@ -10,6 +12,7 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock3,
+  CreditCard,
   Download,
   Euro,
   FileText,
@@ -19,10 +22,12 @@ import {
   MessageCircle,
   ImagePlus,
   Phone,
+  RotateCcw,
   Send,
   ShieldCheck,
   Star,
   ThumbsUp,
+  WalletCards,
   XCircle,
 } from "lucide-react";
 
@@ -40,19 +45,45 @@ function formatDate(value) {
   }
 }
 
-function formatDateTime(value) {
+function formatMessageTime(value) {
   if (!value) return "";
 
   try {
-    return new Intl.DateTimeFormat("sq-AL", {
-      day: "2-digit",
-      month: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-    }).format(new Date(value));
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return date.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   } catch {
     return "";
   }
+}
+
+function createClientMessageId() {
+  return window.crypto?.randomUUID?.()
+    || `msg-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+function messageDateKey(value) {
+  if (!value) return "";
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? "" : date.toDateString();
+}
+
+function formatMessageDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+
+  const today = new Date();
+  const yesterday = new Date();
+  yesterday.setDate(today.getDate() - 1);
+
+  if (date.toDateString() === today.toDateString()) return "Sot";
+  if (date.toDateString() === yesterday.toDateString()) return "Dje";
+
+  return date.toLocaleDateString("sq-AL", {
+    day: "numeric",
+    month: "long",
+    year: date.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
+  });
 }
 
 function formatPrice(priceAmount, currency, priceType) {
@@ -173,6 +204,7 @@ function EmptyState({ navigate, short = false }) {
 export default function CustomerOfferDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { access, user } = useAuth();
 
   const [offer, setOffer] = useState(null);
@@ -185,6 +217,7 @@ export default function CustomerOfferDetailsPage() {
   const [messages, setMessages] = useState([]);
   const [messageInput, setMessageInput] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [chatLoading, setChatLoading] = useState(true);
   const [reviewRating, setReviewRating] = useState(0);
   const [reviewHover, setReviewHover] = useState(0);
   const [reviewText, setReviewText] = useState("");
@@ -192,13 +225,32 @@ export default function CustomerOfferDetailsPage() {
   const [recommended, setRecommended] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewError, setReviewError] = useState("");
+  const [payment, setPayment] = useState(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
+  const [paymentMessage, setPaymentMessage] = useState("");
+
+  const chatEndRef = useRef(null);
+  const chatContainerRef = useRef(null);
+  const shouldAutoScrollRef = useRef(true);
 
   const fetchMessages = useCallback(async () => {
     try {
       const res = await api.get(`offers/${id}/messages/`);
-      setMessages(res.data || []);
+      const serverMessages = Array.isArray(res.data) ? res.data : [];
+      setMessages((current) => [
+        ...serverMessages,
+        ...current.filter((message) => String(message.id).startsWith("temp-")),
+      ]);
+      if (
+        document.visibilityState === "visible"
+        && serverMessages.some((message) => message.sender_type === "company" && !message.read_at)
+      ) {
+        await api.post(`offers/${id}/messages/read/`);
+      }
     } catch (err) {
       if (err.response?.status !== 404) console.error("Chat load error:", err);
+    } finally {
+      setChatLoading(false);
     }
   }, [id]);
 
@@ -237,7 +289,12 @@ export default function CustomerOfferDetailsPage() {
   }, [id]);
 
   useEffect(() => {
-    if (access && id) fetchOffer();
+    if (access && id) {
+      setMessages([]);
+      setChatLoading(true);
+      shouldAutoScrollRef.current = true;
+      fetchOffer();
+    }
   }, [access, id, fetchOffer]);
 
   useEffect(() => {
@@ -246,9 +303,84 @@ export default function CustomerOfferDetailsPage() {
 
   useEffect(() => {
     if (!id || noOfferYet) return undefined;
-    const interval = setInterval(fetchMessages, 5000);
-    return () => clearInterval(interval);
+    const refreshWhenVisible = () => {
+      if (document.visibilityState === "visible") fetchMessages();
+    };
+    const handlePush = (event) => {
+      const notificationOfferId = event.detail?.offer_id;
+      if (!notificationOfferId || String(notificationOfferId) === String(id)) {
+        refreshWhenVisible();
+      }
+    };
+
+    const interval = window.setInterval(refreshWhenVisible, 3000);
+    document.addEventListener("visibilitychange", refreshWhenVisible);
+    window.addEventListener("ndertimnet:push", handlePush);
+    return () => {
+      window.clearInterval(interval);
+      document.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.removeEventListener("ndertimnet:push", handlePush);
+    };
   }, [id, noOfferYet, fetchMessages]);
+
+  useEffect(() => {
+    if (!shouldAutoScrollRef.current) return;
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    shouldAutoScrollRef.current = false;
+  }, [messages]);
+
+  const refreshPaymentStatus = useCallback(async () => {
+    try {
+      const response = await paymentService.getJobPaymentStatus(id);
+      setPayment(response.data || null);
+      return response.data || null;
+    } catch {
+      return null;
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (access && offer?.status === "accepted") refreshPaymentStatus();
+  }, [access, offer?.status, refreshPaymentStatus]);
+
+  useEffect(() => {
+    if (searchParams.get("payment") !== "return" || offer?.status !== "accepted") return undefined;
+
+    let active = true;
+    let attempts = 0;
+    setPaymentMessage("Po verifikojmë pagesën me bankën…");
+
+    const check = async () => {
+      attempts += 1;
+      const latest = await refreshPaymentStatus();
+      if (!active) return;
+
+      if (latest?.status === "paid") {
+        setPaymentMessage("Pagesa u konfirmua me sukses.");
+        setSearchParams({}, { replace: true });
+        return;
+      }
+      if (latest?.status === "failed") {
+        setPaymentMessage("Pagesa dështoi. Mund të provoni përsëri.");
+        setSearchParams({}, { replace: true });
+        return;
+      }
+      if (latest?.status === "canceled") {
+        setPaymentMessage("Pagesa u anulua. Mund të provoni përsëri.");
+        setSearchParams({}, { replace: true });
+        return;
+      }
+      if (attempts >= 6) {
+        setPaymentMessage("Pagesa është ende në verifikim. Statusi përditësohet automatikisht.");
+        setSearchParams({}, { replace: true });
+        return;
+      }
+      window.setTimeout(check, 1500);
+    };
+
+    check();
+    return () => { active = false; };
+  }, [offer?.status, refreshPaymentStatus, searchParams, setSearchParams]);
 
   const handleAccept = async () => {
     try {
@@ -282,19 +414,47 @@ export default function CustomerOfferDetailsPage() {
     }
   };
 
-  const handleSendMessage = async () => {
-    if (!messageInput.trim() || sendingMessage || offer?.chat_locked) return;
+  const handleSendMessage = async (content = messageInput, retryMessage = null) => {
+    const trimmed = content.trim();
+    if (!trimmed || sendingMessage || offer?.chat_locked) return;
+
+    const clientMessageId = retryMessage?.client_message_id || createClientMessageId();
+    const tempMessage = {
+      id: `temp-${Date.now()}`,
+      message: trimmed,
+      sender_name: user?.first_name || user?.email || "Ju",
+      sender_type: "customer",
+      created_at: new Date().toISOString(),
+      delivery_status: "sending",
+      client_message_id: clientMessageId,
+    };
 
     try {
       setSendingMessage(true);
-      const res = await api.post(`offers/${id}/messages/`, {
-        message: messageInput.trim(),
-      });
-      setMessages((prev) => [...prev, res.data]);
+      shouldAutoScrollRef.current = true;
+      setMessages((prev) => [
+        ...prev.filter((message) => message.id !== retryMessage?.id),
+        tempMessage,
+      ]);
       setMessageInput("");
+      const res = await api.post(`offers/${id}/messages/`, {
+        message: trimmed,
+        client_message_id: clientMessageId,
+      });
+      setMessages((prev) => {
+        const withoutTemp = prev.filter((message) => message.id !== tempMessage.id);
+        const alreadyLoaded = withoutTemp.some(
+          (message) => String(message.id) === String(res.data?.id)
+        );
+        return alreadyLoaded || !res.data ? withoutTemp : [...withoutTemp, res.data];
+      });
     } catch (err) {
       console.error("Send message error:", err);
-      alert("Mesazhi nuk u dërgua.");
+      setMessages((prev) => prev.map((message) => (
+        message.id === tempMessage.id
+          ? { ...message, delivery_status: "failed" }
+          : message
+      )));
     } finally {
       setSendingMessage(false);
     }
@@ -349,6 +509,42 @@ export default function CustomerOfferDetailsPage() {
     } catch (downloadError) {
       console.error("PDF download error:", downloadError);
       alert("Nuk mund të shkarkohet kontrata.");
+    }
+  };
+
+  const handleJobPayment = async () => {
+    if (paymentLoading) return;
+    setPaymentLoading(true);
+    setPaymentMessage("");
+
+    try {
+      const response = await paymentService.payAcceptedOffer(id);
+      if (response.data?.requires_payment && response.data?.payment_url) {
+        setPayment({
+          status: "pending",
+          amount: response.data.payment_amount,
+          currency: response.data.currency,
+        });
+        await openPaymentUrl(
+          response.data.payment_url,
+          `/customer/offers/${id}?payment=return`
+        );
+      } else {
+        setPayment(response.data || null);
+      }
+    } catch (paymentError) {
+      const code = paymentError.response?.data?.code;
+      if (code === "merchant_setup_required") {
+        setPaymentMessage("Pagesa do të hapet sapo aktivizimi me bankën të jetë përfunduar.");
+      } else if (code === "final_amount_required") {
+        setPaymentMessage("Për ofertat me çmim për orë duhet fillimisht të caktohet shuma përfundimtare.");
+      } else if (code === "payment_initializing") {
+        setPaymentMessage("Pagesa po përgatitet. Provoni përsëri pas pak.");
+      } else {
+        setPaymentMessage("Pagesa nuk mund të hapej. Provoni përsëri.");
+      }
+    } finally {
+      setPaymentLoading(false);
     }
   };
 
@@ -475,6 +671,53 @@ export default function CustomerOfferDetailsPage() {
               <DetailCard label="Kohëzgjatja" value={version.duration_text} icon={Clock3} />
             </div>
           </section>
+
+          {offer.status === "accepted" && (
+            <section className="premium-card overflow-hidden border-emerald-100">
+              <div className="bg-gradient-to-br from-emerald-50 to-white p-5 sm:p-7">
+                <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
+                      {payment?.status === "paid" ? <CheckCircle2 size={24} /> : <WalletCards size={24} />}
+                    </div>
+                    <div>
+                      <p className="text-label">Pagesa e punës</p>
+                      <h2 className="mt-1 text-xl font-semibold text-gray-900">
+                        {payment?.status === "paid" ? "Pagesa është konfirmuar" : "Paguani ofertën e pranuar"}
+                      </h2>
+                      <p className="mt-2 max-w-xl text-sm leading-6 text-gray-600">
+                        {version.price_type === "hourly"
+                          ? "Kjo ofertë ka çmim për orë. Kompania duhet të përcaktojë shumën përfundimtare para pagesës."
+                          : "Pagesa hapet në faqen e sigurt të bankës. Kartat dhe kuletat digjitale shfaqen kur janë aktive në llogarinë e tregtarit."}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="shrink-0 text-left sm:text-right">
+                    <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Shuma</p>
+                    <p className="mt-1 text-2xl font-bold text-gray-900">{priceLabel}</p>
+                  </div>
+                </div>
+
+                {paymentMessage && (
+                  <p role="status" className={`mt-5 rounded-xl border p-3 text-sm ${payment?.status === "paid" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
+                    {paymentMessage}
+                  </p>
+                )}
+
+                {payment?.status !== "paid" && version.price_type !== "hourly" && (
+                  <button
+                    type="button"
+                    onClick={handleJobPayment}
+                    disabled={paymentLoading}
+                    className="premium-btn btn-dark mt-5 w-full disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+                  >
+                    {paymentLoading ? <Loader2 className="animate-spin" size={18} /> : <CreditCard size={18} />}
+                    {paymentLoading ? "Duke hapur pagesën…" : payment?.status === "pending" ? "Vazhdo pagesën" : "Paguaj në mënyrë të sigurt"}
+                  </button>
+                )}
+              </div>
+            </section>
+          )}
 
           {version.presentation_text && (
             <section className="premium-card p-5 sm:p-7">
@@ -639,39 +882,74 @@ export default function CustomerOfferDetailsPage() {
               </div>
             </div>
 
-            <div className="max-h-[430px] min-h-[180px] space-y-4 overflow-y-auto bg-gray-50/60 p-5 sm:p-7">
-              {messages.length === 0 ? (
+            <div
+              ref={chatContainerRef}
+              onScroll={(event) => {
+                const element = event.currentTarget;
+                shouldAutoScrollRef.current = element.scrollHeight - element.scrollTop - element.clientHeight < 100;
+              }}
+              className="max-h-[430px] min-h-[180px] space-y-4 overflow-y-auto bg-gray-50/60 p-5 sm:p-7"
+            >
+              {chatLoading && (
+                <div className="flex min-h-[130px] items-center justify-center text-gray-400">
+                  <Loader2 className="animate-spin" size={22} />
+                </div>
+              )}
+              {!chatLoading && messages.length === 0 ? (
                 <div className="flex min-h-[130px] flex-col items-center justify-center text-center">
                   <MessageCircle className="text-gray-300" size={30} />
                   <p className="mt-3 text-sm font-medium text-gray-700">Ende nuk ka mesazhe</p>
                   <p className="mt-1 text-xs text-gray-500">Shkruani kompanisë nëse keni pyetje për ofertën.</p>
                 </div>
-              ) : (
-                messages.map((msg) => {
+              ) : !chatLoading && (
+                messages.map((msg, index) => {
                   const isCustomer = msg.sender_type === "customer";
+                  const showDate = index === 0
+                    || messageDateKey(messages[index - 1]?.created_at) !== messageDateKey(msg.created_at);
                   return (
-                    <div key={msg.id} className={`flex ${isCustomer ? "justify-end" : "justify-start"}`}>
-                      <div
-                        className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm sm:max-w-md ${
-                          isCustomer
-                            ? "rounded-br-md bg-gray-900 text-white"
-                            : "rounded-bl-md border border-gray-200 bg-white text-gray-800"
-                        }`}
-                      >
-                        <div className={`mb-1 text-xs font-semibold ${isCustomer ? "text-gray-300" : "text-gray-500"}`}>
-                          {isCustomer ? "Ju" : msg.sender_name}
+                    <React.Fragment key={msg.id}>
+                      {showDate && (
+                        <div className="flex items-center gap-3 py-1" aria-label={formatMessageDate(msg.created_at)}>
+                          <span className="h-px flex-1 bg-gray-200" />
+                          <span className="text-[11px] font-medium text-gray-400">{formatMessageDate(msg.created_at)}</span>
+                          <span className="h-px flex-1 bg-gray-200" />
                         </div>
-                        <p className="whitespace-pre-wrap leading-6">{msg.message}</p>
-                        {msg.created_at && (
-                          <p className={`mt-1.5 text-[10px] ${isCustomer ? "text-gray-400" : "text-gray-400"}`}>
-                            {formatDateTime(msg.created_at)}
-                          </p>
-                        )}
+                      )}
+                      <div className={`flex ${isCustomer ? "justify-end" : "justify-start"}`}>
+                        <div
+                          className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm shadow-sm sm:max-w-md ${
+                            isCustomer
+                              ? "rounded-br-md bg-gray-900 text-white"
+                              : "rounded-bl-md border border-gray-200 bg-white text-gray-800"
+                          } ${msg.delivery_status === "failed" ? "ring-2 ring-red-300" : ""}`}
+                        >
+                          <div className={`mb-1 text-xs font-semibold ${isCustomer ? "text-gray-300" : "text-gray-500"}`}>
+                            {isCustomer ? "Ju" : msg.sender_name}
+                          </div>
+                          <p className="whitespace-pre-wrap break-words leading-6">{msg.message}</p>
+                          <div className={`mt-1.5 flex items-center gap-2 text-[10px] ${isCustomer ? "justify-end text-gray-400" : "text-gray-400"}`}>
+                            <span>{formatMessageTime(msg.created_at)}</span>
+                            {isCustomer && msg.delivery_status === "sending" && <span>Duke dërguar…</span>}
+                            {isCustomer && !msg.delivery_status && (
+                              <span>{msg.read_at ? `Lexuar · ${formatMessageTime(msg.read_at)}` : "Dërguar"}</span>
+                            )}
+                          </div>
+                          {isCustomer && msg.delivery_status === "failed" && (
+                            <button
+                              type="button"
+                              onClick={() => handleSendMessage(msg.message, msg)}
+                              className="mt-2 inline-flex items-center gap-1.5 rounded-full bg-white/10 px-2.5 py-1 text-[11px] font-semibold text-white hover:bg-white/20"
+                            >
+                              <RotateCcw size={12} /> Provo përsëri
+                            </button>
+                          )}
+                        </div>
                       </div>
-                    </div>
+                    </React.Fragment>
                   );
                 })
               )}
+              <div ref={chatEndRef} />
             </div>
 
             {chatLocked ? (
@@ -683,27 +961,35 @@ export default function CustomerOfferDetailsPage() {
                 </div>
               </div>
             ) : (
-            <div className="flex gap-2 border-t border-gray-100 bg-white p-4 sm:p-5">
-              <input
-                type="text"
-                value={messageInput}
-                onChange={(event) => setMessageInput(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === "Enter" && !event.shiftKey) handleSendMessage();
-                }}
-                placeholder="Shkruani mesazhin tuaj..."
-                aria-label="Mesazhi juaj"
-                className="premium-input flex-1"
-              />
-              <button
-                onClick={handleSendMessage}
-                disabled={!messageInput.trim() || sendingMessage}
-                aria-label="Dërgo mesazhin"
-                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-900 text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                {sendingMessage ? <Loader2 className="animate-spin" size={17} /> : <Send size={17} />}
-              </button>
-            </div>
+              <div className="border-t border-gray-100 bg-white p-4 sm:p-5">
+                <div className="flex items-end gap-2">
+                  <textarea
+                    rows={1}
+                    maxLength={2000}
+                    value={messageInput}
+                    onChange={(event) => setMessageInput(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" && !event.shiftKey) {
+                        event.preventDefault();
+                        handleSendMessage();
+                      }
+                    }}
+                    placeholder="Shkruani mesazhin tuaj..."
+                    aria-label="Mesazhi juaj"
+                    className="premium-input min-h-11 flex-1 resize-none py-2.5"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => handleSendMessage()}
+                    disabled={!messageInput.trim() || sendingMessage}
+                    aria-label="Dërgo mesazhin"
+                    className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-gray-900 text-white transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    {sendingMessage ? <Loader2 className="animate-spin" size={17} /> : <Send size={17} />}
+                  </button>
+                </div>
+                <p className="mt-1.5 text-right text-[11px] text-gray-400">{messageInput.length}/2000</p>
+              </div>
             )}
           </section>
         </main>

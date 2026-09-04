@@ -14,6 +14,8 @@ import OfferEdit from "../pages/company/OfferEdit";
 import OfferDetails from "../pages/company/OfferDetails";
 import MarketingDashboardPage from "../pages/marketing/MarketingDashboardPage";
 import CreateMarketingCampaignPage from "../pages/marketing/CreateMarketingCampaignPage";
+import PaymentHistory from "../pages/company/PaymentHistory";
+import NotificationSettings from "../pages/NotificationSettings";
 
 export default function CompanyRoutes() {
   return (
@@ -34,6 +36,8 @@ export default function CompanyRoutes() {
 
             <Route path="marketing" element={<MarketingDashboardPage />} />
             <Route path="marketing/create" element={<CreateMarketingCampaignPage />} />
+            <Route path="payments" element={<PaymentHistory />} />
+            <Route path="notifications" element={<NotificationSettings />} />
 
           </Route>
         </Route>

@@ -15,6 +15,8 @@ import CompanyRoutes from "./routes/CompanyRoutes";
 import PrivateRoute from "./components/PrivateRoute";
 import Layout from "./components/layout/Layout";
 import PublicCompanyProfile from "./pages/company/PublicCompanyProfile";
+import MobileRuntime from "./platform/MobileRuntime";
+import NotificationRuntime from "./platform/NotificationRuntime";
 
 function ScrollToTop() {
   const { pathname, search, hash } = useLocation();
@@ -40,6 +42,8 @@ function App() {
     <AuthProvider>
       <ErrorBoundary>
         <Router>
+          <MobileRuntime />
+          <NotificationRuntime />
           <ScrollToTop />
           <Routes>
 

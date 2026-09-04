@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from unittest.mock import patch
 from rest_framework.test import APITestCase
 
 from accounts.models import Company, Customer
@@ -117,6 +118,42 @@ class OfferReviewApiTests(APITestCase):
         self.client.force_authenticate(self.company_user)
         company_post = self.client.post(self.messages_url, {"message": "Company message"})
         self.assertEqual(company_post.status_code, 403)
+
+    @patch("offers.views.schedule_push_notification")
+    def test_chat_is_idempotent_tracks_unread_and_read_status(self, schedule_push):
+        client_message_id = "7e0fb44e-7340-4f42-964d-5f43ad2d3381"
+        self.client.force_authenticate(self.customer_user)
+
+        first = self.client.post(
+            self.messages_url,
+            {"message": "Can we confirm the start date?", "client_message_id": client_message_id},
+            format="json",
+        )
+        duplicate = self.client.post(
+            self.messages_url,
+            {"message": "Can we confirm the start date?", "client_message_id": client_message_id},
+            format="json",
+        )
+
+        self.assertEqual(first.status_code, 201)
+        self.assertEqual(duplicate.status_code, 200)
+        self.assertEqual(first.data["id"], duplicate.data["id"])
+        self.assertEqual(OfferMessage.objects.filter(offer=self.offer).count(), 1)
+        schedule_push.assert_called_once()
+
+        self.client.force_authenticate(self.company_user)
+        unread = self.client.get("/api/offers/unread-count/")
+        marked = self.client.post(f"/api/offers/{self.offer.id}/messages/read/")
+        after = self.client.get("/api/offers/unread-count/")
+
+        self.assertEqual(unread.status_code, 200)
+        self.assertEqual(unread.data["total"], 1)
+        self.assertEqual(marked.data["marked_read"], 1)
+        self.assertEqual(after.data["total"], 0)
+
+        self.client.force_authenticate(self.customer_user)
+        messages = self.client.get(self.messages_url)
+        self.assertIsNotNone(messages.data[0]["read_at"])
 
     def test_company_cannot_create_customer_review(self):
         self.client.force_authenticate(self.company_user)

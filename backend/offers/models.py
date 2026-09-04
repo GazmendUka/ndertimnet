@@ -303,12 +303,15 @@ class OfferMessage(models.Model):
     )
 
     message = models.TextField()
+    client_message_id = models.UUIDField(null=True, blank=True, unique=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    read_at = models.DateTimeField(null=True, blank=True, db_index=True)
 
     class Meta:
         ordering = ["created_at"]
         indexes = [
             models.Index(fields=["offer", "created_at"]),
+            models.Index(fields=["offer", "read_at"]),
         ]
 
     def clean(self):

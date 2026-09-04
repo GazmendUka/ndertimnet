@@ -58,6 +58,9 @@ urlpatterns = [
     # ⚙️ Payments API 
     path("api/payments/", include("payments.urls")),
 
+    # Device registration and notification preferences
+    path("api/notifications/", include("pushnotifications.urls")),
+
     # ⚙️ Offers app
     path("api/offers/", include("offers.urls")),
 

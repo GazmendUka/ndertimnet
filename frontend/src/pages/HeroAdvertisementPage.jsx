@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet";
 import { Link, useParams } from "react-router-dom";
-import { ArrowLeft, ArrowRight } from "lucide-react";
+import { ArrowLeft, ArrowRight, Megaphone } from "lucide-react";
 import api from "../api/axios";
 
 function renderBody(body) {
@@ -99,7 +99,7 @@ export default function HeroAdvertisementPage() {
 
       <main className="bg-white text-[#12251b]">
         {loading && (
-          <div className="mx-auto max-w-3xl px-6 py-20">
+          <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20">
             <div className="rounded-lg border border-[#e5e0d5] bg-[#f7f4ee] p-5 text-[#5f6f66]">
               Duke ngarkuar reklamën...
             </div>
@@ -107,7 +107,7 @@ export default function HeroAdvertisementPage() {
         )}
 
         {!loading && error && (
-          <div className="mx-auto max-w-3xl px-6 py-20">
+          <div className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-20">
             <Link
               to="/"
               className="inline-flex items-center gap-2 text-sm font-semibold text-[#17643f] hover:underline"
@@ -141,7 +141,12 @@ export default function HeroAdvertisementPage() {
                   Faqja kryesore
                 </Link>
 
-                <h1 className="mt-8 max-w-4xl text-[36px] font-semibold leading-[1.06] text-white sm:text-[58px]">
+                <div className="mt-8 inline-flex items-center gap-2 rounded-md bg-white/90 px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[#12251b] backdrop-blur">
+                  <Megaphone size={15} />
+                  Përmbajtje e sponsorizuar
+                </div>
+
+                <h1 className="mt-5 max-w-4xl text-[34px] font-semibold leading-[1.08] text-white sm:text-[58px]">
                   {advertisement.title}
                 </h1>
 
@@ -153,14 +158,14 @@ export default function HeroAdvertisementPage() {
               </div>
             </section>
 
-            <section className="py-16 sm:py-20">
+            <section className="py-10 sm:py-20">
               <div className="mx-auto max-w-3xl px-4 sm:px-6 lg:px-8">
                 {advertisement.sections?.length ? (
                   <div className="space-y-8">
                     {advertisement.sections.slice(0, 5).map((section) => (
                       <article
                         key={section.id}
-                        className="rounded-lg border border-[#e5e0d5] bg-white p-6 shadow-sm"
+                        className="rounded-xl border border-[#e5e0d5] bg-white p-5 shadow-sm sm:p-6"
                       >
                         {section.title && (
                           <h2 className="text-2xl font-semibold text-[#12251b]">
@@ -179,9 +184,9 @@ export default function HeroAdvertisementPage() {
                   </div>
                 )}
 
-                {advertisement.link_type === "external" && advertisement.external_url && (
+                {advertisement.link_type === "external" && advertisement.target_url && (
                   <a
-                    href={advertisement.external_url}
+                    href={advertisement.target_url}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="mt-10 inline-flex min-h-[48px] items-center justify-center gap-2 rounded-lg bg-[#ef7d22] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#d96814]"

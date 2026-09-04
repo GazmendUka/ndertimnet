@@ -4,7 +4,7 @@
 // ===========================================
 
 import { useEffect, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
 import {
   ArrowRight,
@@ -29,9 +29,9 @@ import {
 import api from "../api/axios";
 
 const defaultHero = {
-  title: "Platforma ku klientët gjejnë kompani ndërtimi dhe renovimi.",
+  title: "Gjej kompaninë e duhur për ndërtim dhe renovim.",
   subtitle:
-    "Publiko projektin, merr oferta nga kompani serioze dhe zgjidh ekipin e duhur me më shumë qartësi. Për kompanitë, Ndertimnet sjell kërkesa reale nga klientë që duan të fillojnë.",
+    "Publiko projektin falas dhe merr oferta nga kompani të interesuara. Krahaso mundësitë dhe zgjidh ekipin që të përshtatet.",
   imageUrl:
     "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=2200&q=82",
   imageAlt: "Kantier ndërtimi dhe renovimi",
@@ -165,6 +165,45 @@ function HeroAdvertisementButton({ advertisement }) {
   );
 }
 
+function SponsoredHeroAdvertisement({ advertisement }) {
+  return (
+    <section aria-label="Përmbajtje e sponsorizuar" className="border-b border-[#e5e0d5] bg-[#f7f4ee] py-5 sm:py-8">
+      <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+        <article className="overflow-hidden rounded-2xl border border-[#ddd6c9] bg-white shadow-sm lg:grid lg:grid-cols-[1.05fr_0.95fr]">
+          <div className="relative aspect-[16/9] min-h-[210px] overflow-hidden lg:aspect-auto lg:min-h-[320px]">
+            <img
+              src={advertisement.background_image_url}
+              alt={advertisement.title}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
+            <span className="absolute left-3 top-3 rounded-md bg-white/95 px-2.5 py-1.5 text-xs font-semibold text-[#12251b] shadow-sm backdrop-blur">
+              Reklamë
+            </span>
+          </div>
+
+          <div className="flex flex-col justify-center p-5 sm:p-7 lg:p-9">
+            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#7a6b60]">
+              Përmbajtje e sponsorizuar
+            </p>
+            <h2 className="mt-3 text-2xl font-semibold leading-tight text-[#12251b] sm:text-3xl">
+              {advertisement.title}
+            </h2>
+            {advertisement.subtitle && (
+              <p className="mt-3 line-clamp-3 leading-7 text-[#5f6f66]">
+                {advertisement.subtitle}
+              </p>
+            )}
+            <div className="mt-5 self-start">
+              <HeroAdvertisementButton advertisement={advertisement} />
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  );
+}
+
 function SectionIntro({ eyebrow, title, text }) {
   return (
     <div className="max-w-3xl">
@@ -181,7 +220,6 @@ function SectionIntro({ eyebrow, title, text }) {
 }
 
 export default function LandingPage() {
-  const navigate = useNavigate();
   const [heroAdvertisement, setHeroAdvertisement] = useState(null);
 
   useEffect(() => {
@@ -207,45 +245,6 @@ export default function LandingPage() {
       isMounted = false;
     };
   }, []);
-
-  const hero = heroAdvertisement
-    ? {
-        title: heroAdvertisement.title,
-        subtitle: heroAdvertisement.subtitle,
-        imageUrl: heroAdvertisement.background_image_url,
-        imageAlt: heroAdvertisement.title,
-      }
-    : defaultHero;
-
-  const openHeroAdvertisement = () => {
-    if (!heroAdvertisement?.target_url) {
-      return;
-    }
-
-    if (heroAdvertisement.link_type === "external") {
-      window.open(heroAdvertisement.target_url, "_blank", "noopener,noreferrer");
-      return;
-    }
-
-    navigate(heroAdvertisement.target_url);
-  };
-
-  const handleHeroClick = (event) => {
-    if (!heroAdvertisement || event.target.closest("a")) {
-      return;
-    }
-
-    openHeroAdvertisement();
-  };
-
-  const handleHeroKeyDown = (event) => {
-    if (!heroAdvertisement || !["Enter", " "].includes(event.key)) {
-      return;
-    }
-
-    event.preventDefault();
-    openHeroAdvertisement();
-  };
 
   return (
     <>
@@ -320,56 +319,33 @@ export default function LandingPage() {
       </Helmet>
 
       <div className="bg-white text-[#12251b]">
-        <section
-          className={`relative overflow-hidden bg-[#12251b] ${heroAdvertisement ? "cursor-pointer" : ""}`}
-          role={heroAdvertisement ? "link" : undefined}
-          tabIndex={heroAdvertisement ? 0 : undefined}
-          onClick={handleHeroClick}
-          onKeyDown={handleHeroKeyDown}
-          aria-label={heroAdvertisement ? `Hap reklamën: ${heroAdvertisement.title}` : undefined}
-        >
+        <section className="relative overflow-hidden bg-[#12251b]">
           <img
-            src={hero.imageUrl}
-            alt={hero.imageAlt}
+            src={defaultHero.imageUrl}
+            alt={defaultHero.imageAlt}
             className="absolute inset-0 h-full w-full object-cover"
           />
           <div className="absolute inset-0 bg-[#12251b]/70" />
           <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-[#12251b]/85" />
 
-          <div className="relative mx-auto flex max-w-7xl flex-col justify-center px-4 py-10 sm:px-6 sm:py-16 lg:px-8 lg:py-20">
-            <div className="max-w-4xl pt-4">
+          <div className="relative mx-auto flex max-w-7xl flex-col justify-center px-4 py-10 sm:px-6 sm:py-14 lg:px-8 lg:py-20">
+            <div className="max-w-4xl sm:py-2">
               <div className="mb-5 inline-flex items-center gap-2 rounded-md bg-white/10 px-3 py-2 text-sm font-semibold text-white backdrop-blur">
                 <MapPin size={16} />
-                {heroAdvertisement ? "Reklamë" : "Kosovë dhe Shqipëri"}
+                Kosovë dhe Shqipëri
               </div>
 
-              <h1 className="max-w-4xl text-[36px] font-semibold leading-[1.05] text-white sm:text-[58px] lg:text-[72px]">
-                {hero.title}
+              <h1 className="max-w-4xl text-[36px] font-semibold leading-[1.06] text-white sm:text-[56px] lg:text-[68px]">
+                {defaultHero.title}
               </h1>
 
-              {hero.subtitle && (
-                <p className="mt-6 max-w-2xl text-base leading-7 text-white/85 sm:text-lg sm:leading-8">
-                  {hero.subtitle}
-                </p>
-              )}
+              <p className="mt-5 max-w-2xl text-base leading-7 text-white/85 sm:mt-6 sm:text-lg sm:leading-8">
+                {defaultHero.subtitle}
+              </p>
 
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
-                {heroAdvertisement ? (
-                  <HeroAdvertisementButton advertisement={heroAdvertisement} />
-                ) : (
-                  <>
-                    <PrimaryButton to="/login">Publiko projekt</PrimaryButton>
-                    <SecondaryButton to="/register/company">
-                      Regjistro kompaninë
-                    </SecondaryButton>
-                    <a
-                      href="#si-funksionon"
-                      className="inline-flex min-h-[48px] items-center justify-center rounded-lg px-5 py-3 text-sm font-semibold text-white underline-offset-4 hover:underline sm:px-6"
-                    >
-                      Shiko si funksionon
-                    </a>
-                  </>
-                )}
+              <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap">
+                <PrimaryButton to="/login">Publiko projekt falas</PrimaryButton>
+                <SecondaryButton to="/register/company">Për kompanitë</SecondaryButton>
               </div>
 
               <div className="mt-8 hidden flex-wrap gap-2 sm:flex">
@@ -386,6 +362,10 @@ export default function LandingPage() {
 
           </div>
         </section>
+
+        {heroAdvertisement && (
+          <SponsoredHeroAdvertisement advertisement={heroAdvertisement} />
+        )}
 
         <section className="border-b border-[#e5e0d5] bg-[#f7f4ee]">
           <div className="mx-auto grid max-w-7xl gap-3 px-4 py-5 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">

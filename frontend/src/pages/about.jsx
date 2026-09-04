@@ -188,7 +188,7 @@ export default function AboutPage() {
 
                 <div className="mt-8 flex flex-col gap-4 sm:flex-row">
                   <Link
-                    to="/jobrequests/create"
+                    to="/login"
                     className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-slate-800"
                   >
                     Publiko projektin
@@ -747,7 +747,7 @@ export default function AboutPage() {
 
                 <div className="flex flex-col gap-4 sm:flex-row sm:justify-end">
                   <Link
-                    to="/jobrequests/create"
+                      to="/login"
                     className="inline-flex items-center justify-center rounded-2xl bg-white px-6 py-3.5 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
                   >
                     Publiko projektin

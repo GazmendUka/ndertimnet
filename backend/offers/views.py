@@ -1,9 +1,11 @@
 # backend/offers/views.py
 
 from io import BytesIO
+from uuid import UUID, uuid4
 
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, Q
+from django.utils import timezone
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 
@@ -15,8 +17,9 @@ from rest_framework.response import Response
 from accounts.permissions_company_steps import IsCompanyStep2
 from jobrequests.models import JobRequest
 from payments.models import LeadAccess
+from pushnotifications.services import schedule_push_notification
 
-from .models import Offer, OfferReview, OfferVersion, OfferStatus
+from .models import Offer, OfferMessage, OfferReview, OfferVersion, OfferStatus
 from .pdf_contract import build_offer_contract_pdf
 from .serializers import (
     OfferSerializer,
@@ -82,7 +85,7 @@ class OfferViewSet(viewsets.ModelViewSet):
         if job_request_id:
             qs = qs.filter(job_request_id=job_request_id)
 
-        return qs
+        return qs.order_by("-created_at")
 
     # --------------------------------------------------
     # RETRIEVE
@@ -309,6 +312,18 @@ class OfferViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
 
+        schedule_push_notification(
+            user=offer.job_request.customer,
+            category="offer_updates",
+            title="Ofertë e re në Ndërtimnet",
+            body="Një kompani ka dërguar një ofertë të re për kërkesën tuaj.",
+            data={
+                "type": "offer_signed",
+                "offer_id": offer.id,
+                "path": f"/customer/offers/{offer.id}",
+            },
+        )
+
         return Response(
             {"success": True, "message": "Oferta u nënshkrua me sukses."},
             status=200,
@@ -322,6 +337,7 @@ class OfferViewSet(viewsets.ModelViewSet):
     def decision(self, request, pk=None):
         offer = self.get_object()
         user = request.user
+        previous_status = offer.status
 
         if getattr(user, "role", None) != "customer":
             return Response(
@@ -342,6 +358,23 @@ class OfferViewSet(viewsets.ModelViewSet):
 
         serializer.is_valid(raise_exception=True)
         decided_offer = serializer.save()
+
+        if previous_status != decided_offer.status:
+            schedule_push_notification(
+                user=decided_offer.company.user,
+                category="offer_updates",
+                title="Përditësim i ofertës",
+                body=(
+                    "Klienti e pranoi ofertën tuaj."
+                    if decided_offer.status == OfferStatus.ACCEPTED
+                    else "Klienti nuk e pranoi ofertën tuaj."
+                ),
+                data={
+                    "type": f"offer_{decided_offer.status}",
+                    "offer_id": decided_offer.id,
+                    "path": f"/company/offers/{decided_offer.id}",
+                },
+            )
 
         return Response(
             {"success": True, "status": decided_offer.status},
@@ -502,6 +535,14 @@ class OfferViewSet(viewsets.ModelViewSet):
         if not isinstance(message_text, str) or not message_text.strip():
             return Response({"detail": "Message is required"}, status=400)
         message_text = message_text.strip()
+        if len(message_text) > 2000:
+            return Response({"detail": "Message cannot exceed 2000 characters"}, status=400)
+
+        raw_client_id = request.data.get("client_message_id")
+        try:
+            client_message_id = UUID(str(raw_client_id)) if raw_client_id else uuid4()
+        except (TypeError, ValueError, AttributeError):
+            return Response({"detail": "client_message_id is invalid"}, status=400)
 
         # Lock the offer row so review submission and new messages cannot cross.
         with transaction.atomic():
@@ -512,25 +553,78 @@ class OfferViewSet(viewsets.ModelViewSet):
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
+            existing = OfferMessage.objects.filter(client_message_id=client_message_id).first()
+            if existing:
+                if (
+                    existing.offer_id == locked_offer.id
+                    and existing.sender_type == getattr(user, "role", "")
+                ):
+                    return Response(OfferMessageSerializer(existing).data, status=200)
+                return Response(
+                    {"detail": "client_message_id is already in use"},
+                    status=status.HTTP_409_CONFLICT,
+                )
+
             if getattr(user, "role", None) == "company":
                 message = locked_offer.messages.create(
                     sender_type="company",
                     sender_company=user.company_profile,
                     message=message_text,
+                    client_message_id=client_message_id,
                 )
+                recipient = locked_offer.job_request.customer
+                recipient_path = f"/customer/offers/{locked_offer.id}"
 
             elif getattr(user, "role", None) == "customer":
                 message = locked_offer.messages.create(
                     sender_type="customer",
                     sender_customer=user.customer_profile,
                     message=message_text,
+                    client_message_id=client_message_id,
                 )
+                recipient = locked_offer.company.user
+                recipient_path = f"/company/offers/{locked_offer.id}"
 
             else:
                 return Response({"detail": "Invalid sender"}, status=403)
 
+        schedule_push_notification(
+            user=recipient,
+            category="chat_messages",
+            title="Mesazh i ri në Ndërtimnet",
+            body="Keni një mesazh të ri në bisedën tuaj.",
+            data={
+                "type": "chat_message",
+                "offer_id": offer.id,
+                "message_id": message.id,
+                "path": recipient_path,
+            },
+        )
+
         serializer = OfferMessageSerializer(message)
         return Response(serializer.data, status=201)
+
+    @action(detail=True, methods=["post"], url_path="messages/read")
+    def mark_messages_read(self, request, pk=None):
+        offer = self.get_object()
+        sender_type = getattr(request.user, "role", "")
+        updated = offer.messages.filter(read_at__isnull=True).exclude(
+            sender_type=sender_type
+        ).update(read_at=timezone.now())
+        return Response({"marked_read": updated})
+
+    @action(detail=False, methods=["get"], url_path="unread-count")
+    def unread_count(self, request):
+        sender_type = getattr(request.user, "role", "")
+        unread = OfferMessage.objects.filter(
+            offer__in=self.get_queryset(),
+            read_at__isnull=True,
+        ).exclude(sender_type=sender_type)
+        by_offer = {
+            str(row["offer_id"]): row["count"]
+            for row in unread.values("offer_id").annotate(count=Count("id"))
+        }
+        return Response({"total": sum(by_offer.values()), "by_offer": by_offer})
 
     # --------------------------------------------------
     # CUSTOMER REVIEW

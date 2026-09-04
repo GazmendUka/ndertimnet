@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useState, useEffect } from "react";
 import api from "../api/axios";
+import { deactivateCurrentPushDevice } from "../services/notificationService";
 
 const AuthContext = createContext();
 
@@ -45,7 +46,8 @@ export const AuthProvider = ({ children }) => {
   // 🚪 LOGOUT
   // ============================================================
 
-  const logout = useCallback(() => {
+  const logout = useCallback(async () => {
+    await deactivateCurrentPushDevice().catch(() => undefined);
     clearStorage();
     setUser(null);
     setAccess(null);
