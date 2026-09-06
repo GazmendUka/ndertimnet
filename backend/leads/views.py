@@ -45,8 +45,8 @@ class JobRequestViewSet(viewsets.ModelViewSet):
     pagination_class = AlbanianPagination
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
-    filterset_fields = ["is_active", "is_reopened", "location", "max_offers"]
-    search_fields = ["title", "description", "location", "customer__user__email"]
+    filterset_fields = ["is_active", "is_reopened", "city", "max_offers"]
+    search_fields = ["title", "description", "city__name", "customer__email"]
     ordering_fields = ["created_at", "budget", "max_offers"]
     ordering = ["-created_at"]
 
