@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import api from "../../api/axios";
+import LegalLinks from "../LegalLinks";
 
 import { Bell, Home, User, LogOut, Briefcase, FileText, ReceiptText } from "lucide-react";
 
@@ -143,6 +144,7 @@ export default function Sidebar() {
       </nav>
 
       {/* LOGOUT */}
+      <LegalLinks />
       <button
         onClick={handleLogout}
         className="

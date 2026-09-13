@@ -17,6 +17,7 @@ import {
   X,
 } from "lucide-react";
 import MobileMoreSheet from "./MobileMoreSheet";
+import LegalLinks from "../LegalLinks";
 
 const logoSrc = "/ndertimnet-logo-full-width/ndertimnet-logo-search-transparent.png";
 const servicePaths = [
@@ -178,6 +179,7 @@ export default function PublicLayout() {
           <Link onClick={() => setOpen(false)} to="/perditesime">Përditësime</Link>
           <Link onClick={() => setOpen(false)} to="/about">Rreth nesh</Link>
           <Link onClick={() => setOpen(false)} to="/contact">Kontakt</Link>
+          <LegalLinks />
 
         </div>
 
@@ -257,6 +259,7 @@ export default function PublicLayout() {
         </div>
 
         <div className="border-t text-center py-6 text-xs text-gray-500">
+          <LegalLinks />
           © 2026 Ndertimnet. Të gjitha të drejtat e rezervuara.
         </div>
 
@@ -292,6 +295,7 @@ export default function PublicLayout() {
           <MobileMoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} title="Më shumë">
             <MoreLink to="/about" icon={Info} onClick={() => setMoreOpen(false)}>Rreth nesh</MoreLink>
             <MoreLink to="/contact" icon={Mail} onClick={() => setMoreOpen(false)}>Kontakt</MoreLink>
+            <LegalLinks onClick={() => setMoreOpen(false)} />
             <MoreLink to="/register/company" icon={Building2} onClick={() => setMoreOpen(false)}>Regjistro kompaninë</MoreLink>
             <MoreLink to="/login" icon={LogIn} onClick={() => setMoreOpen(false)}>Kyçu</MoreLink>
           </MobileMoreSheet>

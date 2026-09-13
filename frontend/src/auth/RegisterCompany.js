@@ -3,6 +3,7 @@
 // Fields: company_name, phone, email, password
 
 import React, { useState } from "react";
+import { LegalLink } from "../components/LegalLinks";
 import api from "../api/axios";
 import { Link, useNavigate } from "react-router-dom";
 import { AlertCircle, ArrowLeft, Building2, Eye, EyeOff, Loader2, Mail, Phone } from "lucide-react";
@@ -137,6 +138,9 @@ export default function RegisterCompany() {
           </div>
 
           {/* 🔘 Submit */}
+          <p className="text-sm leading-6 text-[#5f6f66]">
+            Lexoni si i përpunojmë të dhënat tuaja te <LegalLink />.
+          </p>
           <button
             type="submit"
             disabled={loading}

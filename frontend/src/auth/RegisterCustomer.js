@@ -1,6 +1,7 @@
 // src/pages/auth/RegisterCustomer.jsx
 
 import React, { useState } from "react";
+import { LegalLink } from "../components/LegalLinks";
 import api from "../api/axios";
 import { Link, useNavigate } from "react-router-dom";
 import { AlertCircle, ArrowLeft, Eye, EyeOff, Loader2, Mail } from "lucide-react";
@@ -174,6 +175,9 @@ export default function RegisterCustomer() {
           </div>
 
           {/* 🔘 Submit */}
+          <p className="text-sm leading-6 text-[#5f6f66]">
+            Lexoni si i përpunojmë të dhënat tuaja te <LegalLink />.
+          </p>
           <button
             type="submit"
             disabled={loading}
