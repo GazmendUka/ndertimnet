@@ -16,6 +16,14 @@ test("public links point to actual HTML pages without requiring a router or logi
   expect(screen.getByRole("link", { name: "Fshirja e llogarisë" }).getAttribute("href")).toBe("/account-deletion.html");
 });
 
+test("footer uses a named navigation group without menu-button styling", () => {
+  isNativeApp.mockReturnValue(false);
+  render(<LegalLinks variant="footer" />);
+  expect(screen.getByRole("navigation", { name: "Privatësia dhe llogaria" }).className).toBe("legal-links--footer");
+  expect(screen.getAllByRole("link")).toHaveLength(2);
+  expect(screen.getByRole("link", { name: "Politika e privatësisë" }).className).toBe("");
+});
+
 test("native app opens the current policy without leaving its WebView", async () => {
   isNativeApp.mockReturnValue(true);
   openExternalUrl.mockResolvedValue(undefined);

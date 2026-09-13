@@ -22,7 +22,15 @@ export function LegalLink({ deletion = false, children, className = "underline",
   return <a href={isNativeApp() ? href : path} onClick={handleClick} className={className}>{children || (deletion ? "Fshirja e llogarisë" : "Politika e privatësisë")}</a>;
 }
 
-export default function LegalLinks({ onClick }) {
+export default function LegalLinks({ onClick, variant = "menu" }) {
+  if (variant === "footer") {
+    return (
+      <nav className="legal-links--footer" aria-label="Privatësia dhe llogaria">
+        <LegalLink className="" onClick={onClick} />
+        <LegalLink deletion className="" onClick={onClick} />
+      </nav>
+    );
+  }
   return (
     <div className="flex flex-col gap-1 text-sm text-[#17643f]">
       <LegalLink className="rounded-lg px-3 py-3 underline hover:bg-gray-50" onClick={onClick} />

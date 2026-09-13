@@ -21,5 +21,17 @@ ul, ol { padding-left: 1.4rem; }
 .meta { color: #526258; font-size: .9rem; }
 .notice { background: #eff6f1; border-left: 4px solid #17643f; padding: 1rem 1.2rem; border-radius: .3rem; }
 .button { display: inline-block; background: #17643f; color: white; border-radius: .65rem; padding: .75rem 1.2rem; font-weight: 650; text-decoration: none; }
-footer { padding-block: 1.75rem max(1.75rem, env(safe-area-inset-bottom)); font-size: .9rem; }
+.legal-footer { padding-block: 1.5rem max(1.5rem, env(safe-area-inset-bottom)); font-size: .875rem; color: #526258; }
+.legal-footer__top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .25rem 1rem; padding-bottom: .75rem; }
+.legal-footer__brand { font-weight: 700; color: #18352a; }
+.legal-footer a { display: inline-flex; align-items: center; gap: .4rem; min-height: 44px; padding-block: .5rem; text-decoration: none; }
+.legal-footer a:hover { text-decoration: underline; }
+.legal-footer__bottom { border-top: 1px solid #dcded5; padding-top: .5rem; display: flex; flex-direction: column; gap: .5rem; }
+.legal-footer__bottom p { order: 2; margin: 0; font-size: .75rem; }
+.legal-footer nav { gap: 0 1.25rem; font-size: .8125rem; }
+.legal-footer [aria-current="page"] { color: #18352a; text-decoration: underline; }
+@media (min-width: 700px) {
+  .legal-footer__bottom { flex-direction: row; align-items: center; justify-content: space-between; gap: 1rem; }
+  .legal-footer__bottom p { order: 0; }
+}
 @media print { body { background: white; } header, footer, .skip { display: none; } main { border: 0; width: 100%; padding: 0; } }

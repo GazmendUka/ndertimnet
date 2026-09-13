@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import MobileMoreSheet from "./MobileMoreSheet";
 import LegalLinks from "../LegalLinks";
+import SiteFooter from "./SiteFooter";
 
 const logoSrc = "/ndertimnet-logo-full-width/ndertimnet-logo-search-transparent.png";
 const servicePaths = [
@@ -200,71 +201,7 @@ export default function PublicLayout() {
         <Outlet />
       </main>
 
-      {/* ================= FOOTER (UNCHANGED) ================= */}
-      <footer className="border-t mt-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-6 py-12 grid md:grid-cols-3 gap-10 text-sm">
-
-          {/* BRAND */}
-          <div>
-            <img
-              src={logoSrc}
-              alt="Ndertimnet"
-              className="h-[53px] w-auto mb-3"
-            />
-            <p className="text-gray-600">
-              Platformë për të gjetur kompani ndërtimi dhe profesionistë për
-              çdo projekt ndërtimi dhe renovimi në Kosovë dhe Shqipëri.
-            </p>
-          </div>
-
-          {/* CITIES */}
-          <div>
-            <h3 className="font-semibold text-gray-900 mb-3">
-              Qytetet
-            </h3>
-            <div className="flex flex-col gap-2 text-gray-600">
-
-              <Link to="/ndertim/prishtine">Prishtinë</Link>
-              <Link to="/ndertim/tirane">Tiranë</Link>
-              <Link to="/ndertim/durres">Durrës</Link>
-              <Link to="/ndertim/vlore">Vlorë</Link>
-              <Link to="/ndertim/prizren">Prizren</Link>
-              <Link to="/ndertim/mitrovice">Mitrovicë</Link>
-
-            </div>
-          </div>
-
-          {/* SERVICES */}
-          <div>
-            <h3 className="font-semibold text-gray-900 mb-3">
-              Shërbimet
-            </h3>
-
-            <div className="flex flex-col gap-2 text-gray-600">
-
-              <Link to="/ndertime">Ndërtim</Link>
-              <Link to="/renovime">Renovime</Link>
-              <Link to="/renovim-banjo">Renovim banjo</Link>
-              <Link to="/renovim-kuzhine">Renovim kuzhine</Link>
-              <Link to="/elektricist">Elektricist</Link>
-              <Link to="/lyerje">Lyerje</Link>
-              <Link to="/fasada">Fasada</Link>
-              <Link to="/cati">Çati</Link>
-              <Link to="/pllakashtrues">Pllakashtrues</Link>
-              <Link to="/dysheme">Dysheme</Link>
-
-            </div>
-          </div>
-
-        </div>
-
-        <div className="border-t text-center py-6 text-xs text-gray-500">
-          <LegalLinks />
-          © 2026 Ndertimnet. Të gjitha të drejtat e rezervuara.
-        </div>
-
-        {isNativeApp && <div className="h-24" aria-hidden="true" />}
-      </footer>
+      <SiteFooter isNativeApp={isNativeApp} />
 
       {isNativeApp && (
         <>
