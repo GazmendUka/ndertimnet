@@ -400,7 +400,7 @@ export default function OfferEdit() {
       });
 
       if (res?.data) {
-        setOffer(res.data);
+        setOffer((currentOffer) => ({ ...currentOffer, ...res.data }));
       }
 
       setSaveStatus("saved");
@@ -430,18 +430,26 @@ export default function OfferEdit() {
   }
 
   async function downloadPdf() {
+    if (!offer?.id) {
+      toast.error("PDF nuk mund të shkarkohet: oferta mungon.");
+      return;
+    }
+
     try {
       const res = await api.get(`offers/${offer.id}/pdf/`, {
         responseType: "blob",
       });
 
-      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const url = window.URL.createObjectURL(
+        new Blob([res.data], { type: "application/pdf" })
+      );
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute("download", `oferta_${offer.id}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
 
       toast.success("PDF u shkarkua ✅");
     } catch (err) {
