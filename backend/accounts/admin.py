@@ -148,7 +148,8 @@ class CompanyAdmin(admin.ModelAdmin):
         "is_active": "Aktive",
         "archived_at": "Arkivuar më",
         "profile_step": "Hapi i profilit",
-        "free_leads_remaining": "Kërkesa falas të mbetura",
+        "free_leads_remaining": "Kërkesa falas të mbetura (historik)",
+        "free_offers_remaining": "Oferta hyrëse falas të mbetura",
         "default_offer_presentation": "Prezantimi standard i ofertës",
         "created_at": "Krijuar më",
         "updated_at": "Përditësuar më",
@@ -163,7 +164,7 @@ class CompanyAdmin(admin.ModelAdmin):
         "qyteti",
         "e_verifikuar",
         "aktive",
-        "kerkesat_falas_te_mbetura",
+        "free_offers_remaining",
         "gati_per_verifikim",
         "qasja_ne_treg",
     )
@@ -240,6 +241,7 @@ class CompanyAdmin(admin.ModelAdmin):
         }),
         ("Kërkesat dhe qasja", {
             "fields": (
+                "free_offers_remaining",
                 "free_leads_remaining",
                 "qasja_ne_treg",
                 "mund_te_dergoje_oferta",

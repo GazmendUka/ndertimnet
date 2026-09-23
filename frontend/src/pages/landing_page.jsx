@@ -31,7 +31,7 @@ import api from "../api/axios";
 const defaultHero = {
   title: "Gjej kompaninë e duhur për ndërtim dhe renovim.",
   subtitle:
-    "Publiko projektin falas dhe merr oferta nga kompani të interesuara. Krahaso mundësitë dhe zgjidh ekipin që të përshtatet.",
+    "Publiko projektin me ofertën hyrëse 0 € dhe merr oferta nga kompani të interesuara. Krahaso mundësitë dhe zgjidh ekipin që të përshtatet.",
   imageUrl:
     "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=2200&q=82",
   imageAlt: "Kantier ndërtimi dhe renovimi",
@@ -100,7 +100,7 @@ const companyBenefits = [
 const faqItems = [
   {
     q: "A është Ndertimnet falas për klientët?",
-    a: "Po, klientët mund të publikojnë projektin dhe të kërkojnë oferta pa pagesë.",
+    a: "Publikimi ka një çmim të planifikuar dhe një ofertë hyrëse. Çmimi dhe zbritja shfaqen para dërgimit të kërkesës.",
   },
   {
     q: "Për cilat shërbime mund të publikoj projekt?",
@@ -344,7 +344,7 @@ export default function LandingPage() {
               </p>
 
               <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap">
-                <PrimaryButton to="/login">Publiko projekt falas</PrimaryButton>
+                <PrimaryButton to="/login">Publiko projektin</PrimaryButton>
                 <SecondaryButton to="/register/company">Për kompanitë</SecondaryButton>
               </div>
 

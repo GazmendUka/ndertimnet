@@ -2,6 +2,7 @@
 
 import { createContext, useCallback, useContext, useState, useEffect } from "react";
 import api from "../api/axios";
+import { resetOfferIntroduction } from "../components/payments/offerIntroductionSession";
 import { deactivateCurrentPushDevice } from "../services/notificationService";
 
 const AuthContext = createContext();
@@ -23,6 +24,7 @@ const getStorage = () => {
 };
 
 const clearStorage = () => {
+  resetOfferIntroduction();
   localStorage.removeItem("access");
   localStorage.removeItem("refresh");
   localStorage.removeItem("user");
@@ -143,6 +145,7 @@ export const AuthProvider = ({ children }) => {
         { skipAuth: true }
       );
 
+      resetOfferIntroduction();
       const data = res.data?.data || res.data;
       const storage = rememberMe ? localStorage : sessionStorage;
 

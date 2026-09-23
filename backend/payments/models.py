@@ -1,5 +1,7 @@
 # backend/payments/models
 
+from uuid import uuid4
+
 from django.db import models
 from django.conf import settings
 from django.utils import timezone
@@ -214,3 +216,110 @@ class Payment(models.Model):
             f"{self.company} | {self.type} | "
             f"{self.amount} {self.currency} | {self.status}"
         )
+
+
+class BillingSubscription(models.Model):
+    """A monthly company contract with three calendar months' notice."""
+    company = models.ForeignKey(Company, on_delete=models.PROTECT, related_name="billing_subscriptions")
+    plan_code = models.CharField(max_length=32)
+    monthly_price = models.DecimalField(max_digits=10, decimal_places=2)
+    monthly_offers = models.PositiveSmallIntegerField()
+    started_at = models.DateTimeField(null=True, blank=True)
+    canceled_at = models.DateTimeField(null=True, blank=True)
+    ends_at = models.DateTimeField(null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    terms_version = models.CharField(max_length=40, default="2026-09-three-month-notice")
+
+
+class BillingPeriod(models.Model):
+    subscription = models.ForeignKey(BillingSubscription, on_delete=models.PROTECT, related_name="periods")
+    number = models.PositiveIntegerField()
+    starts_at = models.DateTimeField(null=True, blank=True)
+    ends_at = models.DateTimeField(null=True, blank=True)
+    offers_used = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["subscription", "number"], name="unique_billing_period")]
+
+
+class PlatformCharge(models.Model):
+    class Kind(models.TextChoices):
+        LISTING = "listing", "Publikimi i kërkesës"
+        OFFER = "offer_fee", "Dërgimi i ofertës"
+        OFFER_ADJUSTMENT = "offer_adjustment", "Diferenca e tarifës së ofertës"
+        SUBSCRIPTION = "subscription", "Abonimi mujor"
+
+    payer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="platform_charges")
+    company = models.ForeignKey(Company, null=True, blank=True, on_delete=models.PROTECT)
+    offer = models.ForeignKey(Offer, null=True, blank=True, on_delete=models.PROTECT, related_name="platform_charges")
+    job_request = models.OneToOneField("jobrequests.JobRequest", null=True, blank=True, on_delete=models.PROTECT, related_name="publication_charge")
+    period = models.OneToOneField(BillingPeriod, null=True, blank=True, on_delete=models.PROTECT, related_name="charge")
+    included_in_period = models.ForeignKey(BillingPeriod, null=True, blank=True, on_delete=models.PROTECT, related_name="included_charges")
+    kind = models.CharField(max_length=20, choices=Kind.choices)
+    regular_amount = models.DecimalField(max_digits=10, decimal_places=2)
+    discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    quoted_price = models.DecimalField(max_digits=10, decimal_places=2, null=True, blank=True)
+    currency = models.CharField(max_length=3, default="EUR")
+    status = models.CharField(max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+    paid_at = models.DateTimeField(null=True, blank=True)
+    fulfilled_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [
+            models.CheckConstraint(condition=models.Q(amount__gte=0), name="platform_charge_nonnegative"),
+            models.UniqueConstraint(fields=["offer"], condition=models.Q(kind="offer_fee"), name="one_initial_offer_charge"),
+            models.UniqueConstraint(fields=["offer"], condition=models.Q(kind="offer_adjustment", status="pending"), name="one_pending_offer_adjustment"),
+        ]
+
+
+class PlatformCheckout(models.Model):
+    """Immutable attempt: the callback must match this bank order and amount."""
+    charge = models.ForeignKey(PlatformCharge, on_delete=models.PROTECT, related_name="checkouts")
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    reference = models.UUIDField(default=uuid4, unique=True, editable=False)
+    order_id = models.CharField(max_length=255, null=True, blank=True, unique=True)
+    transaction_id = models.CharField(max_length=255, null=True, blank=True, unique=True)
+    checkout_url = models.URLField(max_length=1000, blank=True)
+    last_checked_at = models.DateTimeField(null=True, blank=True)
+    reconciliation_note = models.CharField(max_length=255, blank=True)
+    status = models.CharField(max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.PENDING)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class OfferPriceReport(models.Model):
+    offer = models.ForeignKey(Offer, on_delete=models.PROTECT, related_name="price_reports")
+    reported_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    total = models.DecimalField(max_digits=10, decimal_places=2)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+
+class SubscriptionAgreement(models.Model):
+    subscription = models.OneToOneField(BillingSubscription, on_delete=models.PROTECT, related_name="agreement")
+    signed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    signer_name = models.CharField(max_length=200)
+    company_name = models.CharField(max_length=255)
+    text = models.TextField()
+    version = models.CharField(max_length=80)
+    sha256 = models.CharField(max_length=64)
+    signed_at = models.DateTimeField(auto_now_add=True)
+
+
+class OfferCredit(models.Model):
+    class Reason(models.TextChoices):
+        FALSE_REQUEST = "false_request", "Kërkesë e rreme e konfirmuar"
+        DUPLICATE = "duplicate", "Kërkesë e dyfishtë e konfirmuar"
+        JOB_CLOSED = "job_closed_before_send", "Kërkesa u mbyll përpara dërgimit"
+        TECHNICAL_FAILURE = "technical_failure", "Dështim teknik i konfirmuar"
+    company = models.ForeignKey(Company, on_delete=models.PROTECT, related_name="offer_credits")
+    source_offer = models.OneToOneField(Offer, on_delete=models.PROTECT, related_name="compensation_credit")
+    reason = models.CharField(max_length=30, choices=Reason.choices)
+    evidence = models.TextField()
+    issued_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, null=True, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    redeemed_offer = models.OneToOneField(Offer, on_delete=models.PROTECT, null=True, blank=True, related_name="redeemed_credit")
+    redeemed_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        permissions = [("issue_offer_credit", "Issue an offer credit after confirming an eligible fault")]

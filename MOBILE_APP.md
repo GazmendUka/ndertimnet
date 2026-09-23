@@ -51,26 +51,26 @@ after a server-to-server transaction verification, never from the browser
 return URL. The verified transaction id, merchant, environment, amount,
 currency and success code must match the locally stored payment.
 
-There are two materially different payment categories:
+The current model charges for platform services: publishing a job request,
+sending a company offer, or a monthly company subscription. See `BILLING.md`.
+Preparing a draft is free but reveals no customer contacts or chat. Each company has
+25 free sent offers, usable on web and native; quota is consumed atomically when signing.
+After these, a subscription allowance or individual payment is required. Chat and direct contacts open when the paid/included offer is sent.
+Phone/email sharing is allowed after sending. Accepted agreements stay separate from
+proposed changes; customers approve the exact signed version. Individually paid
+price increases require only the outstanding fee difference before resending. The former 25-free-leads and 4.95 EUR unlock model
+is retired. Payments for the actual construction work are no longer offered.
 
-- Payment for construction or another physical service delivered outside the
-  app may use RaiAccept card checkout, Apple Pay or Google Pay.
-- Payment to unlock a lead is payment for app functionality. Paid lead unlocks
-  are therefore blocked in the native iOS and Android clients until Apple
-  In-App Purchase and Google Play Billing, or a written applicable exception,
-  has been implemented. Free lead unlocks continue to work in every client.
+Native iOS/Android clients do not open external checkout for these purchases.
+Free introductory publications and existing paid subscription entitlements
+remain usable. Native purchase flows still require StoreKit/Play Billing setup
+and applicable store review; no store products or receipt validation are
+implemented by this change. Web checkout uses the existing RaiAccept adapter.
 
-RaiAccept advertises Apple Pay and Google Pay through its hosted checkout, but
-the payment methods must be enabled for the merchant account. Production must
-not be enabled until the bank has supplied and approved the final merchant
-credentials, return URLs and notification URL.
-
-Customer payment for an accepted construction offer is protected by
-`CUSTOMER_JOB_PAYMENTS_ENABLED`, which defaults to `False`. It currently
-supports accepted, signed, fixed-price offers in EUR. Hourly offers require a
-separately agreed final amount before a payment can be created. Set the flag to
-`True` only after the acquiring, settlement, refund and merchant-of-record
-arrangements are approved and the full sandbox journey has passed.
+Production requires approved merchant credentials, a merchant account ID,
+return URLs and the new `/api/billing/notify/` callback. The legacy callback is
+retained only to settle historical transactions. Monthly subscriptions currently
+use one hosted payment per month; they do not auto-debit saved cards.
 
 ## Push notifications
 
@@ -121,3 +121,7 @@ iOS, the Apple APNs authentication key have been configured and tested.
    push opt-in/out, image/PDF uploads, account deletion, and payment return on
    real devices.
 7. Upload an internal Android build and an iOS TestFlight build before review.
+
+Price increases below EUR 100 cumulatively from the last billed price incur no extra fee.
+At EUR 100 or more only the unpaid fee difference applies. See BILLING.md for credits,
+version decisions and platform inactivity. These rules are enforced on the server.

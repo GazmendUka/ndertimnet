@@ -12,6 +12,17 @@ from accounts.serializers import CompanySerializer, BasicCustomerSerializer
 # ------------------------------------------------------------
 
 class LeadMessageSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        from payments.services.access import has_offer_access
+        from offers.contact_policy import safe_text, redact_company
+        data = super().to_representation(instance)
+        if not has_offer_access(instance.lead.company, instance.lead.job_request):
+            data["sender_customer"] = None
+            if data.get("sender_company"):
+                data["sender_company"] = redact_company(data["sender_company"])
+            data["message"] = safe_text(data["message"])
+        return data
+
     sender_company = CompanySerializer(read_only=True)
     sender_customer = BasicCustomerSerializer(read_only=True)
     class Meta:
@@ -31,6 +42,19 @@ class LeadMessageSerializer(serializers.ModelSerializer):
 # ------------------------------------------------------------
 
 class LeadMatchSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        from payments.services.access import has_offer_access, has_chat_access
+        data = super().to_representation(instance)
+        if not has_chat_access(instance.company, instance.job_request):
+            data["messages"] = []
+        data["can_chat"] = has_chat_access(instance.company, instance.job_request)
+        if not has_offer_access(instance.company, instance.job_request):
+            from offers.contact_policy import safe_text
+            data["message"] = safe_text(data.get("message", ""))
+            data["customer_info_unlocked"] = False
+            data["customer_info_unlocked_by_company"] = False
+        return data
+
     company = CompanySerializer(read_only=True)
     messages = LeadMessageSerializer(many=True, read_only=True)
 

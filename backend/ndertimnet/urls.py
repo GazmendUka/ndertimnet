@@ -57,6 +57,7 @@ urlpatterns = [
 
     # ⚙️ Payments API 
     path("api/payments/", include("payments.urls")),
+    path("api/billing/", include("payments.billing_urls")),
 
     # Device registration and notification preferences
     path("api/notifications/", include("pushnotifications.urls")),

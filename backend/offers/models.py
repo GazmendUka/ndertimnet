@@ -70,6 +70,17 @@ class Offer(models.Model):
         related_name="+",
     )
 
+    accepted_version = models.ForeignKey("offers.OfferVersion", on_delete=models.PROTECT, null=True, blank=True, related_name="+")
+    customer_opened_at = models.DateTimeField(null=True, blank=True)
+
+    def customer_version(self):
+        latest = self.versions.filter(is_signed=True).first()
+        if self.accepted_version_id and latest and latest.customer_rejected_at:
+            return self.accepted_version
+        return latest or self.accepted_version
+
+    chat_retention_reason = models.CharField(max_length=500, blank=True, default="")
+    chat_retention_hold = models.BooleanField(default=False, help_text="Keep chat for an ongoing support or dispute case.")
     accepted_at = models.DateTimeField(null=True, blank=True)
     rejected_at = models.DateTimeField(null=True, blank=True)
 
@@ -96,10 +107,13 @@ class Offer(models.Model):
     # ------------------------------------------------------------------
 
     def is_locked(self) -> bool:
-        return self.status in {OfferStatus.ACCEPTED, OfferStatus.LOCKED}
+        return self.status == OfferStatus.LOCKED
 
     def can_view_lead_details(self) -> bool:
-        return bool(self.lead_unlocked)
+        return self.can_chat()
+
+    def can_chat(self) -> bool:
+        return self.versions.filter(is_signed=True).exists()
 
     def clean(self):
         # Non-draft must have version
@@ -108,7 +122,8 @@ class Offer(models.Model):
 
         # Cannot accept unsigned
         if self.status == OfferStatus.ACCEPTED:
-            if not self.current_version or not self.current_version.is_signed:
+            agreed = self.accepted_version or self.current_version
+            if not agreed or not agreed.is_signed or agreed.offer_id != self.pk:
                 raise ValidationError("Cannot accept unsigned offer.")
 
         # Prevent modifying accepted offer
@@ -161,6 +176,17 @@ class OfferVersion(models.Model):
         blank=True
     )
 
+    estimated_hours = models.DecimalField(max_digits=8, decimal_places=2, null=True, blank=True)
+
+    @property
+    def estimated_total(self):
+        from payments.pricing import money
+        if self.price_amount is None:
+            return None
+        if self.price_type == "hourly":
+            return money(self.price_amount * self.estimated_hours) if self.estimated_hours else None
+        return self.price_amount
+
     currency = models.CharField(max_length=10, default="EUR")
 
     includes_text = models.TextField(blank=True, default="")
@@ -176,6 +202,8 @@ class OfferVersion(models.Model):
 
     created_at = models.DateTimeField(auto_now_add=True)
 
+    customer_accepted_at = models.DateTimeField(null=True, blank=True)
+    customer_rejected_at = models.DateTimeField(null=True, blank=True)
     is_signed = models.BooleanField(default=False)
     signed_at = models.DateTimeField(null=True, blank=True)
 
@@ -308,6 +336,7 @@ class OfferMessage(models.Model):
     read_at = models.DateTimeField(null=True, blank=True, db_index=True)
 
     class Meta:
+        permissions = [("review_chat", "Review stored chats and manage retention holds")]
         ordering = ["created_at"]
         indexes = [
             models.Index(fields=["offer", "created_at"]),
@@ -394,3 +423,10 @@ class OfferReview(models.Model):
 
     def __str__(self):
         return f"Review offer={self.offer_id} ({self.rating}/5)"
+
+
+class ChatReviewAccess(models.Model):
+    reviewer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True)
+    offer = models.ForeignKey(Offer, on_delete=models.SET_NULL, null=True, blank=True)
+    action = models.CharField(max_length=20, default="view")
+    accessed_at = models.DateTimeField(auto_now_add=True)

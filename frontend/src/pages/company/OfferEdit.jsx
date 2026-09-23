@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import api from "../../api/axios";
+import { OfferBilling } from "../../components/payments/PlatformBilling";
 import { useAuth } from "../../auth/AuthContext";
 import toast from "react-hot-toast";
 import {
@@ -66,6 +67,7 @@ export default function OfferEdit() {
   // Step 3
   const [priceType, setPriceType] = useState("fixed");
   const [priceAmount, setPriceAmount] = useState("");
+  const [estimatedHours, setEstimatedHours] = useState("");
 
   // Step 4
   const [includesText, setIncludesText] = useState("");
@@ -114,9 +116,6 @@ export default function OfferEdit() {
   }
 
   function canEnterStep(stepKey) {
-    if (offer?.status === "signed" || offer?.status === "accepted") {
-      return stepKey === 5;
-    }
 
     if (stepKey === 1) return true;
     if (stepKey === 2) return isStep1Valid;
@@ -209,6 +208,7 @@ export default function OfferEdit() {
       setStartDate(cv?.can_start_from || "");
       setPriceType(cv?.price_type || "fixed");
       setPriceAmount(cv?.price_amount || "");
+      setEstimatedHours(cv?.estimated_hours || "");
       setIncludesText(cv?.includes_text || "");
       setExcludesText(cv?.excludes_text || "");
 
@@ -351,8 +351,13 @@ export default function OfferEdit() {
       return;
     }
 
+    if (priceType === "hourly" && (!Number.isFinite(Number(estimatedHours)) || Number(estimatedHours) <= 0)) {
+      toast.error("Vendosni numrin e vlerësuar të orëve.");
+      return;
+    }
     await savePatch(
       {
+        estimated_hours: priceType === "hourly" ? estimatedHours : null,
         price_type: priceType,
         price_amount: priceAmount,
         currency: "EUR",
@@ -760,6 +765,11 @@ export default function OfferEdit() {
             {step === 3 && (
               <div className="premium-card p-6 space-y-5">
                 <h2 className="text-lg font-semibold">Hapi 3 – Çmimi</h2>
+                <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6" role="note">
+                  <strong>Kontrolloni me kujdes çmimin përpara dërgimit.</strong>
+                  <p>Çmimi dhe kushtet e pranuara nga klienti janë pjesë e marrëveshjes suaj dhe duhet të respektohen. Mos vendosni çmim më të ulët për të shmangur tarifën e platformës. Ndryshimet e punës ose çmimit duhen dokumentuar dhe rënë dakord me klientin, duke respektuar përjashtimet që mund të parashikojë ligji.</p>
+                  <p>{priceType === "fixed" ? "Për çmim fiks, kontrolloni shumën totale dhe tregoni qartë çfarë përfshihet ose përjashtohet, përfshirë materialet dhe taksat." : "Për çmim për orë, shënoni tarifën për orë dhe sqaroni si llogariten orët, materialet dhe taksat. Tarifa për orë nuk është një çmim total fiks."}</p>
+                </div>
 
                 <div className="space-y-3">
                   <label className="flex items-center gap-2">
@@ -801,10 +811,17 @@ export default function OfferEdit() {
                     disabled={saving}
                   />
                   <p className="text-xs text-gray-500 mt-2">
-                    Valuta aktualisht është EUR.
+                    Valuta aktualisht është EUR. Tarifa e platformës llogaritet mbi totalin e vlerësuar.
                   </p>
                 </div>
 
+                {priceType === "hourly" && <div>
+                  <label className="block text-sm font-medium">Orë të vlerësuara
+                    <input type="number" min="0.01" step="0.01" value={estimatedHours} onChange={e => setEstimatedHours(e.target.value)} className="w-full border rounded-lg p-3" disabled={saving} />
+                  </label>
+                  <p className="mt-2 font-semibold">Total i vlerësuar: {Number.isFinite(Number(priceAmount) * Number(estimatedHours)) ? (Number(priceAmount) * Number(estimatedHours)).toFixed(2) : "—"} €</p>
+                  <p className="text-sm">Vlerësim, jo çmim total fiks. Kontrolloni tarifën për orë dhe numrin e orëve.</p>
+                </div>}
                 <div className="flex justify-between gap-3 pt-2">
                   <button
                     onClick={() => goStep(2)}
@@ -888,6 +905,7 @@ export default function OfferEdit() {
                 <h2 className="text-lg font-semibold">
                   Hapi 5 – Nënshkrimi
                 </h2>
+                <OfferBilling offerId={offer.id} />
 
                 {!canSign && (
                   <div className="border border-yellow-300 bg-yellow-50 p-4 rounded-lg text-sm text-yellow-800">

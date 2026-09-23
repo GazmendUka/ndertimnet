@@ -54,6 +54,11 @@ class BasicCustomerSerializer(serializers.ModelSerializer):
 
 # 🏢 CompanySerializer
 class CompanySerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        from offers.contact_policy import company_contacts_allowed, redact_company
+        data = super().to_representation(instance)
+        return data if company_contacts_allowed(instance, self.context) else redact_company(data)
+
     can_access_marketplace = serializers.SerializerMethodField()
     missing_requirements = serializers.SerializerMethodField()
     recommended_improvements = serializers.SerializerMethodField()
@@ -272,6 +277,11 @@ class CompanySerializer(serializers.ModelSerializer):
 
 
 class PublicCompanySerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        from offers.contact_policy import company_contacts_allowed, redact_company
+        data = super().to_representation(instance)
+        return data if company_contacts_allowed(instance, self.context) else redact_company(data)
+
     """Public company data only; excludes contact and onboarding documents."""
 
     logo_url = serializers.SerializerMethodField()

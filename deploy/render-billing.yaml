@@ -1,0 +1,22 @@
+# Import this Blueprint after deploying the matching backend and its migrations.
+# Configure the environment group with the SAME database and bank credentials as that backend.
+# No services are created merely by committing this file.
+services:
+  - type: cron
+    name: ndertimnet-billing-reconcile
+    runtime: python
+    rootDir: backend
+    schedule: "*/5 * * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py run_billing_maintenance reconcile --apply
+    envVars:
+      - fromGroup: ndertimnet-billing-runtime
+  - type: cron
+    name: ndertimnet-billing-daily
+    runtime: python
+    rootDir: backend
+    schedule: "15 3 * * *"
+    buildCommand: pip install -r requirements.txt
+    startCommand: python manage.py run_billing_maintenance daily --apply
+    envVars:
+      - fromGroup: ndertimnet-billing-runtime

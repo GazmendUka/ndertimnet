@@ -1,10 +1,10 @@
+import OfferAgreementPanel from "../../components/offers/OfferAgreementPanel";
+import ChatPolicyNotice from "../../components/offers/ChatPolicyNotice";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useNavigate, useParams, useSearchParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
 import CompanyRatingSummary from "../../components/reviews/CompanyRatingSummary";
-import paymentService from "../../services/paymentService";
-import { openPaymentUrl } from "../../platform/mobile";
 
 import {
   ArrowLeft,
@@ -12,7 +12,6 @@ import {
   CalendarDays,
   CheckCircle2,
   Clock3,
-  CreditCard,
   Download,
   Euro,
   FileText,
@@ -27,7 +26,6 @@ import {
   ShieldCheck,
   Star,
   ThumbsUp,
-  WalletCards,
   XCircle,
 } from "lucide-react";
 
@@ -204,7 +202,6 @@ function EmptyState({ navigate, short = false }) {
 export default function CustomerOfferDetailsPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [searchParams, setSearchParams] = useSearchParams();
   const { access, user } = useAuth();
 
   const [offer, setOffer] = useState(null);
@@ -215,6 +212,7 @@ export default function CustomerOfferDetailsPage() {
   const [decisionLoading, setDecisionLoading] = useState("");
   const [error, setError] = useState("");
   const [messages, setMessages] = useState([]);
+  const [chatError, setChatError] = useState("");
   const [messageInput, setMessageInput] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
   const [chatLoading, setChatLoading] = useState(true);
@@ -225,9 +223,6 @@ export default function CustomerOfferDetailsPage() {
   const [recommended, setRecommended] = useState(false);
   const [reviewLoading, setReviewLoading] = useState(false);
   const [reviewError, setReviewError] = useState("");
-  const [payment, setPayment] = useState(null);
-  const [paymentLoading, setPaymentLoading] = useState(false);
-  const [paymentMessage, setPaymentMessage] = useState("");
 
   const chatEndRef = useRef(null);
   const chatContainerRef = useRef(null);
@@ -329,63 +324,10 @@ export default function CustomerOfferDetailsPage() {
     shouldAutoScrollRef.current = false;
   }, [messages]);
 
-  const refreshPaymentStatus = useCallback(async () => {
-    try {
-      const response = await paymentService.getJobPaymentStatus(id);
-      setPayment(response.data || null);
-      return response.data || null;
-    } catch {
-      return null;
-    }
-  }, [id]);
-
-  useEffect(() => {
-    if (access && offer?.status === "accepted") refreshPaymentStatus();
-  }, [access, offer?.status, refreshPaymentStatus]);
-
-  useEffect(() => {
-    if (searchParams.get("payment") !== "return" || offer?.status !== "accepted") return undefined;
-
-    let active = true;
-    let attempts = 0;
-    setPaymentMessage("Po verifikojmë pagesën me bankën…");
-
-    const check = async () => {
-      attempts += 1;
-      const latest = await refreshPaymentStatus();
-      if (!active) return;
-
-      if (latest?.status === "paid") {
-        setPaymentMessage("Pagesa u konfirmua me sukses.");
-        setSearchParams({}, { replace: true });
-        return;
-      }
-      if (latest?.status === "failed") {
-        setPaymentMessage("Pagesa dështoi. Mund të provoni përsëri.");
-        setSearchParams({}, { replace: true });
-        return;
-      }
-      if (latest?.status === "canceled") {
-        setPaymentMessage("Pagesa u anulua. Mund të provoni përsëri.");
-        setSearchParams({}, { replace: true });
-        return;
-      }
-      if (attempts >= 6) {
-        setPaymentMessage("Pagesa është ende në verifikim. Statusi përditësohet automatikisht.");
-        setSearchParams({}, { replace: true });
-        return;
-      }
-      window.setTimeout(check, 1500);
-    };
-
-    check();
-    return () => { active = false; };
-  }, [offer?.status, refreshPaymentStatus, searchParams, setSearchParams]);
-
   const handleAccept = async () => {
     try {
       setDecisionLoading("accept");
-      await api.post(`offers/${id}/decision/`, { decision: "accept" });
+      await api.post(`offers/${id}/decision/`, { decision: "accept", version_id: version.id });
       await fetchOffer();
       alert("Oferta u pranua!");
     } catch (err) {
@@ -398,13 +340,13 @@ export default function CustomerOfferDetailsPage() {
 
   const handleDecline = async () => {
     const confirmed = window.confirm(
-      "A jeni i sigurt që dëshironi ta refuzoni këtë ofertë?"
+      offer.pending_amendment ? "Ta refuzoni vetëm këtë ndryshim? Marrëveshja e pranuar më parë mbetet në fuqi në platformë." : "A jeni i sigurt që dëshironi ta refuzoni këtë ofertë?"
     );
     if (!confirmed) return;
 
     try {
       setDecisionLoading("reject");
-      await api.post(`offers/${id}/decision/`, { decision: "reject" });
+      await api.post(`offers/${id}/decision/`, { decision: "reject", version_id: version.id });
       await fetchOffer();
     } catch (err) {
       console.error(err);
@@ -415,6 +357,7 @@ export default function CustomerOfferDetailsPage() {
   };
 
   const handleSendMessage = async (content = messageInput, retryMessage = null) => {
+    setChatError("");
     const trimmed = content.trim();
     if (!trimmed || sendingMessage || offer?.chat_locked) return;
 
@@ -449,7 +392,7 @@ export default function CustomerOfferDetailsPage() {
         return alreadyLoaded || !res.data ? withoutTemp : [...withoutTemp, res.data];
       });
     } catch (err) {
-      console.error("Send message error:", err);
+      setChatError(err.response?.data?.detail || "Mesazhi nuk u dërgua. Provoni përsëri.");
       setMessages((prev) => prev.map((message) => (
         message.id === tempMessage.id
           ? { ...message, delivery_status: "failed" }
@@ -512,48 +455,12 @@ export default function CustomerOfferDetailsPage() {
     }
   };
 
-  const handleJobPayment = async () => {
-    if (paymentLoading) return;
-    setPaymentLoading(true);
-    setPaymentMessage("");
-
-    try {
-      const response = await paymentService.payAcceptedOffer(id);
-      if (response.data?.requires_payment && response.data?.payment_url) {
-        setPayment({
-          status: "pending",
-          amount: response.data.payment_amount,
-          currency: response.data.currency,
-        });
-        await openPaymentUrl(
-          response.data.payment_url,
-          `/customer/offers/${id}?payment=return`
-        );
-      } else {
-        setPayment(response.data || null);
-      }
-    } catch (paymentError) {
-      const code = paymentError.response?.data?.code;
-      if (code === "merchant_setup_required") {
-        setPaymentMessage("Pagesa do të hapet sapo aktivizimi me bankën të jetë përfunduar.");
-      } else if (code === "final_amount_required") {
-        setPaymentMessage("Për ofertat me çmim për orë duhet fillimisht të caktohet shuma përfundimtare.");
-      } else if (code === "payment_initializing") {
-        setPaymentMessage("Pagesa po përgatitet. Provoni përsëri pas pak.");
-      } else {
-        setPaymentMessage("Pagesa nuk mund të hapej. Provoni përsëri.");
-      }
-    } finally {
-      setPaymentLoading(false);
-    }
-  };
-
-  const canDecide = offer?.status === "signed";
+  const canDecide = offer?.status === "signed" || offer?.pending_amendment;
   const priceLabel = useMemo(
     () => formatPrice(version?.price_amount, version?.currency, version?.price_type),
     [version]
   );
-  const statusMeta = getStatusMeta(offer?.status);
+  const statusMeta = offer?.pending_amendment ? { label: "Ndryshim në pritje", description: "Çmimi dhe teksti i këtij versioni presin miratimin tuaj. Marrëveshja e pranuar më parë shfaqet më poshtë.", classes: "border-amber-200 bg-amber-50 text-amber-800", dot: "bg-amber-500" } : getStatusMeta(offer?.status);
   const companyName = company?.company_name || "Kompani";
   const companyInitial = companyName.trim().charAt(0).toUpperCase() || "K";
   const review = offer?.review || null;
@@ -667,55 +574,16 @@ export default function CustomerOfferDetailsPage() {
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <DetailCard label="Çmimi" value={priceLabel} icon={Euro} featured />
+              {version?.price_type === "hourly" && <DetailCard label="Vlerësimi" value={`${version.estimated_hours || "—"} orë · ${version.estimated_total || "—"} € gjithsej`} icon={Euro} />}
               <DetailCard label="Fillimi" value={formatDate(version.can_start_from)} icon={CalendarDays} />
               <DetailCard label="Kohëzgjatja" value={version.duration_text} icon={Clock3} />
             </div>
           </section>
 
+          <OfferAgreementPanel offer={offer} />
           {offer.status === "accepted" && (
-            <section className="premium-card overflow-hidden border-emerald-100">
-              <div className="bg-gradient-to-br from-emerald-50 to-white p-5 sm:p-7">
-                <div className="flex flex-col gap-5 sm:flex-row sm:items-start sm:justify-between">
-                  <div className="flex gap-4">
-                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-emerald-100 text-emerald-700">
-                      {payment?.status === "paid" ? <CheckCircle2 size={24} /> : <WalletCards size={24} />}
-                    </div>
-                    <div>
-                      <p className="text-label">Pagesa e punës</p>
-                      <h2 className="mt-1 text-xl font-semibold text-gray-900">
-                        {payment?.status === "paid" ? "Pagesa është konfirmuar" : "Paguani ofertën e pranuar"}
-                      </h2>
-                      <p className="mt-2 max-w-xl text-sm leading-6 text-gray-600">
-                        {version.price_type === "hourly"
-                          ? "Kjo ofertë ka çmim për orë. Kompania duhet të përcaktojë shumën përfundimtare para pagesës."
-                          : "Pagesa hapet në faqen e sigurt të bankës. Kartat dhe kuletat digjitale shfaqen kur janë aktive në llogarinë e tregtarit."}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="shrink-0 text-left sm:text-right">
-                    <p className="text-xs font-medium uppercase tracking-wider text-gray-500">Shuma</p>
-                    <p className="mt-1 text-2xl font-bold text-gray-900">{priceLabel}</p>
-                  </div>
-                </div>
-
-                {paymentMessage && (
-                  <p role="status" className={`mt-5 rounded-xl border p-3 text-sm ${payment?.status === "paid" ? "border-emerald-200 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-800"}`}>
-                    {paymentMessage}
-                  </p>
-                )}
-
-                {payment?.status !== "paid" && version.price_type !== "hourly" && (
-                  <button
-                    type="button"
-                    onClick={handleJobPayment}
-                    disabled={paymentLoading}
-                    className="premium-btn btn-dark mt-5 w-full disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
-                  >
-                    {paymentLoading ? <Loader2 className="animate-spin" size={18} /> : <CreditCard size={18} />}
-                    {paymentLoading ? "Duke hapur pagesën…" : payment?.status === "pending" ? "Vazhdo pagesën" : "Paguaj në mënyrë të sigurt"}
-                  </button>
-                )}
-              </div>
+            <section className="premium-card p-5 text-sm text-gray-600">
+              Pagesa për punën kryhet drejtpërdrejt me kompaninë sipas marrëveshjes suaj.
             </section>
           )}
 
@@ -745,6 +613,7 @@ export default function CustomerOfferDetailsPage() {
             </div>
             <button
               onClick={handleDownloadPDF}
+              disabled={!offer?.accepted_version}
               className="premium-btn btn-light mt-5 inline-flex w-full items-center gap-2 sm:w-auto"
             >
               <Download size={17} />
@@ -952,6 +821,8 @@ export default function CustomerOfferDetailsPage() {
               <div ref={chatEndRef} />
             </div>
 
+        <ChatPolicyNotice accepted={offer?.contact_details_available} />
+        {chatError && <p role="alert" className="px-5 py-3 text-sm text-red-700">{chatError}</p>}
             {chatLocked ? (
               <div className="flex items-start gap-3 border-t border-gray-100 bg-gray-50 p-4 text-sm text-gray-600 sm:p-5">
                 <Lock className="mt-0.5 shrink-0 text-gray-500" size={18} />
@@ -1012,7 +883,7 @@ export default function CustomerOfferDetailsPage() {
                   className="premium-btn w-full bg-emerald-600 text-white hover:bg-emerald-700 disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   {decisionLoading === "accept" ? <Loader2 className="animate-spin" size={18} /> : <CheckCircle2 size={18} />}
-                  {decisionLoading === "accept" ? "Duke pranuar..." : "Prano ofertën"}
+                  {decisionLoading === "accept" ? "Duke pranuar..." : offer.pending_amendment ? "Prano ndryshimin" : "Prano ofertën"}
                 </button>
                 <button
                   onClick={handleDecline}
@@ -1020,7 +891,7 @@ export default function CustomerOfferDetailsPage() {
                   className="premium-btn w-full border border-gray-200 bg-white text-gray-700 hover:border-red-200 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-45"
                 >
                   {decisionLoading === "reject" ? <Loader2 className="animate-spin" size={18} /> : <XCircle size={18} />}
-                  {decisionLoading === "reject" ? "Duke refuzuar..." : "Refuzo ofertën"}
+                  {decisionLoading === "reject" ? "Duke refuzuar..." : offer.pending_amendment ? "Refuzo ndryshimin" : "Refuzo ofertën"}
                 </button>
               </div>
 
@@ -1049,11 +920,11 @@ export default function CustomerOfferDetailsPage() {
               </div>
               <div className="flex items-center gap-3">
                 <Phone className="shrink-0 text-gray-400" size={17} />
-                <span className="break-all">{company?.phone || "Nuk është dhënë"}</span>
+                <span className="break-all">{offer?.contact_details_available ? (company?.phone || "Nuk është dhënë") : "Shfaqet pas pranimit"}</span>
               </div>
               <div className="flex items-center gap-3">
                 <Mail className="shrink-0 text-gray-400" size={17} />
-                <span className="break-all">{company?.user?.email || "Nuk është dhënë"}</span>
+                <span className="break-all">{offer?.contact_details_available ? (company?.account_email || "Nuk është dhënë") : "Shfaqet pas pranimit"}</span>
               </div>
             </div>
           </section>

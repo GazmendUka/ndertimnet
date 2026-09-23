@@ -1,5 +1,6 @@
 import logging
 
+from django import forms
 from django.contrib import admin, messages
 from django.core.exceptions import PermissionDenied
 from django.db import transaction
@@ -55,8 +56,23 @@ class OfferInline(admin.TabularInline):
         return True
 
 
+class JobRequestAdminForm(forms.ModelForm):
+    class Meta:
+        model = JobRequest
+        fields = "__all__"
+
+    def clean(self):
+        data = super().clean()
+        from payments.models import PlatformCharge, PaymentStatus
+        if self.instance.pk and (data.get("is_active") or data.get("moderation_status") == JobRequest.MODERATION_APPROVED):
+            if PlatformCharge.objects.filter(job_request=self.instance).exclude(status=PaymentStatus.PAID).exists():
+                raise forms.ValidationError("Publikimi pret konfirmimin e pagesës.")
+        return data
+
+
 @admin.register(JobRequest)
 class JobRequestAdmin(admin.ModelAdmin):
+    form = JobRequestAdminForm
     change_list_template = "admin/jobrequests/jobrequest/change_list.html"
     list_display = (
         "id", "title", "customer", "city", "moderation_status",
@@ -160,6 +176,10 @@ class JobRequestAdmin(admin.ModelAdmin):
         for job in queryset:
             with transaction.atomic():
                 locked_job = JobRequest.objects.select_for_update().get(pk=job.pk)
+                from payments.models import PlatformCharge, PaymentStatus
+                if status_value == JobRequest.MODERATION_APPROVED and PlatformCharge.objects.filter(job_request=locked_job).exclude(status=PaymentStatus.PAID).exists():
+                    self.message_user(request, f"Kërkesa #{job.pk} pret pagesën.", messages.WARNING)
+                    continue
                 locked_job.apply_moderation(
                     status_value,
                     moderator=request.user,

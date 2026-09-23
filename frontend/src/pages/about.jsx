@@ -33,7 +33,7 @@ export default function AboutPage() {
         name: "A është Ndertimnet falas për klientët?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Po, klientët mund të publikojnë projektin dhe të marrin oferta nga kompani relevante përmes platformës.",
+          text: "Publikimi ofrohet me çmimin dhe zbritjen që shfaqen para dërgimit. Gjatë ofertës hyrëse shuma është 0 €.",
         },
       },
       {
@@ -693,7 +693,7 @@ export default function AboutPage() {
               {[
                 {
                   q: "A është Ndertimnet falas për klientët?",
-                  a: "Po, klientët mund të publikojnë projektin dhe të marrin oferta nga kompani relevante përmes platformës.",
+                  a: "Publikimi ofrohet me çmimin dhe zbritjen që shfaqen para dërgimit. Gjatë ofertës hyrëse shuma është 0 €.",
                 },
                 {
                   q: "Në cilat tregje operon Ndertimnet?",

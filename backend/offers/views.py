@@ -16,10 +16,13 @@ from rest_framework.response import Response
 
 from accounts.permissions_company_steps import IsCompanyStep2
 from jobrequests.models import JobRequest
-from payments.models import LeadAccess
+from payments.models import LeadAccess, PlatformCharge, PaymentStatus
+from payments.billing import authorize_offer_send
+from accounts.models import Company
 from pushnotifications.services import schedule_push_notification
 
 from .models import Offer, OfferMessage, OfferReview, OfferVersion, OfferStatus
+from .contact_policy import enforce_contact_policy
 from .pdf_contract import build_offer_contract_pdf
 from .serializers import (
     OfferSerializer,
@@ -37,6 +40,7 @@ class OfferViewSet(viewsets.ModelViewSet):
     queryset = Offer.objects.select_related("current_version", "job_request").all()
     serializer_class = OfferSerializer
     permission_classes = [IsAuthenticated]
+    http_method_names = ["get", "post", "patch", "head", "options"]
 
     # --------------------------------------------------
     # BASE QUERYSET
@@ -73,7 +77,7 @@ class OfferViewSet(viewsets.ModelViewSet):
                 job_request__is_deleted=False,
             ).filter(
                 Q(job_request__is_active=True) | Q(status=OfferStatus.ACCEPTED)
-            ).exclude(status=OfferStatus.DRAFT)
+            ).filter(versions__is_signed=True).distinct()
 
         else:
             return Offer.objects.none()
@@ -99,7 +103,7 @@ class OfferViewSet(viewsets.ModelViewSet):
 
             offer = get_object_or_404(
                 Offer.objects.select_related("current_version", "job_request")
-                .exclude(status=OfferStatus.DRAFT)
+                .filter(versions__is_signed=True).distinct()
                 .filter(job_request__is_deleted=False)
                 .filter(
                     Q(job_request__is_active=True) |
@@ -133,6 +137,10 @@ class OfferViewSet(viewsets.ModelViewSet):
         else:
             return Response({"detail": "Not allowed"}, status=403)
 
+        if request.user.role == "customer":
+            from jobrequests.activity import record_customer_activity
+            record_customer_activity(offer.job_request_id)
+            Offer.objects.filter(pk=offer.pk, customer_opened_at__isnull=True).update(customer_opened_at=timezone.now())
         serializer = self.get_serializer(offer)
         return Response(serializer.data)
 
@@ -167,7 +175,7 @@ class OfferViewSet(viewsets.ModelViewSet):
             .order_by("-created_at")
         )
 
-        serializer = OfferSerializer(qs, many=True)
+        serializer = OfferSerializer(qs, many=True, context={"request": request})
         return Response(serializer.data, status=200)
 
     # --------------------------------------------------
@@ -219,25 +227,27 @@ class OfferViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         offer = serializer.save()
 
-        return Response(OfferSerializer(offer).data, status=status.HTTP_201_CREATED)
+        return Response(OfferSerializer(offer, context={"request": request}).data, status=status.HTTP_201_CREATED)
 
     # --------------------------------------------------
     # UPDATE (wizard save)
     # PATCH /api/offers/{id}/
     # --------------------------------------------------
+    @transaction.atomic
     def partial_update(self, request, pk=None):
         offer = self.get_object()
+        if request.user.role != "company" or offer.company.user_id != request.user.pk:
+            return Response({"detail": "Vetëm kompania mund të ndryshojë ofertën."}, status=403)
+        Company.objects.select_for_update().get(pk=offer.company_id)
+        JobRequest.objects.select_for_update().get(pk=offer.job_request_id)
+        offer = Offer.objects.select_for_update(of=("self",)).get(pk=offer.pk)
+        charges = PlatformCharge.objects.filter(offer=offer, fulfilled_at__isnull=True)
+        if charges.filter(status=PaymentStatus.PAID).exists() or charges.filter(checkouts__status=PaymentStatus.PENDING).exists():
+            return Response({"detail": "Përfundoni pagesën dhe nënshkrimin para ndryshimeve."}, status=409)
 
-        if offer.job_request.is_deleted or not offer.job_request.is_active:
+        if offer.job_request.is_deleted or (not offer.job_request.is_active and offer.status != OfferStatus.ACCEPTED):
             return Response(
                 {"detail": "Kjo kërkesë nuk është më aktive."},
-                status=400,
-            )
-
-        # Blockera om accepterad
-        if offer.status == OfferStatus.ACCEPTED:
-            return Response(
-                {"detail": "Oferta e pranuar nuk mund të ndryshohet."},
                 status=400,
             )
 
@@ -264,6 +274,7 @@ class OfferViewSet(viewsets.ModelViewSet):
                 duration_text=cv.duration_text,
                 price_type=cv.price_type,
                 price_amount=cv.price_amount,
+                estimated_hours=cv.estimated_hours,
                 currency=cv.currency,
                 includes_text=cv.includes_text,
                 excludes_text=cv.excludes_text,
@@ -271,29 +282,36 @@ class OfferViewSet(viewsets.ModelViewSet):
             )
 
             offer.current_version = new_v
-            offer.status = OfferStatus.DRAFT
+            if offer.status != OfferStatus.ACCEPTED:
+                offer.status = OfferStatus.DRAFT
             offer.save(update_fields=["current_version", "status"])
             cv = new_v
 
-        # Uppdatera fält på current version
-        for field, value in request.data.items():
-            if hasattr(cv, field):
-                setattr(cv, field, value)
-
-        cv.save()
+        # Validate only editable business fields. Never accept is_signed/offer/id from the client.
+        serializer = OfferVersionSerializer(cv, data=request.data, partial=True)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
         offer.refresh_from_db()
 
-        return Response(OfferSerializer(offer).data)
+        return Response(OfferSerializer(offer, context={"request": request}).data)
 
     # --------------------------------------------------
     # SIGN
     # POST /api/offers/{id}/sign/
     # --------------------------------------------------
     @action(detail=True, methods=["post"])
+    @transaction.atomic
     def sign(self, request, pk=None):
         offer = self.get_object()
+        if request.user.role != "company" or offer.company.user_id != request.user.pk:
+            return Response({"detail": "Vetëm kompania mund të nënshkruajë ofertën."}, status=403)
+        Company.objects.select_for_update().get(pk=offer.company_id)
+        job = JobRequest.objects.select_for_update().get(pk=offer.job_request_id)
+        offer = Offer.objects.select_for_update(of=("self",)).select_related("current_version", "job_request").get(pk=offer.pk)
+        from payments.offer_slots import require_offer_slot
+        require_offer_slot(offer, job)
 
-        if offer.job_request.is_deleted or not offer.job_request.is_active:
+        if offer.job_request.is_deleted or (not offer.job_request.is_active and offer.status != OfferStatus.ACCEPTED):
             return Response(
                 {"detail": "Kjo kërkesë nuk është më aktive."},
                 status=400,
@@ -310,7 +328,10 @@ class OfferViewSet(viewsets.ModelViewSet):
             context={"request": request, "offer": offer},
         )
         serializer.is_valid(raise_exception=True)
+        authorize_offer_send(offer, request.user)
         serializer.save()
+        offer.lead_unlocked = True
+        offer.save(update_fields=["lead_unlocked", "updated_at"])
 
         schedule_push_notification(
             user=offer.job_request.customer,
@@ -338,6 +359,8 @@ class OfferViewSet(viewsets.ModelViewSet):
         offer = self.get_object()
         user = request.user
         previous_status = offer.status
+        previous_accepted_id = offer.accepted_version_id
+        previous_rejected_id = offer.versions.filter(customer_rejected_at__isnull=False).values_list("pk", flat=True).first()
 
         if getattr(user, "role", None) != "customer":
             return Response(
@@ -359,18 +382,19 @@ class OfferViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         decided_offer = serializer.save()
 
-        if previous_status != decided_offer.status:
+        latest_rejected_id = decided_offer.versions.filter(customer_rejected_at__isnull=False).values_list("pk", flat=True).first()
+        if previous_status != decided_offer.status or previous_accepted_id != decided_offer.accepted_version_id or previous_rejected_id != latest_rejected_id:
             schedule_push_notification(
                 user=decided_offer.company.user,
                 category="offer_updates",
                 title="Përditësim i ofertës",
                 body=(
                     "Klienti e pranoi ofertën tuaj."
-                    if decided_offer.status == OfferStatus.ACCEPTED
+                    if serializer.validated_data["decision"] == "accept"
                     else "Klienti nuk e pranoi ofertën tuaj."
                 ),
                 data={
-                    "type": f"offer_{decided_offer.status}",
+                    "type": f"offer_version_{serializer.validated_data['decision']}" if previous_status == OfferStatus.ACCEPTED else f"offer_{decided_offer.status}",
                     "offer_id": decided_offer.id,
                     "path": f"/company/offers/{decided_offer.id}",
                 },
@@ -387,16 +411,7 @@ class OfferViewSet(viewsets.ModelViewSet):
     # --------------------------------------------------
     @action(detail=True, methods=["post"], url_path="unlock-chat")
     def unlock_chat(self, request, pk=None):
-        offer = self.get_object()
-
-        serializer = OfferEarlyChatUnlockSerializer(
-            data={},
-            context={"request": request, "offer": offer},
-        )
-        serializer.is_valid(raise_exception=True)
-        unlock = serializer.save()
-
-        return Response({"success": True, "amount": unlock.amount}, status=200)
+        return Response({"detail": "Hapja e veçantë e bisedës nuk ofrohet më."}, status=410)
 
     # --------------------------------------------------
     # PDF CONTRACT
@@ -406,10 +421,12 @@ class OfferViewSet(viewsets.ModelViewSet):
     def pdf(self, request, pk=None):
         offer = self.get_object()
 
+        if offer.status != OfferStatus.ACCEPTED:
+            return Response({"detail": "Kontrata me kontaktet është e disponueshme pasi klienti të pranojë ofertën."}, status=403)
         pdf_bytes = build_offer_contract_pdf(offer)
         filename = (
             f"oferta_{offer.id}_v"
-            f"{offer.current_version.version_number if offer.current_version else 1}.pdf"
+            f"{offer.accepted_version.version_number if offer.accepted_version else 1}.pdf"
         )
 
         return FileResponse(
@@ -498,7 +515,7 @@ class OfferViewSet(viewsets.ModelViewSet):
 
             return Response({"detail": "Nuk ekziston asnjë ofertë për këtë kërkesë."}, status=404)
 
-        return Response(OfferSerializer(offer).data, status=200)
+        return Response(OfferSerializer(offer, context={"request": request}).data, status=200)
 
     # --------------------------------------------------
     # VERSIONS HISTORY
@@ -508,7 +525,9 @@ class OfferViewSet(viewsets.ModelViewSet):
     def versions(self, request, pk=None):
         offer = self.get_object()
         qs = OfferVersion.objects.filter(offer=offer).order_by("-version_number")
-        serializer = OfferVersionSerializer(qs, many=True)
+        if request.user.role == "customer":
+            qs = qs.filter(is_signed=True)
+        serializer = OfferVersionSerializer(qs, many=True, context={"request": request})
         return Response(serializer.data, status=200)
 
     # --------------------------------------------------
@@ -520,6 +539,10 @@ class OfferViewSet(viewsets.ModelViewSet):
     def messages(self, request, pk=None):
         offer = self.get_object()
         user = request.user
+
+        if not offer.can_chat():
+            return Response({"detail": "Dërgoni ofertën përpara se të hapni bisedën.",
+                             "code": "offer_not_sent"}, status=403)
 
         # GET → list messages
         if request.method == "GET":
@@ -546,13 +569,14 @@ class OfferViewSet(viewsets.ModelViewSet):
 
         # Lock the offer row so review submission and new messages cannot cross.
         with transaction.atomic():
-            locked_offer = Offer.objects.select_for_update().get(pk=offer.pk)
+            locked_offer = Offer.objects.select_for_update(of=("self",)).get(pk=offer.pk)
             if OfferReview.objects.filter(offer=locked_offer).exists():
                 return Response(
                     {"detail": "Biseda është mbyllur pasi klienti ka lënë vlerësimin."},
                     status=status.HTTP_403_FORBIDDEN,
                 )
 
+            enforce_contact_policy(locked_offer, message_text)
             existing = OfferMessage.objects.filter(client_message_id=client_message_id).first()
             if existing:
                 if (
@@ -601,12 +625,17 @@ class OfferViewSet(viewsets.ModelViewSet):
             },
         )
 
+        if user.role == "customer":
+            from jobrequests.activity import record_customer_activity
+            record_customer_activity(offer.job_request_id)
         serializer = OfferMessageSerializer(message)
         return Response(serializer.data, status=201)
 
     @action(detail=True, methods=["post"], url_path="messages/read")
     def mark_messages_read(self, request, pk=None):
         offer = self.get_object()
+        if not offer.can_chat():
+            return Response({"detail": "Biseda hapet pas dërgimit të ofertës."}, status=403)
         sender_type = getattr(request.user, "role", "")
         updated = offer.messages.filter(read_at__isnull=True).exclude(
             sender_type=sender_type
@@ -667,7 +696,7 @@ class OfferViewSet(viewsets.ModelViewSet):
         # Serialise review creation with message sending. Once this transaction
         # commits, no later message can be created for the offer.
         with transaction.atomic():
-            locked_offer = Offer.objects.select_for_update().select_related("company").get(pk=offer.pk)
+            locked_offer = Offer.objects.select_for_update(of=("self",)).select_related("company").get(pk=offer.pk)
             if OfferReview.objects.filter(offer=locked_offer).exists():
                 return Response(
                     {"detail": "Vlerësimi për këtë punë është dorëzuar tashmë."},

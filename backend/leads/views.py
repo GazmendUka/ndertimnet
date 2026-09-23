@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly, IsAuthenticate
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from django.utils import timezone
+from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 
 from accounts.models import Customer, Company
@@ -17,7 +18,7 @@ from accounts.permissions import (
     IsEmailVerified,
     IsCompanyMarketplaceReady,
 )
-from payments.services.access import has_offer_access
+from payments.services.access import has_offer_access, has_chat_access
 
 
 # ------------------------------------------------------------
@@ -46,7 +47,7 @@ class JobRequestViewSet(viewsets.ModelViewSet):
 
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ["is_active", "is_reopened", "city", "max_offers"]
-    search_fields = ["title", "description", "city__name", "customer__email"]
+    search_fields = ["title", "description", "city__name"]
     ordering_fields = ["created_at", "budget", "max_offers"]
     ordering = ["-created_at"]
 
@@ -129,6 +130,7 @@ class JobRequestViewSet(viewsets.ModelViewSet):
 # 🇦🇱 Oferta të kompanive (LeadMatch)
 # ------------------------------------------------------------
 class LeadMatchViewSet(viewsets.ModelViewSet):
+    http_method_names = ["get", "post", "head", "options"]
     queryset = (
         LeadMatch.objects.all()
         .select_related("job_request", "company", "job_request__customer")
@@ -227,7 +229,7 @@ class LeadMatchViewSet(viewsets.ModelViewSet):
         else:
             company = get_company_for_user(user)
             if company:
-                filtered = qs.filter(company=company)
+                filtered = qs.filter(company=company, job_request__offers__company=company, job_request__offers__versions__is_signed=True).distinct()
             elif getattr(user, "customer_profile", None):
                 filtered = qs.filter(job_request__customer=user.customer_profile)
             else:
@@ -241,10 +243,6 @@ class LeadMatchViewSet(viewsets.ModelViewSet):
             except ValueError:
                 return LeadMatch.objects.none()
             filtered = filtered.filter(job_request_id=job_request_id_int)
-
-        # (debug prints – remove later if you want)
-        print("DEBUG → job_request filter:", self.request.query_params.get("job_request"))
-        print("DEBUG → SQL:", filtered.query)
 
         return filtered
     
@@ -309,7 +307,7 @@ class LeadMatchViewSet(viewsets.ModelViewSet):
         data = LeadMatchSerializer(lead).data
 
         # 🔐 Anonymisation of customer
-        if not lead.customer_info_unlocked:
+        if not has_offer_access(lead.company, lead.job_request):
             if "job_request" in data and "customer" in data["job_request"]:
                 data["job_request"]["customer"] = {
                     "id": None,
@@ -324,10 +322,10 @@ class LeadMatchViewSet(viewsets.ModelViewSet):
         else:
             customer = lead.job_request.customer
             data["customer_phone"] = getattr(customer, "phone", None)
-            data["customer_email"] = getattr(customer.user, "email", None)
+            data["customer_email"] = getattr(customer, "email", None)
 
         # 💬 If chat is locked, return empty list so frontend knows.
-        if not lead.can_chat:
+        if not has_chat_access(lead.company, lead.job_request):
             data["messages"] = []
 
         return Response(data, status=status.HTTP_200_OK)
@@ -423,6 +421,7 @@ class LeadMessageViewSet(viewsets.ModelViewSet):
         .all()
         .select_related("lead", "sender_company", "sender_customer")
     )
+    http_method_names = ["get", "post", "head", "options"]
     serializer_class = LeadMessageSerializer
     permission_classes = [
         IsAuthenticated,
@@ -446,14 +445,17 @@ class LeadMessageViewSet(viewsets.ModelViewSet):
 
         company = get_company_for_user(self.request.user)
 
-        # 🔐 Företag måste ha unlockat lead
         if company:
-            if not has_offer_access(company, lead.job_request):
+            if lead.company_id != company.pk or not has_chat_access(company, lead.job_request):
                 return qs.none()
-
+        elif lead.job_request.customer_id != self.request.user.pk:
+            return qs.none()
+        if not has_chat_access(lead.company, lead.job_request):
+            return qs.none()
         return qs.filter(lead=lead).order_by("created_at")
 
 
+    @transaction.atomic
     def perform_create(self, serializer):
         """
         Kur dërgohet mesazh:
@@ -473,6 +475,13 @@ class LeadMessageViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError({"detail": f"Lead me ID {lead_id} nuk ekziston."})
 
 
+        from offers.models import Offer
+        from offers.contact_policy import enforce_contact_policy
+        offer = Offer.objects.select_for_update().filter(company=lead.company, job_request=lead.job_request).first()
+        if not offer or not offer.can_chat():
+            raise serializers.ValidationError({"detail": "Dërgoni ofertën përpara bisedës."})
+        enforce_contact_policy(offer, serializer.validated_data.get("message", ""))
+
         company = get_company_for_user(user)
         if company:
             if lead.company != company:
@@ -481,7 +490,7 @@ class LeadMessageViewSet(viewsets.ModelViewSet):
                 )
 
             # 🔐 Lead måste vara upplåst
-            if not has_offer_access(company, lead.job_request):
+            if not has_chat_access(company, lead.job_request):
                 raise serializers.ValidationError(
                     {
                         "detail": "Lead måste vara upplåst för att skriva meddelanden.",
@@ -499,7 +508,9 @@ class LeadMessageViewSet(viewsets.ModelViewSet):
 
 
         if getattr(user, "customer_profile", None):
-            if lead.job_request.customer != user.customer_profile:
+            if not has_chat_access(lead.company, lead.job_request):
+                raise serializers.ValidationError({"detail": "Biseda hapet pas dërgimit të ofertës."})
+            if lead.job_request.customer_id != user.pk:
                 raise serializers.ValidationError(
                     {"detail": "Nuk keni autorizim për këtë lead."}
                 )

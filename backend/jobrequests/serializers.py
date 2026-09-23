@@ -13,12 +13,24 @@ from taxonomy.models import Profession
 # ------------------------------------------------------------
 
 class OfferVersionPublicSerializer(serializers.Serializer):
+    def to_representation(self, instance):
+        from offers.contact_policy import safe_text
+        data = super().to_representation(instance)
+        request = self.context.get("request")
+        own = bool(request and request.user.pk == instance.offer.company.user_id)
+        if not own and not instance.offer.can_view_lead_details():
+            for field in ("presentation_text", "duration_text", "includes_text", "excludes_text", "payment_terms"):
+                data[field] = safe_text(data.get(field, ""))
+        return data
+
     version_number = serializers.IntegerField()
     presentation_text = serializers.CharField()
     can_start_from = serializers.DateField(allow_null=True)
     duration_text = serializers.CharField()
     price_type = serializers.CharField()
     price_amount = serializers.DecimalField(max_digits=10, decimal_places=2, allow_null=True)
+    estimated_hours = serializers.DecimalField(max_digits=8, decimal_places=2, allow_null=True)
+    estimated_total = serializers.DecimalField(max_digits=10, decimal_places=2, read_only=True)
     currency = serializers.CharField()
     includes_text = serializers.CharField()
     excludes_text = serializers.CharField()
@@ -32,12 +44,18 @@ class OfferPublicSerializer(serializers.Serializer):
     company = CompanySerializer(read_only=True)
     status = serializers.CharField()
     round_number = serializers.IntegerField()
-    lead_unlocked = serializers.BooleanField()
+    lead_unlocked = serializers.BooleanField(source="can_view_lead_details", read_only=True)
     created_at = serializers.DateTimeField()
     updated_at = serializers.DateTimeField()
     accepted_at = serializers.DateTimeField(allow_null=True)
     rejected_at = serializers.DateTimeField(allow_null=True)
-    current_version = OfferVersionPublicSerializer(allow_null=True, required=False)
+    current_version = serializers.SerializerMethodField()
+    accepted_version = OfferVersionPublicSerializer(allow_null=True, required=False)
+
+    def get_current_version(self, obj):
+        request = self.context.get("request")
+        v = obj.customer_version() if request and request.user.role == "customer" else obj.current_version
+        return OfferVersionPublicSerializer(v, context=self.context).data if v else None
 
 
 # ------------------------------------------------------------
@@ -63,6 +81,15 @@ class JobRequestModerationEventSerializer(serializers.ModelSerializer):
 # ------------------------------------------------------------
 
 class JobRequestListSerializer(serializers.ModelSerializer):
+    def to_representation(self, instance):
+        from offers.contact_policy import safe_text
+        data = super().to_representation(instance)
+        request = self.context.get("request")
+        if not request or request.user.pk != instance.customer_id:
+            for field in ("title", "description"):
+                data[field] = safe_text(data.get(field, ""))
+        return data
+
     has_offer = serializers.SerializerMethodField()
     customer = serializers.SerializerMethodField()
     moderation_note = serializers.SerializerMethodField()
@@ -78,6 +105,7 @@ class JobRequestListSerializer(serializers.ModelSerializer):
             "description",
             "budget",
             "is_active",
+            "inactive_marked_at",
             "city_detail",
             "profession_detail",
             "customer",
@@ -106,7 +134,7 @@ class JobRequestListSerializer(serializers.ModelSerializer):
             return None
 
         offer = obj.offers.filter(company=company).first()
-        if not offer or not offer.lead_unlocked:
+        if not offer or not offer.can_view_lead_details():
             return None
 
         return {"id": obj.customer_id}
@@ -162,6 +190,7 @@ class JobRequestSerializer(serializers.ModelSerializer):
             "created_at",
             "updated_at",
             "is_active",
+            "inactive_marked_at",
             "lead_unlocked",
             "max_offers",
             "offers_count",
@@ -171,6 +200,8 @@ class JobRequestSerializer(serializers.ModelSerializer):
             "is_reopened",
             "reopened_at",
             "is_completed",
+            "status",
+            "completed_at",
             "expires_at",
             "offers",
             "winner_offer",
@@ -185,18 +216,34 @@ class JobRequestSerializer(serializers.ModelSerializer):
         ]
 
         read_only_fields = (
+            "status", "completed_at", "is_completed",
+            "inactive_marked_at",
             "customer",
             "created_at",
             "last_offer_at",
             "reopened_at",
             "updated_at",
             "is_active",
+            "inactive_marked_at",
             "moderation_status",
             "moderation_note",
             "submitted_at",
             "moderation_updated_at",
             "published_at",
         )
+
+    def to_representation(self, instance):
+        data = super().to_representation(instance)
+        user = self._get_request_user()
+        owner = bool(user and (user.is_superuser or instance.customer_id == user.pk))
+        offer = self._get_company_offer(instance) if not owner else None
+        if not owner and not (offer and offer.can_view_lead_details()):
+            data["address"] = None
+            data["postal_code"] = None
+            from offers.contact_policy import safe_text
+            data["description"] = safe_text(data.get("description", ""))
+            data["title"] = safe_text(data.get("title", ""))
+        return data
 
     def _get_request_user(self):
         request = self.context.get("request")
@@ -220,6 +267,8 @@ class JobRequestSerializer(serializers.ModelSerializer):
             return None
 
         role = getattr(user, "role", None)
+        if not getattr(obj.customer, "customer_profile", None):
+            return None
 
         if role == "customer":
             return BasicCustomerSerializer(
@@ -228,7 +277,7 @@ class JobRequestSerializer(serializers.ModelSerializer):
 
         if role == "company":
             offer = self._get_company_offer(obj)
-            if not offer or not offer.lead_unlocked:
+            if not offer or not offer.can_view_lead_details():
                 return None
             return BasicCustomerSerializer(
                 obj.customer.customer_profile
@@ -238,7 +287,7 @@ class JobRequestSerializer(serializers.ModelSerializer):
 
     def get_lead_unlocked(self, obj):
         offer = self._get_company_offer(obj)
-        return bool(offer and offer.lead_unlocked)
+        return bool(offer and offer.can_view_lead_details())
 
     def get_audit_logs(self, obj):
         user = self._get_request_user()
@@ -254,7 +303,7 @@ class JobRequestSerializer(serializers.ModelSerializer):
 
         if role == "company":
             offer = self._get_company_offer(obj)
-            if not offer or not offer.lead_unlocked:
+            if not offer or not offer.can_view_lead_details():
                 return []
             return JobRequestAuditSerializer(
                 obj.audit_logs.all().order_by("-created_at"), many=True
@@ -276,9 +325,7 @@ class JobRequestSerializer(serializers.ModelSerializer):
 
     def get_offers_left(self, obj):
         company = self._get_company()
-        if not company:
-            return 0
-        return getattr(company, "free_leads_remaining", 0)
+        return company.free_offers_remaining if company else 0
 
     def get_offers(self, obj):
         user = self._get_request_user()
@@ -288,12 +335,12 @@ class JobRequestSerializer(serializers.ModelSerializer):
         role = getattr(user, "role", None)
 
         if role == "customer":
-            qs = obj.offers.select_related("company", "current_version").order_by("-created_at")
-            return OfferPublicSerializer(qs, many=True).data
+            qs = obj.offers.filter(versions__is_signed=True).distinct().select_related("company", "current_version").order_by("-created_at")
+            return OfferPublicSerializer(qs, many=True, context=self.context).data
 
         if role == "company":
             offer = self._get_company_offer(obj)
-            return OfferPublicSerializer([offer], many=True).data if offer else []
+            return OfferPublicSerializer([offer], many=True, context=self.context).data if offer else []
 
         return []
 
@@ -310,15 +357,15 @@ class JobRequestSerializer(serializers.ModelSerializer):
         if role == "customer":
             offer = obj.winner_offer
             offer = type(offer).objects.select_related("company", "current_version").get(pk=offer.pk)
-            return OfferPublicSerializer(offer).data
+            return OfferPublicSerializer(offer, context=self.context).data
 
         if role == "company":
             offer = self._get_company_offer(obj)
-            if not offer or not offer.lead_unlocked:
+            if not offer or not offer.can_view_lead_details():
                 return None
             if offer.id != obj.winner_offer_id:
                 return None
-            return OfferPublicSerializer(offer).data
+            return OfferPublicSerializer(offer, context=self.context).data
 
         return None
     
@@ -337,25 +384,25 @@ class JobRequestSerializer(serializers.ModelSerializer):
             offer = obj.winner_offer
 
             return {
-                "company": CompanySerializer(obj.winner_company).data if obj.winner_company else None,
+                "company": CompanySerializer(obj.winner_company, context=self.context).data if obj.winner_company else None,
                 "price": obj.winner_price,
-                "offer": OfferPublicSerializer(offer).data,
+                "offer": OfferPublicSerializer(offer, context=self.context).data,
             }
 
         # Company → endast om lead unlocked + rätt company
         if role == "company":
             offer = self._get_company_offer(obj)
 
-            if not offer or not offer.lead_unlocked:
+            if not offer or not offer.can_view_lead_details():
                 return None
 
             if offer.id != obj.winner_offer_id:
                 return None
 
             return {
-                "company": CompanySerializer(obj.winner_company).data if obj.winner_company else None,
+                "company": CompanySerializer(obj.winner_company, context=self.context).data if obj.winner_company else None,
                 "price": obj.winner_price,
-                "offer": OfferPublicSerializer(offer).data,
+                "offer": OfferPublicSerializer(offer, context=self.context).data,
             }
 
         return None
