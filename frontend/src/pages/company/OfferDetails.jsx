@@ -1,3 +1,5 @@
+import OfferAgreementPanel from "../../components/offers/OfferAgreementPanel";
+import ChatPolicyNotice from "../../components/offers/ChatPolicyNotice";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import api from "../../api/axios";
@@ -74,11 +76,13 @@ export default function OfferDetails() {
   const { access, user } = useAuth();
 
   const [offer, setOffer] = useState(null);
+  const chatAvailable = Boolean(offer?.chat_available);
   const [versions, setVersions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [loadingVersions, setLoadingVersions] = useState(true);
 
   const [messages, setMessages] = useState([]);
+  const [chatError, setChatError] = useState("");
   const [messageInput, setMessageInput] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [chatLoading, setChatLoading] = useState(true);
@@ -120,6 +124,11 @@ export default function OfferDetails() {
   // ===============================
 
   const fetchMessages = useCallback(async () => {
+    if (!chatAvailable) {
+      setMessages([]);
+      setChatLoading(false);
+      return;
+    }
     try {
       const res = await api.get(`/offers/${id}/messages/`);
       const serverMessages = Array.isArray(res.data) ? res.data : [];
@@ -138,9 +147,10 @@ export default function OfferDetails() {
     } finally {
       setChatLoading(false);
     }
-  }, [id]);
+  }, [id, chatAvailable]);
 
   const sendMessage = async (content = messageInput, retryMessage = null) => {
+    setChatError("");
     const trimmed = content.trim();
     if (!trimmed || isSending || offer?.chat_locked) return;
 
@@ -180,7 +190,7 @@ export default function OfferDetails() {
         });
       }
     } catch (err) {
-      console.error("Send message error:", err);
+      setChatError(err.response?.data?.detail || "Mesazhi nuk u dërgua. Provoni përsëri.");
 
       setMessages((prev) =>
         prev.map((msg) =>
@@ -364,6 +374,7 @@ export default function OfferDetails() {
         Kthehu
       </button>
 
+      <OfferAgreementPanel offer={offer} />
       {/* OFFER OVERVIEW */}
 
       <div className="premium-card overflow-hidden">
@@ -376,7 +387,7 @@ export default function OfferDetails() {
           </div>
 
           <div className="flex flex-wrap gap-3">
-            <button onClick={downloadPdf} className="premium-btn btn-light inline-flex items-center gap-2">
+            <button onClick={downloadPdf} disabled={!offer.accepted_version} className="premium-btn btn-light inline-flex items-center gap-2">
               <Download size={16} /> Shkarko PDF
             </button>
             {job?.id && (
@@ -406,8 +417,11 @@ export default function OfferDetails() {
           </InfoSection>
 
           <InfoSection title="Çmimi dhe afati" icon={<Euro size={18} />}>
+            {offer.accepted_version && offer.accepted_version.id !== v?.id && <p className="rounded-lg bg-amber-50 p-3 text-sm">Ky është {v?.is_signed ? "një propozim i dërguar" : "një draft"}, jo marrëveshja e pranuar. Versioni i pranuar shfaqet veçmas më sipër.</p>}
             <DetailRow label="Çmimi" value={v?.price_amount ? `${v.price_amount} ${v.currency || "EUR"}` : null} strong />
             <DetailRow label="Lloji i çmimit" value={v?.price_type} />
+            {v?.price_type === "hourly" && <><DetailRow label="Orë të vlerësuara" value={v.estimated_hours} /><DetailRow label="Total i vlerësuar (€)" value={v.estimated_total} /></>}
+
             <DetailRow label="Mund të fillojë" value={v?.can_start_from} />
             <DetailRow label="Kohëzgjatja" value={v?.duration_text} />
             <DetailRow label="Nënshkruar" value={v?.is_signed ? "Po" : "Jo"} />
@@ -466,7 +480,7 @@ export default function OfferDetails() {
           </div>
           <div>
             <h3 className="font-semibold">Komunikimi me klientin</h3>
-            <p className="text-xs text-gray-500">{chatLocked ? "Biseda është mbyllur pas vlerësimit" : "Mesazhet rifreskohen automatikisht"}</p>
+            <p className="text-xs text-gray-500">{chatLocked ? (review ? "Biseda është mbyllur pas vlerësimit" : "Biseda hapet pasi dërgoni ofertën") : "Mesazhet rifreskohen automatikisht"}</p>
           </div>
         </div>
 
@@ -533,12 +547,14 @@ export default function OfferDetails() {
           <div ref={chatEndRef} />
         </div>
 
+        <ChatPolicyNotice accepted={offer?.contact_details_available} />
+        {chatError && <p role="alert" className="px-5 py-3 text-sm text-red-700">{chatError}</p>}
         {chatLocked ? (
           <div className="flex items-start gap-3 border-t border-gray-100 bg-gray-50 p-5 text-sm text-gray-600">
             <Lock className="mt-0.5 shrink-0 text-gray-500" size={18} />
             <div>
               <p className="font-semibold text-gray-800">Biseda është mbyllur</p>
-              <p className="mt-1 text-xs leading-5">Klienti ka dorëzuar vlerësimin. Mesazhet e mëparshme mbeten të dukshme, por nuk mund të dërgohen mesazhe të reja.</p>
+              <p className="mt-1 text-xs leading-5">{review ? "Klienti ka dorëzuar vlerësimin. Mesazhet e mëparshme mbeten të dukshme, por nuk mund të dërgohen mesazhe të reja." : "Nënshkruani dhe dërgoni ofertën për të hapur bisedën me klientin."}</p>
             </div>
           </div>
         ) : (

@@ -143,6 +143,13 @@ class JobRequest(models.Model):
     is_active = models.BooleanField(default=True, db_index=True, verbose_name="Aktive")
     is_completed = models.BooleanField(default=False, db_index=True, verbose_name="Përfunduar")
 
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+    activity_tracking_started_at = models.DateTimeField(default=timezone.now)
+    customer_activity_at = models.DateTimeField(null=True, blank=True)
+    inactivity_reminded_at = models.DateTimeField(null=True, blank=True)
+    inactive_marked_at = models.DateTimeField(null=True, blank=True)
+
     max_offers = models.PositiveIntegerField(default=7, verbose_name="Numri maksimal i ofertave")
     last_offer_at = models.DateTimeField(null=True, blank=True, verbose_name="Data e ofertës së fundit")
 
@@ -203,6 +210,12 @@ class JobRequest(models.Model):
         if new_status not in dict(self.MODERATION_STATUS_CHOICES):
             raise ValueError("Invalid moderation status")
 
+        if new_status == self.MODERATION_APPROVED:
+            from payments.models import PlatformCharge, PaymentStatus
+            if PlatformCharge.objects.filter(job_request=self).exclude(status=PaymentStatus.PAID).exists():
+                from django.core.exceptions import ValidationError
+                raise ValidationError("Publikimi pret konfirmimin e pagesës.")
+
         now = timezone.now()
         self.moderation_status = new_status
         self.moderation_note = (note or "").strip()
@@ -248,16 +261,15 @@ class JobRequest(models.Model):
 
     @property
     def offers_count(self):
-        from offers.models import OfferStatus
-
         if not self.pk:
             return 0
 
-        return self.offers.exclude(status=OfferStatus.DRAFT).count()
+        return self.offers.filter(versions__is_signed=True).distinct().count()
 
     @property
     def offers_left(self):
-        return max(self.max_offers - self.offers_count, 0)
+        from payments.offer_slots import occupied_offers
+        return max(self.max_offers - occupied_offers(self).count(), 0)
 
     @property
     def extra_offers_added(self):

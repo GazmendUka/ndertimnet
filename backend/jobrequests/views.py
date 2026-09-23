@@ -4,6 +4,7 @@ import logging
 from datetime import timedelta
 
 from django.db import transaction
+from payments.billing import create_publication_charge
 from django.utils import timezone
 
 from rest_framework import permissions, status, viewsets
@@ -195,6 +196,9 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
             raise ValidationError("Customer not found.")
 
         with transaction.atomic():
+            draft = type(draft).objects.select_for_update().get(pk=draft.pk)
+            if draft.is_submitted:
+                return Response({"detail": "Ky draft është tashmë i dorëzuar."}, status=400)
             job = JobRequest.objects.create(
                 customer=customer,
                 title=draft.title,
@@ -210,6 +214,8 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
                 submitted_at=timezone.now(),
                 expires_at=None,
             )
+
+            create_publication_charge(job)
 
             draft.is_submitted = True
             draft.save(update_fields=["is_submitted"])
@@ -364,6 +370,7 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
     # --------------------------------------------------------
     # 📝 Skapa ny job request → koppla till customer_profile
     # --------------------------------------------------------
+    @transaction.atomic
     def perform_create(self, serializer):
         user = self.request.user
 
@@ -378,6 +385,7 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
             is_active=False,
             expires_at=None,
         )
+        create_publication_charge(job)
         JobRequestModerationEvent.objects.create(
             job_request=job,
             status=JobRequest.MODERATION_PENDING,
@@ -517,7 +525,8 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
             return Response({"detail": "Oferta nuk u gjet."}, status=status.HTTP_404_NOT_FOUND)
 
         try:
-            _, job = accept_offer_service(offer_id=offer.id, customer=user)
+            _, job = accept_offer_service(offer_id=offer.id, customer=user,
+                version_id=offer.current_version_id if offer.status != OfferStatus.ACCEPTED else None)
         except OfferAcceptanceError as exc:
             return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -553,9 +562,11 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
-        offer.status = OfferStatus.REJECTED
-        offer.rejected_at = timezone.now()
-        offer.save()
+        from offers.services import decide_version
+        try:
+            decide_version(offer_id=offer.pk, customer=user, version_id=offer.current_version_id, decision="reject")
+        except OfferAcceptanceError as exc:
+            return Response({"detail": str(exc)}, status=status.HTTP_400_BAD_REQUEST)
 
         JobRequestAudit.objects.create(
             job_request=job,
@@ -625,6 +636,27 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
     # --------------------------------------------------------
     # 📜 GET /api/jobrequests/{id}/audit/
     # --------------------------------------------------------
+    @action(detail=True, methods=["post"], url_path="complete-work")
+    @transaction.atomic
+    def complete_work(self, request, pk=None):
+        candidate = self.get_object()
+        job = JobRequest.objects.select_for_update().get(pk=candidate.pk)
+        if job.customer_id != request.user.pk or request.user.role != "customer":
+            raise PermissionDenied("Vetëm klienti mund të konfirmojë përfundimin.")
+        if not job.winner_offer_id or job.is_deleted:
+            raise ValidationError("Pranoni ofertën përpara përfundimit të punës.")
+        if request.data.get("confirm") is not True:
+            raise ValidationError("Konfirmoni që puna ka përfunduar.")
+        if not job.completed_at:
+            job.completed_at = timezone.now()
+            job.status = "completed"
+            job.is_completed = True
+            job.is_active = False
+            job.save(update_fields=["completed_at", "status", "is_completed", "is_active", "updated_at"])
+            JobRequestAudit.objects.create(job_request=job, user=request.user,
+                action="job_closed", message="Klienti konfirmoi përfundimin e punës.")
+        return Response(self.get_serializer(job).data)
+
     @action(detail=True, methods=["get"], url_path="audit")
     def audit_log(self, request, pk=None):
         job = self.get_object()
@@ -649,7 +681,7 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
                 return Response({"detail": "Not allowed"}, status=status.HTTP_403_FORBIDDEN)
 
             offer = Offer.objects.filter(company=company, job_request=job).first()
-            if not offer or not offer.lead_unlocked:
+            if not offer or not offer.can_view_lead_details():
                 return Response({"detail": "Lead is locked"}, status=status.HTTP_403_FORBIDDEN)
 
         else:
@@ -662,8 +694,10 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
     # --------------------------------------------------------
     # 🗑️ DELETE /api/jobrequests/{id}/  → Soft delete
     # --------------------------------------------------------
+    @transaction.atomic
     def destroy(self, request, *args, **kwargs):
-        job = self.get_object()
+        candidate = self.get_object()
+        job = JobRequest.objects.select_for_update().get(pk=candidate.pk)
         user = request.user
 
         if getattr(user, "role", None) != "customer":
@@ -710,4 +744,6 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
             message="Kërkesa u fshi nga klienti.",
         )
 
+        from payments.credits import compensate_job_offers
+        transaction.on_commit(lambda: compensate_job_offers(job.pk), robust=True)
         return Response(status=status.HTTP_204_NO_CONTENT)

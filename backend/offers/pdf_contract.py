@@ -107,7 +107,7 @@ def build_offer_contract_pdf(offer) -> bytes:
     )
 
     # Data extraction
-    version = getattr(offer, "current_version", None)
+    version = offer.accepted_version or getattr(offer, "current_version", None)
     company = getattr(offer, "company", None)
     job = getattr(offer, "job_request", None)
 
@@ -269,6 +269,8 @@ def build_offer_contract_pdf(offer) -> bytes:
     price_label = "Çmim fiks" if str(price_type).lower() == "fixed" else ("Çmim për orë" if str(price_type).lower() == "hourly" else str(price_type))
     story.append(Paragraph(f"<b>Lloji i çmimit:</b> {price_label}", P))
     story.append(Paragraph(f"<b>Shuma:</b> {_money(price_amount, currency)}", P))
+    if version and version.price_type == "hourly":
+        story.append(Paragraph(f"<b>Orë të vlerësuara:</b> {version.estimated_hours or chr(45)} · <b>Total i vlerësuar:</b> {_money(version.estimated_total, currency)}", P))
 
     if includes_text:
         story.append(Paragraph("<b>Përfshin:</b>", P))

@@ -1,7 +1,6 @@
 # backend/payments/views.py
 
 from decimal import Decimal, InvalidOperation
-from datetime import timedelta
 
 from django.conf import settings
 from django.shortcuts import get_object_or_404
@@ -28,16 +27,10 @@ from payments.services.raiaccept import (
     FAILED_STATUSES,
     PAID_STATUSES,
     RaiAcceptError,
-    build_job_payment_payload,
-    build_lead_unlock_payload,
-    create_checkout,
     get_transaction_details,
 )
 from payments.serializers import PaymentSerializer
 from pushnotifications.services import schedule_push_notification
-
-
-PAID_LEAD_PRICE = Decimal("4.95")
 
 
 class PaymentViewSet(viewsets.ViewSet):
@@ -147,7 +140,7 @@ class PaymentViewSet(viewsets.ViewSet):
             return Response({"status": "not_started", "lead_unlocked": False})
 
         data = PaymentSerializer(payment).data
-        data["lead_unlocked"] = payment.offer.lead_unlocked
+        data["lead_unlocked"] = payment.offer.can_view_lead_details()
         return Response(data)
 
     @action(detail=True, methods=["get"], url_path="receipt")
@@ -193,187 +186,8 @@ class PaymentViewSet(viewsets.ViewSet):
 
     @action(detail=False, methods=["post"], url_path="pay-job")
     def pay_job(self, request):
-        if getattr(request.user, "role", None) != "customer":
-            return Response(
-                {"detail": "Only customers can pay an accepted offer."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
-
-        if not settings.CUSTOMER_JOB_PAYMENTS_ENABLED:
-            return Response(
-                {
-                    "detail": "Pagesat aktivizohen sapo llogaria bankare e tregtarit të jetë gati.",
-                    "code": "merchant_setup_required",
-                },
-                status=status.HTTP_503_SERVICE_UNAVAILABLE,
-            )
-
-        offer_id = request.data.get("offer")
-        if not offer_id:
-            return Response(
-                {"detail": "offer is required"},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
-        offer = get_object_or_404(
-            Offer.objects.select_related(
-                "company",
-                "current_version",
-                "job_request",
-                "job_request__city",
-            ),
-            pk=offer_id,
-            job_request__customer=request.user,
-            status=OfferStatus.ACCEPTED,
-        )
-        version = offer.current_version
-        if not version or not version.is_signed:
-            return Response(
-                {"detail": "Only a signed offer can be paid."},
-                status=status.HTTP_409_CONFLICT,
-            )
-        if version.price_type != PriceType.FIXED:
-            return Response(
-                {
-                    "detail": "Oferta me çmim për orë kërkon fillimisht një shumë përfundimtare.",
-                    "code": "final_amount_required",
-                },
-                status=status.HTTP_409_CONFLICT,
-            )
-        if not version.price_amount or version.price_amount <= 0:
-            return Response(
-                {"detail": "The accepted offer has no payable amount."},
-                status=status.HTTP_409_CONFLICT,
-            )
-        currency = (version.currency or "EUR").upper()
-        if currency != "EUR":
-            return Response(
-                {"detail": "Only EUR payments are currently supported."},
-                status=status.HTTP_409_CONFLICT,
-            )
-
-        with transaction.atomic():
-            payment, created = Payment.objects.select_for_update().get_or_create(
-                offer=offer,
-                company=offer.company,
-                type=PaymentType.JOB_PAYMENT,
-                defaults={
-                    "payer_user": request.user,
-                    "amount": version.price_amount,
-                    "currency": currency,
-                    "provider": PaymentProvider.RAIACCEPT,
-                },
-            )
-
-            if payment.status == PaymentStatus.PAID:
-                return Response(PaymentSerializer(payment).data, status=status.HTTP_200_OK)
-
-            if (
-                not created
-                and payment.status == PaymentStatus.PENDING
-                and payment.amount == version.price_amount
-                and payment.currency == currency
-                and payment.provider_reference
-                and payment.checkout_url
-            ):
-                return Response(
-                    {
-                        "message": "RaiAccept checkout already exists",
-                        "requires_payment": True,
-                        "payment_url": payment.checkout_url,
-                        "payment_amount": f"{payment.amount:.2f}",
-                        "currency": payment.currency,
-                    },
-                    status=status.HTTP_202_ACCEPTED,
-                )
-
-            recently_started = (
-                not created
-                and payment.status == PaymentStatus.PENDING
-                and not payment.checkout_url
-                and payment.updated_at >= timezone.now() - timedelta(seconds=60)
-            )
-            if recently_started:
-                return Response(
-                    {
-                        "detail": "Pagesa po përgatitet. Provoni përsëri pas pak.",
-                        "code": "payment_initializing",
-                    },
-                    status=status.HTTP_409_CONFLICT,
-                )
-
-            payment.payer_user = request.user
-            payment.amount = version.price_amount
-            payment.currency = currency
-            payment.provider = PaymentProvider.RAIACCEPT
-            payment.status = PaymentStatus.PENDING
-            payment.paid_at = None
-            payment.failure_code = ""
-            payment.provider_reference = ""
-            payment.provider_session_id = ""
-            payment.provider_transaction_id = ""
-            payment.checkout_url = ""
-            payment.save(update_fields=[
-                "payer_user",
-                "amount",
-                "currency",
-                "provider",
-                "status",
-                "paid_at",
-                "failure_code",
-                "provider_reference",
-                "provider_session_id",
-                "provider_transaction_id",
-                "checkout_url",
-                "updated_at",
-            ])
-
-        return_url = self._frontend_job_payment_return_url(offer.id)
-        notification_url = self._absolute_backend_url(
-            request,
-            "/api/payments/raiaccept/notify/",
-        )
-        payload = build_job_payment_payload(
-            payment=payment,
-            offer=offer,
-            request=request,
-            return_url=return_url,
-            notification_url=notification_url,
-        )
-
-        try:
-            checkout = create_checkout(payload)
-        except RaiAcceptError:
-            payment.mark_failed("checkout_failed")
-            return Response(
-                {
-                    "detail": "Nuk u arrit të krijohet pagesa.",
-                    "code": "raiaccept_checkout_failed",
-                },
-                status=status.HTTP_502_BAD_GATEWAY,
-            )
-
-        payment.provider_reference = checkout["order_id"]
-        payment.provider_session_id = checkout.get("session_id", "")
-        payment.checkout_url = checkout["payment_url"]
-        payment.status = PaymentStatus.PENDING
-        payment.save(update_fields=[
-            "provider_reference",
-            "provider_session_id",
-            "checkout_url",
-            "status",
-            "updated_at",
-        ])
-        return Response(
-            {
-                "message": "RaiAccept checkout created",
-                "requires_payment": True,
-                "payment_url": checkout["payment_url"],
-                "payment_amount": f"{payment.amount:.2f}",
-                "currency": payment.currency,
-            },
-            status=status.HTTP_202_ACCEPTED,
-        )
+        return Response({"detail": "Pagesa e punës bëhet drejtpërdrejt me kompaninë.",
+                         "code": "job_payments_retired"}, status=410)
 
     @action(detail=False, methods=["post"], url_path="unlock-lead")
     def unlock_lead(self, request):
@@ -408,201 +222,15 @@ class PaymentViewSet(viewsets.ViewSet):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        platform = str(request.data.get("platform") or "web").lower()
-
+        # Opening a draft is free. Billing is enforced when the offer is sent.
         with transaction.atomic():
             company = Company.objects.select_for_update().get(pk=company.pk)
-
-            offer, _ = Offer.objects.get_or_create(
-                company=company,
-                job_request=job,
-            )
-
-            if offer.lead_unlocked:
-                LeadAccess.objects.get_or_create(company=company, job_request=job)
-                return Response(
-                    {
-                        "detail": "Lead är redan upplåst.",
-                        "payment_amount": "0.00",
-                        "currency": "EUR",
-                        "used_free_lead": False,
-                        "free_leads_remaining": company.free_leads_remaining,
-                    },
-                    status=status.HTTP_200_OK,
-                )
-
-            use_free_lead = company.can_unlock_free_lead()
-            payment_amount = Decimal("0.00") if use_free_lead else PAID_LEAD_PRICE
-
-            if not use_free_lead and platform in {"ios", "android"}:
-                return Response(
-                    {
-                        "detail": "Pagesa për hapjen e lead-it në aplikacion kërkon sistemin e pagesave të dyqanit.",
-                        "code": "store_billing_required",
-                        "platform": platform,
-                    },
-                    status=status.HTTP_409_CONFLICT,
-                )
-
-            payment, created = Payment.objects.select_for_update().get_or_create(
-                offer=offer,
-                company=company,
-                type=PaymentType.UNLOCK_LEAD,
-                defaults={
-                    "amount": payment_amount,
-                    "currency": "EUR",
-                    "provider": PaymentProvider.INTERNAL,
-                },
-            )
-
-            is_existing_paid_unlock = not created and payment.status == PaymentStatus.PAID
-
-            if is_existing_paid_unlock:
-                self._grant_lead_access(payment)
-                return Response(
-                    {
-                        "detail": "Lead är redan upplåst.",
-                        "offer_id": offer.id,
-                        "payment_amount": f"{payment.amount:.2f}",
-                        "currency": payment.currency,
-                        "used_free_lead": payment.amount == Decimal("0.00"),
-                        "free_leads_remaining": company.free_leads_remaining,
-                    },
-                    status=status.HTTP_200_OK,
-                )
-
-            if use_free_lead and payment.status != PaymentStatus.PAID:
-                payment.amount = payment_amount
-                payment.currency = "EUR"
-                payment.provider = PaymentProvider.INTERNAL
-                payment.save(update_fields=["amount", "currency", "provider"])
-                self._grant_lead_access(payment)
-
-            if not is_existing_paid_unlock and use_free_lead:
-                company.free_leads_remaining -= 1
-                company.save(update_fields=["free_leads_remaining"])
-
-            if not use_free_lead:
-                if (
-                    not created
-                    and payment.status == PaymentStatus.PENDING
-                    and payment.provider_reference
-                    and payment.checkout_url
-                ):
-                    return Response(
-                        {
-                            "message": "RaiAccept checkout already exists",
-                            "requires_payment": True,
-                            "payment_url": payment.checkout_url,
-                            "payment_amount": f"{payment.amount:.2f}",
-                            "currency": payment.currency,
-                            "free_leads_remaining": company.free_leads_remaining,
-                        },
-                        status=status.HTTP_202_ACCEPTED,
-                    )
-
-                recently_started = (
-                    not created
-                    and payment.status == PaymentStatus.PENDING
-                    and not payment.checkout_url
-                    and payment.updated_at >= timezone.now() - timedelta(seconds=60)
-                )
-                if recently_started:
-                    return Response(
-                        {
-                            "detail": "Pagesa po përgatitet. Provoni përsëri pas pak.",
-                            "code": "payment_initializing",
-                        },
-                        status=status.HTTP_409_CONFLICT,
-                    )
-
-                payment.amount = PAID_LEAD_PRICE
-                payment.currency = "EUR"
-                payment.provider = PaymentProvider.RAIACCEPT
-                payment.status = PaymentStatus.PENDING
-                payment.paid_at = None
-                payment.failure_code = ""
-                payment.provider_reference = ""
-                payment.provider_session_id = ""
-                payment.provider_transaction_id = ""
-                payment.checkout_url = ""
-                payment.save(
-                    update_fields=[
-                        "amount",
-                        "currency",
-                        "provider",
-                        "status",
-                        "paid_at",
-                        "failure_code",
-                        "provider_reference",
-                        "provider_session_id",
-                        "provider_transaction_id",
-                        "checkout_url",
-                        "updated_at",
-                    ]
-                )
-
-        if not use_free_lead:
-            return_url = self._frontend_payment_return_url(job.id)
-            notification_url = self._absolute_backend_url(
-                request,
-                "/api/payments/raiaccept/notify/",
-            )
-            payload = build_lead_unlock_payload(
-                payment=payment,
-                job=job,
-                request=request,
-                return_url=return_url,
-                notification_url=notification_url,
-            )
-
-            try:
-                checkout = create_checkout(payload)
-            except RaiAcceptError:
-                payment.mark_failed("checkout_failed")
-                return Response(
-                    {
-                        "detail": "Nuk u arrit të krijohet pagesa.",
-                        "code": "raiaccept_checkout_failed",
-                    },
-                    status=status.HTTP_502_BAD_GATEWAY,
-                )
-
-            payment.provider_reference = checkout["order_id"]
-            payment.provider_session_id = checkout.get("session_id", "")
-            payment.checkout_url = checkout["payment_url"]
-            payment.status = PaymentStatus.PENDING
-            payment.save(update_fields=[
-                "provider_reference",
-                "provider_session_id",
-                "checkout_url",
-                "status",
-                "updated_at",
-            ])
-
-            return Response(
-                {
-                    "message": "RaiAccept checkout created",
-                    "requires_payment": True,
-                    "payment_url": checkout["payment_url"],
-                    "payment_amount": f"{payment.amount:.2f}",
-                    "currency": payment.currency,
-                    "free_leads_remaining": company.free_leads_remaining,
-                },
-                status=status.HTTP_202_ACCEPTED,
-            )
-
-        return Response(
-            {
-                "message": "Lead upplåst",
-                "offer_id": offer.id,
-                "payment_amount": f"{payment.amount:.2f}",
-                "currency": payment.currency,
-                "used_free_lead": not is_existing_paid_unlock and use_free_lead,
-                "free_leads_remaining": company.free_leads_remaining,
-            },
-            status=status.HTTP_201_CREATED,
-        )
+            offer, created = Offer.objects.get_or_create(company=company, job_request=job)
+            # Draft preparation does not unlock customer contact or chat.
+            LeadAccess.objects.get_or_create(company=company, job_request=job)
+        return Response({"offer_id": offer.pk, "lead_unlocked": offer.can_view_lead_details(),
+                         "payment_amount": "0.00", "currency": "EUR"},
+                        status=201 if created else 200)
 
     @action(
         detail=False,

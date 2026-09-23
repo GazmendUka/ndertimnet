@@ -290,6 +290,11 @@ class Company(models.Model):
     # PAYMENTS / LEADS
     # ===========================
 
+    free_offers_remaining = models.PositiveIntegerField(
+        default=25,
+        help_text="One-time introductory allowance; consumed only when an offer is sent."
+    )
+
     free_leads_remaining = models.PositiveIntegerField(
         default=25,
         help_text="Number of free lead unlocks remaining for the company"

@@ -1,6 +1,7 @@
 // src/pages/customer/CustomerJobDetails.jsx
 
 import React, { useEffect, useState, useMemo } from "react";
+import { PublicationBilling } from "../../components/payments/PlatformBilling";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
@@ -24,6 +25,17 @@ export default function CustomerJobDetails() {
   const [loadingOffers, setLoadingOffers] = useState(true);
 
   const [error, setError] = useState("");
+  const [completeConfirm, setCompleteConfirm] = useState(false);
+  const [completing, setCompleting] = useState(false);
+  const completeWork = async () => {
+    setCompleting(true);
+    try {
+      const response = await api.post(`/jobrequests/${id}/complete-work/`, { confirm: true });
+      setJob(response.data); setCompleteConfirm(false);
+      toast.success("Përfundimi i punës u regjistrua.");
+    } catch (e) { toast.error(e.response?.data?.detail || "Provoni përsëri."); }
+    finally { setCompleting(false); }
+  };
 
   // ---------------- Helpers ----------------
   const formatBudget = (b) => (b ? `${b} €` : "Pa buxhet");
@@ -223,6 +235,7 @@ export default function CustomerJobDetails() {
   const dashboardPath = "/customer";
   return (
     <div className="premium-container">
+      <PublicationBilling jobId={id} />
       {/* HEADER NAV */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button
@@ -242,6 +255,7 @@ export default function CustomerJobDetails() {
       </div>
 
       {/* JOB HEADER */}
+      {job.inactive_marked_at && <div className="rounded-xl bg-amber-50 p-4 mb-4"><strong>Kërkesa duket joaktive në platformë.</strong><p>A ju nevojitet ende puna? Hapni ofertat dhe përgjigjuni kompanive. Kjo shenjë nuk mbyll kërkesën dhe nuk krijon kredite automatike.</p></div>}
       {job.moderation_status !== "approved" && (
         <section className={`mb-5 rounded-2xl border p-5 sm:p-6 ${
           job.moderation_status === "changes_requested"
@@ -333,6 +347,15 @@ export default function CustomerJobDetails() {
           <div className="flex flex-col items-start sm:items-end gap-2">
             <ModerationBadge status={job.moderation_status} />
 
+            {acceptedOffer && <div className="text-sm space-y-2">
+              <p>{job.completed_at ? "Puna ka përfunduar" : "Oferta u pranua — puna në vazhdim"}</p>
+              {!job.completed_at && <button className="underline" onClick={() => setCompleteConfirm(true)}>Shëno punën si të përfunduar</button>}
+              {completeConfirm && <div role="alert">
+                <p>Konfirmoni vetëm pasi puna të ketë përfunduar. Pranimi i ofertës nuk e përfundon punën.</p>
+                <button disabled={completing} onClick={completeWork}>Konfirmo përfundimin</button>{" "}
+                <button disabled={completing} onClick={() => setCompleteConfirm(false)}>Kthehu</button>
+              </div>}
+            </div>}
             {acceptedOffer && (
               <p className="text-xs text-green-700 font-medium">
                 ✅ Kompania fituese:{" "}

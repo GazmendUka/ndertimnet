@@ -13,6 +13,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { isEmailNotVerifiedError } from "../../utils/emailVerification";
 import { toast } from "react-hot-toast";
 import api from "../../api/axios";
+import { ListingPrice } from "../../components/payments/PlatformBilling";
 import SearchableSelect from "../../components/ui/SearchableSelect";
 
 export default function JobRequestCreate() {
@@ -1014,6 +1015,7 @@ export default function JobRequestCreate() {
   // ------------------------------------------------------------
   const Step5 = (
     <div className="space-y-4">
+      <ListingPrice />
       <div>
         <label className="block mb-1 font-medium">Buxheti (opsionale)</label>
         <input

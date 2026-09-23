@@ -110,9 +110,8 @@ export default function CompanyJobDetails() {
         if (disposed) return;
         const payment = response.data;
 
-        if (payment.lead_unlocked || payment.status === "paid") {
-          setPaymentFeedback({ type: "success", text: "Pagesa u konfirmua dhe lead-i u hap." });
-          setJob((previous) => previous ? { ...previous, lead_unlocked: true } : previous);
+        if (payment.status === "paid") {
+          setPaymentFeedback({ type: "success", text: "Pagesa u konfirmua. Kontaktet hapen pasi dërgoni ofertën." });
           await checkOffer();
           return;
         }
@@ -165,12 +164,8 @@ export default function CompanyJobDetails() {
   // ------------------------------
   const leadUnlocked = job.lead_unlocked === true;
   const isClosed = !job.is_active;
-  const freeLeadsRemaining = Number(job.offers_left || 0);
-  const unlockLeadPriceLabel = freeLeadsRemaining > 0 ? "Gratis" : "4,95 €";
-  const unlockLeadHint =
-    freeLeadsRemaining > 0
-      ? `Ju keni ${freeLeadsRemaining} hapje falas të mbetura`
-      : "Hapja e këtij lead-i kushton 4,95 €";
+  const unlockLeadPriceLabel = "Pa pagesë";
+  const unlockLeadHint = "Përgatitja është falas. 25 ofertat e para dërgohen falas; më pas përdorni abonimin ose paguani për ofertë. Biseda hapet pas dërgimit; kontaktet direkte hapen pas dërgimit dhe pagesës ose përdorimit të kuotës.";
 
   const formatBudget = (b) => (b ? `${b} €` : "Pa buxhet");
   const formatDate = (d) => new Date(d).toLocaleDateString("sv-SE");
@@ -198,21 +193,17 @@ export default function CompanyJobDetails() {
         return;
       }
 
-      toast.success(
-        res.data.used_free_lead
-          ? "Lead u hap falas!"
-          : "Lead u hap me sukses!"
-      );
+      toast.success("Mund të përgatitni ofertën.");
 
       // 🔑 FORCE UI UPDATE
       setJob((prev) => ({
         ...prev,
-        lead_unlocked: true,
-        offers_left: res.data.free_leads_remaining,
+        lead_unlocked: res.data.lead_unlocked === true,
       }));
 
       // Efter unlock: refresh offer-exists (så UI direkt blir korrekt)
       await checkOffer();
+      handleCreateOffer();
     } catch (e) {
       const code = e.response?.data?.code;
       if (code === "store_billing_required") {
@@ -235,6 +226,8 @@ export default function CompanyJobDetails() {
   // ------------------------------
   return (
     <div className="premium-container">
+      {job.winner_offer && <p className="rounded-xl bg-blue-50 p-4 text-sm">{job.completed_at ? "Klienti konfirmoi përfundimin e punës." : "Oferta u pranua. Puna është në vazhdim."}</p>}
+      {job.inactive_marked_at && <p className="rounded-xl bg-amber-50 p-4 mb-4">Klienti nuk ka hapur oferta ose dhënë përgjigje në platformë. Kjo nuk provon mungesë kontakti me telefon dhe nuk jep kredit automatik.</p>}
       {/* TOP NAV */}
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <button
@@ -416,7 +409,7 @@ export default function CompanyJobDetails() {
                     <div className="flex-1">
                       <p className="font-medium">Lead është i mbyllur</p>
                       <p className="text-sm text-gray-600">
-                        Hapeni për të parë të dhënat e klientit.
+                        Biseda hapet pasi dërgoni ofertën. Kontaktet direkte hapen pasi dërgoni ofertën dhe tarifa paguhet ose përfshihet.
                       </p>
 
                       <div className="mt-2 text-sm">
@@ -436,9 +429,7 @@ export default function CompanyJobDetails() {
                         <Unlock size={16} />
                         {unlocking
                           ? "Po hapet..."
-                          : freeLeadsRemaining > 0
-                            ? "Hap lead falas"
-                            : "Blej lead"}
+                          : "Përgatit ofertën"}
                       </button>
                     </div>
                   </div>
@@ -446,16 +437,15 @@ export default function CompanyJobDetails() {
               ) : (
                 <div className="space-y-2 text-sm">
                   <p>
-                    <strong>Emri:</strong> {job.customer?.name || "—"}
+                    <strong>Emri:</strong> {[job.customer?.user?.first_name, job.customer?.user?.last_name].filter(Boolean).join(" ") || "—"}
                   </p>
                   {job.customer?.address && (
                     <p>
                       <strong>Adresa:</strong> {job.customer.address}
                     </p>
                   )}
-                  <p className="text-xs text-gray-500">
-                    * Kontaktet direkte (telefon/email) janë të mbyllura në këtë fazë.
-                  </p>
+                  {job.customer?.phone && <p><strong>Telefoni:</strong> {job.customer.phone}</p>}
+                  {job.customer?.user?.email && <p><strong>Email:</strong> {job.customer.user.email}</p>}
                 </div>
               )}
             </div>

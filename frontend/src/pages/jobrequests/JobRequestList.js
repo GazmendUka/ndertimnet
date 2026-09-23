@@ -8,6 +8,7 @@ import { useAuth } from "../../auth/AuthContext";
 import { ArrowLeft, MapPin, Euro, Tag, Briefcase, Lock } from "lucide-react";
 import StatusBadge from "../../components/ui/StatusBadge";
 import ModerationBadge from "../../components/ui/ModerationBadge";
+import OfferIntroduction from "../../components/payments/OfferIntroduction";
 
 export default function JobRequestList() {
   const { user, access, isCompany, isCustomer } = useAuth();
@@ -127,6 +128,9 @@ export default function JobRequestList() {
   // ============================================================
   return (
     <div className="premium-container">
+      {isCompany && canAccessMarketplace && (
+        <OfferIntroduction key={user.id} userId={user.id} />
+      )}
 
       {/* Back */}
       <button

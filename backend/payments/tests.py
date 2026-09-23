@@ -55,102 +55,8 @@ class PaymentUnlockLeadTests(APITestCase):
             profession=self.profession,
         )
 
-    def test_unlock_lead_writes_payment_and_access_state(self):
-        self.client.force_authenticate(self.company_user)
 
-        response = self.client.post(
-            "/api/payments/unlock-lead/",
-            {"job_request": self.job.id},
-            format="json",
-        )
 
-        self.assertEqual(response.status_code, 201)
-
-        offer = Offer.objects.get(company=self.company, job_request=self.job)
-        self.assertTrue(offer.lead_unlocked)
-        self.assertTrue(
-            LeadAccess.objects.filter(company=self.company, job_request=self.job).exists()
-        )
-        self.assertTrue(
-            Payment.objects.filter(
-                offer=offer,
-                company=self.company,
-                type=PaymentType.UNLOCK_LEAD,
-                status=PaymentStatus.PAID,
-            ).exists()
-        )
-
-        self.company.refresh_from_db()
-        self.assertEqual(self.company.free_leads_remaining, 1)
-
-    def test_unlock_lead_is_idempotent_after_success(self):
-        self.client.force_authenticate(self.company_user)
-
-        self.client.post(
-            "/api/payments/unlock-lead/",
-            {"job_request": self.job.id},
-            format="json",
-        )
-        response = self.client.post(
-            "/api/payments/unlock-lead/",
-            {"job_request": self.job.id},
-            format="json",
-        )
-
-        self.assertEqual(response.status_code, 200)
-
-        self.company.refresh_from_db()
-        self.assertEqual(self.company.free_leads_remaining, 1)
-        self.assertEqual(
-            Payment.objects.filter(company=self.company, type=PaymentType.UNLOCK_LEAD).count(),
-            1,
-        )
-        self.assertEqual(
-            LeadAccess.objects.filter(company=self.company, job_request=self.job).count(),
-            1,
-        )
-
-    @patch("payments.views.create_checkout")
-    def test_unlock_lead_creates_raiaccept_checkout_when_free_leads_are_used(self, create_checkout):
-        create_checkout.return_value = {
-            "order_id": "rai_order_123",
-            "session_id": "rai_session_123",
-            "payment_url": "https://checkout.raiaccept.test/session",
-        }
-        self.company.free_leads_remaining = 0
-        self.company.save(update_fields=["free_leads_remaining"])
-        self.client.force_authenticate(self.company_user)
-
-        response = self.client.post(
-            "/api/payments/unlock-lead/",
-            {"job_request": self.job.id},
-            format="json",
-        )
-
-        self.assertEqual(response.status_code, 202)
-        self.assertTrue(response.data["requires_payment"])
-        self.assertEqual(response.data["payment_url"], "https://checkout.raiaccept.test/session")
-        self.assertEqual(response.data["payment_amount"], "4.95")
-
-        offer = Offer.objects.get(company=self.company, job_request=self.job)
-        self.assertFalse(offer.lead_unlocked)
-        self.assertFalse(
-            LeadAccess.objects.filter(company=self.company, job_request=self.job).exists()
-        )
-
-        payment = Payment.objects.get(
-            offer=offer,
-            company=self.company,
-            type=PaymentType.UNLOCK_LEAD,
-        )
-
-        self.assertEqual(payment.amount, Decimal("4.95"))
-        self.assertEqual(payment.provider, PaymentProvider.RAIACCEPT)
-        self.assertEqual(payment.provider_reference, "rai_order_123")
-        self.assertEqual(payment.status, PaymentStatus.PENDING)
-
-        self.company.refresh_from_db()
-        self.assertEqual(self.company.free_leads_remaining, 0)
 
     @patch("payments.views.get_transaction_details")
     def test_raiaccept_webhook_opens_lead_after_success(self, get_transaction_details):
@@ -272,53 +178,7 @@ class PaymentUnlockLeadTests(APITestCase):
         payment.refresh_from_db()
         self.assertEqual(payment.status, PaymentStatus.PENDING)
 
-    @patch("payments.views.create_checkout")
-    def test_repeated_pending_unlock_reuses_the_same_checkout(self, create_checkout):
-        create_checkout.return_value = {
-            "order_id": "rai_order_reused",
-            "session_id": "rai_session_reused",
-            "payment_url": "https://checkout.raiaccept.test/reused-session",
-        }
-        self.company.free_leads_remaining = 0
-        self.company.save(update_fields=["free_leads_remaining"])
-        self.client.force_authenticate(self.company_user)
 
-        first = self.client.post(
-            "/api/payments/unlock-lead/",
-            {"job_request": self.job.id, "platform": "web"},
-            format="json",
-        )
-        second = self.client.post(
-            "/api/payments/unlock-lead/",
-            {"job_request": self.job.id, "platform": "web"},
-            format="json",
-        )
-
-        self.assertEqual(first.status_code, 202)
-        self.assertEqual(second.status_code, 202)
-        self.assertEqual(first.data["payment_url"], second.data["payment_url"])
-        create_checkout.assert_called_once()
-        self.assertEqual(
-            Payment.objects.filter(company=self.company, type=PaymentType.UNLOCK_LEAD).count(),
-            1,
-        )
-
-    @patch("payments.views.create_checkout")
-    def test_native_paid_lead_unlock_requires_store_billing(self, create_checkout):
-        self.company.free_leads_remaining = 0
-        self.company.save(update_fields=["free_leads_remaining"])
-        self.client.force_authenticate(self.company_user)
-
-        response = self.client.post(
-            "/api/payments/unlock-lead/",
-            {"job_request": self.job.id, "platform": "ios"},
-            format="json",
-        )
-
-        self.assertEqual(response.status_code, 409)
-        self.assertEqual(response.data["code"], "store_billing_required")
-        create_checkout.assert_not_called()
-        self.assertFalse(Payment.objects.filter(company=self.company).exists())
 
     def test_company_can_view_payment_status_history_and_paid_receipt(self):
         offer = Offer.objects.create(
@@ -347,7 +207,7 @@ class PaymentUnlockLeadTests(APITestCase):
         receipt_response = self.client.get(f"/api/payments/{payment.id}/receipt/")
 
         self.assertEqual(status_response.status_code, 200)
-        self.assertTrue(status_response.data["lead_unlocked"])
+        self.assertFalse(status_response.data["lead_unlocked"])  # Payment alone does not send the offer.
         self.assertEqual(status_response.data["status"], PaymentStatus.PAID)
         self.assertEqual(history_response.status_code, 200)
         self.assertEqual(len(history_response.data), 1)
@@ -419,24 +279,6 @@ class PaymentUnlockLeadTests(APITestCase):
         self.assertEqual(payment.status, PaymentStatus.PAID)
         self.assertEqual(payment.paid_at, original_paid_at)
 
-    @patch("payments.views.create_checkout")
-    def test_checkout_failure_is_recorded_without_unlocking_lead(self, create_checkout):
-        create_checkout.side_effect = RaiAcceptError("bank unavailable")
-        self.company.free_leads_remaining = 0
-        self.company.save(update_fields=["free_leads_remaining"])
-        self.client.force_authenticate(self.company_user)
-
-        response = self.client.post(
-            "/api/payments/unlock-lead/",
-            {"job_request": self.job.id, "platform": "web"},
-            format="json",
-        )
-
-        self.assertEqual(response.status_code, 502)
-        payment = Payment.objects.get(company=self.company, offer__job_request=self.job)
-        self.assertEqual(payment.status, PaymentStatus.FAILED)
-        self.assertEqual(payment.failure_code, "checkout_failed")
-        self.assertFalse(payment.offer.lead_unlocked)
 
     @patch("payments.views.get_transaction_details")
     def test_pending_and_failed_gateway_statuses_do_not_unlock_lead(self, get_transaction_details):
@@ -514,84 +356,9 @@ class PaymentUnlockLeadTests(APITestCase):
         offer.save()
         return offer
 
-    @patch("payments.views.create_checkout")
-    def test_customer_job_payment_stays_disabled_until_merchant_is_ready(self, create_checkout):
-        offer = self._accepted_offer()
-        self.client.force_authenticate(self.customer_user)
 
-        response = self.client.post(
-            "/api/payments/pay-job/",
-            {"offer": offer.id},
-            format="json",
-        )
 
-        self.assertEqual(response.status_code, 503)
-        self.assertEqual(response.data["code"], "merchant_setup_required")
-        self.assertFalse(Payment.objects.filter(type=PaymentType.JOB_PAYMENT).exists())
-        create_checkout.assert_not_called()
 
-    @patch("payments.views.create_checkout")
-    def test_customer_can_start_fixed_price_job_payment_when_enabled(self, create_checkout):
-        create_checkout.return_value = {
-            "order_id": "rai_job_order_1",
-            "session_id": "rai_job_session_1",
-            "payment_url": "https://checkout.raiaccept.test/job-session",
-        }
-        offer = self._accepted_offer()
-        self.client.force_authenticate(self.customer_user)
-
-        with self.settings(CUSTOMER_JOB_PAYMENTS_ENABLED=True):
-            response = self.client.post(
-                "/api/payments/pay-job/",
-                {"offer": offer.id, "amount": "0.01"},
-                format="json",
-            )
-
-        self.assertEqual(response.status_code, 202)
-        self.assertEqual(response.data["payment_amount"], "1250.00")
-        payment = Payment.objects.get(offer=offer, type=PaymentType.JOB_PAYMENT)
-        self.assertEqual(payment.payer_user, self.customer_user)
-        self.assertEqual(payment.company, self.company)
-        self.assertEqual(payment.amount, Decimal("1250.00"))
-        self.assertEqual(payment.provider_reference, "rai_job_order_1")
-        payload = create_checkout.call_args.args[0]
-        self.assertEqual(payload["invoice"]["amount"], 1250.0)
-        self.assertEqual(payload["invoice"]["merchantOrderReference"], f"payment_{payment.id}")
-
-    @patch("payments.views.create_checkout")
-    def test_hourly_offer_requires_a_final_amount_before_payment(self, create_checkout):
-        offer = self._accepted_offer(price_type=PriceType.HOURLY, price="35.00")
-        self.client.force_authenticate(self.customer_user)
-
-        with self.settings(CUSTOMER_JOB_PAYMENTS_ENABLED=True):
-            response = self.client.post(
-                "/api/payments/pay-job/",
-                {"offer": offer.id},
-                format="json",
-            )
-
-        self.assertEqual(response.status_code, 409)
-        self.assertEqual(response.data["code"], "final_amount_required")
-        create_checkout.assert_not_called()
-
-    @patch("payments.views.create_checkout")
-    def test_repeated_job_payment_reuses_checkout(self, create_checkout):
-        create_checkout.return_value = {
-            "order_id": "rai_job_order_reused",
-            "session_id": "rai_job_session_reused",
-            "payment_url": "https://checkout.raiaccept.test/reused-job-session",
-        }
-        offer = self._accepted_offer()
-        self.client.force_authenticate(self.customer_user)
-
-        with self.settings(CUSTOMER_JOB_PAYMENTS_ENABLED=True):
-            first = self.client.post("/api/payments/pay-job/", {"offer": offer.id}, format="json")
-            second = self.client.post("/api/payments/pay-job/", {"offer": offer.id}, format="json")
-
-        self.assertEqual(first.status_code, 202)
-        self.assertEqual(second.status_code, 202)
-        self.assertEqual(first.data["payment_url"], second.data["payment_url"])
-        create_checkout.assert_called_once()
 
     @patch("payments.views.get_transaction_details")
     def test_job_payment_webhook_marks_paid_without_unlocking_a_lead(self, get_transaction_details):

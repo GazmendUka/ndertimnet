@@ -246,7 +246,6 @@ RAIACCEPT_MERCHANT_ACCOUNT_ID = os.environ.get("RAIACCEPT_MERCHANT_ACCOUNT_ID", 
 RAIACCEPT_DEFAULT_COUNTRY = os.environ.get("RAIACCEPT_DEFAULT_COUNTRY", "XKX")
 # Keep customer charges disabled until acquiring, settlement and refund handling
 # have been approved with the bank for the production merchant account.
-CUSTOMER_JOB_PAYMENTS_ENABLED = env_bool("CUSTOMER_JOB_PAYMENTS_ENABLED", False)
 
 FRONTEND_BASE_URL = env_url("FRONTEND_BASE_URL", "http://localhost:3000")
 BACKEND_BASE_URL = env_url("BACKEND_BASE_URL", "")
@@ -426,3 +425,12 @@ DEFAULT_FROM_EMAIL = os.environ.get(
     "DEFAULT_FROM_EMAIL",
     "no-reply@ndertimnet.com"
 )
+
+# Platform publication price; launch promotion retains the regular price.
+LISTING_REGULAR_PRICE = os.environ.get("LISTING_REGULAR_PRICE", "3.95")
+LISTING_INTRODUCTORY_FREE = env_bool("LISTING_INTRODUCTORY_FREE", default=True)
+
+# Explicitly enabled only after deploying matching migrations and configuring the jobs.
+BILLING_JOBS_ENABLED = env_bool("BILLING_JOBS_ENABLED", default=False)
+
+EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")

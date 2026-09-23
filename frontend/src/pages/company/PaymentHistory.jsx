@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { CreditCard, FileText, Loader2, ReceiptText } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
+import { SubscriptionBilling, CustomerBillingHistory } from "../../components/payments/PlatformBilling";
 import paymentService from "../../services/paymentService";
 
 const statusLabels = {
@@ -34,7 +35,7 @@ function formatDate(value) {
 }
 
 export default function PaymentHistory() {
-  const { access } = useAuth();
+  const { access, user } = useAuth();
   const [payments, setPayments] = useState([]);
   const [receipt, setReceipt] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -82,6 +83,8 @@ export default function PaymentHistory() {
         </p>
       </section>
 
+      {user?.role === "company" ? <SubscriptionBilling /> : <CustomerBillingHistory />}
+
       {error && <div role="alert" className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error}</div>}
 
       <section className="premium-section mt-4">
@@ -90,8 +93,8 @@ export default function PaymentHistory() {
         ) : payments.length === 0 ? (
           <div className="py-10 text-center">
             <CreditCard className="mx-auto text-gray-300" size={38} />
-            <h2 className="mt-3 font-semibold text-gray-900">Nuk ka pagesa ende</h2>
-            <p className="mt-1 text-sm text-gray-500">Pagesat tuaja do të shfaqen këtu.</p>
+            <h2 className="mt-3 font-semibold text-gray-900">Nuk ka pagesa nga sistemi i mëparshëm</h2>
+            <p className="mt-1 text-sm text-gray-500">Pagesat e reja shfaqen më sipër.</p>
           </div>
         ) : (
           <div className="space-y-3">

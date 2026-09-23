@@ -1,7 +1,7 @@
 import json
 from decimal import Decimal
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
 from urllib.request import Request, urlopen
 
 from django.conf import settings
@@ -54,8 +54,8 @@ def _send_json(request, timeout=20):
     except HTTPError as exc:
         details = exc.read().decode("utf-8", errors="replace")
         raise RaiAcceptError(f"RaiAccept HTTP {exc.code}: {details}") from exc
-    except URLError as exc:
-        raise RaiAcceptError(f"RaiAccept connection failed: {exc.reason}") from exc
+    except (URLError, TimeoutError) as exc:
+        raise RaiAcceptError("RaiAccept connection failed or timed out") from exc
 
     if not raw:
         return {}
@@ -109,7 +109,7 @@ def retrieve_access_token():
     return token
 
 
-def create_checkout(payload):
+def create_checkout(payload, *, on_order_created=None):
     access_token = retrieve_access_token()
     order = _post_json(
         f"{API_URL}/orders",
@@ -120,6 +120,9 @@ def create_checkout(payload):
 
     if not order_id:
         raise RaiAcceptError("RaiAccept order response is missing orderIdentification")
+
+    if on_order_created is not None:
+        on_order_created(order_id)
 
     session = _post_json(
         f"{API_URL}/orders/{order_id}/checkout",
@@ -145,7 +148,7 @@ def create_checkout(payload):
 def get_transaction_details(order_id, transaction_id):
     access_token = retrieve_access_token()
     return _get_json(
-        f"{API_URL}/orders/{order_id}/transactions/{transaction_id}",
+        f"{API_URL}/orders/{quote(order_id, safe='')}/transactions/{quote(transaction_id, safe='')}",
         headers={"Authorization": f"Bearer {access_token}"},
     )
 
@@ -290,3 +293,46 @@ def _client_ip(request):
     if forwarded_for:
         return forwarded_for.split(",")[0].strip()
     return request.META.get("REMOTE_ADDR", "")
+
+
+def build_platform_payload(*, charge, attempt, request, return_url, notification_url):
+    """Hosted checkout for Ndertimnet's own platform services, not building work."""
+    profile = charge.company or getattr(request.user, "customer_profile", None)
+    city = getattr(profile, "city", None)
+    first = (request.user.first_name or "Ndertimnet")[:32]
+    last = (request.user.last_name or "Customer")[:32]
+    city_name = (getattr(city, "name", "") or "Prishtina")[:50]
+    address = {"firstName": first, "lastName": last,
+               "addressStreet1": (getattr(profile, "address", "") or city_name)[:50],
+               "addressStreet2": "", "addressStreet3": "", "city": city_name,
+               "postalCode": (getattr(profile, "postal_code", "") or "")[:20],
+               "country": country_to_iso3(getattr(city, "country", "XK")), "state": ""}
+    description = f"Ndertimnet {charge.kind} #{charge.pk}"
+    return {"billingAddress": address, "shippingAddress": address,
+            "consumer": {"firstName": first, "lastName": last, "email": request.user.email,
+                         "phone": (getattr(profile, "phone", "") or "")[:30],
+                         "mobilePhone": "", "workPhone": "", "ipAddress": _client_ip(request)},
+            "invoice": {"amount": as_raiaccept_amount(attempt.amount), "currency": charge.currency,
+                        "description": description, "merchantOrderReference": str(attempt.reference),
+                        "items": [{"description": description, "numberOfItems": 1,
+                                   "price": as_raiaccept_amount(attempt.amount)}]},
+            "urls": {"cancelUrl": return_url, "failUrl": return_url, "successUrl": return_url,
+                     "notificationUrl": notification_url},
+            "paymentMethodPreference": "CARD", "recurring": None}
+
+
+def get_order_transactions(order_id):
+    """Read-only GET as exposed by the RaiAccept merchant SDK; never creates a charge."""
+    token = retrieve_access_token()
+    result = _get_json(f"{API_URL}/orders/{quote(order_id, safe='')}/transactions",
+                       headers={"Authorization": f"Bearer {token}"})
+    items = result.get("transactions") if isinstance(result, dict) else result
+    if not isinstance(items, list) or not all(isinstance(item, dict) for item in items):
+        raise RaiAcceptError("Invalid transaction list")
+    return items
+
+
+def get_order_details(order_id):
+    token = retrieve_access_token()
+    return _get_json(f"{API_URL}/orders/{quote(order_id, safe='')}",
+                     headers={"Authorization": f"Bearer {token}"})

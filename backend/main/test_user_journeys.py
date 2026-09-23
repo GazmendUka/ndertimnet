@@ -14,7 +14,7 @@ from accounts.utils.email_verification import generate_email_verification_token
 from jobrequests.models import JobRequest
 from locations.models import City
 from offers.models import Offer, OfferMessage, OfferReview, OfferStatus, OfferVersion
-from payments.models import LeadAccess, Payment, PaymentStatus
+from payments.models import LeadAccess, Payment, PaymentStatus, PlatformCharge
 from taxonomy.models import Industry, Profession
 
 
@@ -279,16 +279,17 @@ class FullMarketplaceJourneyTests(APITestCase):
         self.assertEqual(review.status_code, 201, review.data)
 
         job.refresh_from_db()
-        self.assertTrue(job.is_completed)
+        self.assertFalse(job.is_completed)
         self.assertFalse(job.is_active)
         self.assertEqual(job.winner_offer_id, offer.id)
         self.assertTrue(OfferReview.objects.filter(offer=offer).exists())
         self.assertEqual(OfferMessage.objects.filter(offer=offer).count(), 2)
         self.assertTrue(Customer.objects.get(user=customer_user).consent_job_publish)
 
+    @override_settings(RAIACCEPT_MERCHANT_ACCOUNT_ID="journey_merchant", RAIACCEPT_MODE="sandbox", RAIACCEPT_SANDBOX_USERNAME="test", RAIACCEPT_SANDBOX_PASSWORD="test")
     @patch("accounts.views.send_verification_email")
-    @patch("payments.views.get_transaction_details")
-    @patch("payments.views.create_checkout")
+    @patch("payments.billing_views.get_transaction_details")
+    @patch("payments.billing_views.create_checkout")
     def test_company_complete_journey(
         self,
         create_checkout,
@@ -362,8 +363,8 @@ class FullMarketplaceJourneyTests(APITestCase):
         self.assertEqual(profile.data["data"]["profile_step"], 4)
 
         company = Company.objects.get(user=company_user)
-        company.free_leads_remaining = 0
-        company.save(update_fields=["free_leads_remaining"])
+        company.free_offers_remaining = 0
+        company.save(update_fields=["free_offers_remaining"])
 
         marketplace = self.client.get("/api/jobrequests/")
         self.assertEqual(marketplace.status_code, 200, marketplace.data)
@@ -381,37 +382,8 @@ class FullMarketplaceJourneyTests(APITestCase):
             {"job_request": job.id},
             format="json",
         )
-        self.assertEqual(checkout.status_code, 202, checkout.data)
-        self.assertTrue(checkout.data["requires_payment"])
-        self.assertEqual(checkout.data["payment_amount"], "4.95")
-
-        get_transaction_details.return_value = {
-            "transaction": {
-                "transactionId": "journey_tx_123",
-                "transactionAmount": 4.95,
-                "transactionCurrency": "EUR",
-                "isProduction": False,
-                "transactionType": "PURCHASE",
-                "status": "SUCCESS",
-                "statusCode": "0000",
-            }
-        }
-        payment = Payment.objects.get(company=company, offer__job_request=job)
-        notification = self.client.post(
-            "/api/payments/raiaccept/notify/",
-            {
-                "order": {
-                    "orderIdentification": "journey_rai_order_123",
-                    "invoice": {"merchantOrderReference": f"payment_{payment.id}"},
-                },
-                "transaction": {"transactionId": "journey_tx_123"},
-            },
-            format="json",
-        )
-        self.assertEqual(notification.status_code, 200, notification.data)
-        payment.refresh_from_db()
-        self.assertEqual(payment.status, PaymentStatus.PAID)
-        self.assertTrue(LeadAccess.objects.filter(company=company, job_request=job).exists())
+        self.assertEqual(checkout.status_code, 201, checkout.data)
+        self.assertEqual(checkout.data["payment_amount"], "0.00")
 
         existing_offer = self.client.get(f"/api/offers/by-job/{job.id}/")
         self.assertEqual(existing_offer.status_code, 200, existing_offer.data)
@@ -433,6 +405,20 @@ class FullMarketplaceJourneyTests(APITestCase):
             format="json",
         )
         self.assertEqual(offer_update.status_code, 200, offer_update.data)
+
+        checkout = self.client.post("/api/billing/offer-checkout/", {"offer": offer_id, "platform": "web"}, format="json")
+        self.assertEqual(checkout.status_code, 202, checkout.data)
+        self.assertEqual(checkout.data["charge"]["amount"], "19.95")
+        get_transaction_details.return_value = {
+            "merchant": {"merchantAccountId": "journey_merchant"},
+            "transaction": {"transactionId": "journey_tx_123", "transactionAmount": "19.95",
+                "transactionCurrency": "EUR", "isProduction": False, "transactionType": "PURCHASE",
+                "status": "SUCCESS", "statusCode": "0000"}}
+        notification = self.client.post("/api/billing/notify/", {
+            "order": {"orderIdentification": "journey_rai_order_123"},
+            "transaction": {"transactionId": "journey_tx_123"}}, format="json")
+        self.assertEqual(notification.status_code, 200, notification.data)
+        self.assertEqual(PlatformCharge.objects.get(offer_id=offer_id).status, PaymentStatus.PAID)
 
         signed = self.client.post(
             f"/api/offers/{offer_id}/sign/",
