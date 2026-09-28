@@ -132,6 +132,14 @@ class CompanySerializer(serializers.ModelSerializer):
             "default_offer_presentation",
             "profile_sections",
         ]
+        # Company self-service must not overwrite administrator-controlled status.
+        # Verification and activation are managed through the separate admin flow.
+        read_only_fields = [
+            "is_verified",
+            "is_active",
+            "created_at",
+            "updated_at",
+        ]
 
     def to_internal_value(self, data):
         data = data.copy()
