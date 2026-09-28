@@ -4,26 +4,16 @@ import { useNavigate } from "react-router-dom";
 import { Mail, UserRoundCheck, ArrowRight, RefreshCw } from "lucide-react";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
+import { companyProfileProgress } from "../../utils/companyProfileProgress";
 
 /**
- * Production-ready onboarding banner for Company users.
- *
- * Step priority:
- *  1) Email not verified  -> Hapi 1/2
- *  2) Profile incomplete  -> Hapi 2/2
- *  else -> render null
- *
- * Data sources:
- *  - user.email_verified (or user.is_email_verified fallback)
- *  - profile completion from:
- *      props.profileCompletion
- *      company.profile_completion / company.profileCompleteness / company.profile_completion_percentage
- *      user.profile_completion / user.profileCompleteness / user.profile_completion_percentage
+ * Email verification takes priority. Saved profile sections determine whether
+ * to show the profile reminder; document submission/admin approval stay separate.
+ * Legacy percentage fields are only a fallback when section data is unavailable.
  */
 export default function CompanyOnboardingBanner({
   company = null,
   profileCompletion = null, // optional override
-  totalSteps = 2,
   profileTarget = 100,
   profileRoute = "/company/profile",
   resendVerificationEndpoint = null, // e.g. "/accounts/resend-verification/"
@@ -61,16 +51,20 @@ export default function CompanyOnboardingBanner({
     return Math.max(0, Math.min(100, Math.round(n)));
   }, [profileCompletion, company, user]);
 
+  const sections = company?.profile_sections ?? user?.company?.profile_sections;
+  const profile = sections ? companyProfileProgress(sections) : null;
+  const needsProfileReminder = profile ? profile.needsReminder : completion < profileTarget;
+
   const stepToRender = useMemo(() => {
-    if (!emailVerified) return 1; // Hapi 1/2
-    if (emailVerified && completion < profileTarget) return 2; // Hapi 2/2
+    if (!emailVerified) return 1;
+    if (needsProfileReminder) return 2;
     return null;
-  }, [emailVerified, completion, profileTarget]);
+  }, [emailVerified, needsProfileReminder]);
 
   const ui = useMemo(() => {
     if (stepToRender === 1) {
       return {
-        stepLabel: `Hapi 1 / ${totalSteps}`,
+        stepLabel: "Verifikimi i email-it",
         icon: Mail,
         title: "Email-i juaj nuk është i verifikuar",
         description:
@@ -83,11 +77,11 @@ export default function CompanyOnboardingBanner({
 
     if (stepToRender === 2) {
       return {
-        stepLabel: `Hapi 2 / ${totalSteps}`,
+        stepLabel: profile ? `${profile.completed} nga ${profile.total} hapa` : "Profili i kompanisë",
         icon: UserRoundCheck,
-        title: `Plotëso profilin tuaj – ${completion}%`,
+        title: "Prezantoni kompaninë tuaj",
         description:
-          "Shto qytetin, specialitetet dhe të dhënat kryesore të kompanisë për të marrë më shumë projekte.",
+          "Një profil i plotë i ndihmon klientët të njohin shërbimet dhe përvojën tuaj. Vazhdoni aty ku e latë.",
         ctaLabel: "Plotëso Profilin",
         ctaIcon: ArrowRight,
         ctaAction: "profile",
@@ -95,7 +89,7 @@ export default function CompanyOnboardingBanner({
     }
 
     return null;
-  }, [stepToRender, totalSteps, completion, resendLoading]);
+  }, [stepToRender, profile, resendLoading]);
 
   const handleResendVerification = async () => {
     if (!resendVerificationEndpoint) {
@@ -157,32 +151,33 @@ export default function CompanyOnboardingBanner({
   const CtaIcon = ui.ctaIcon;
 
   return (
-    <div
+    <section
+      aria-label="Udhëzimi i llogarisë"
       className={[
-        "w-full rounded-2xl border border-amber-200 bg-amber-50",
+        "w-full min-w-0 rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-emerald-50/50",
         "px-4 py-4 md:px-6 md:py-5",
         "shadow-sm",
         className,
       ].join(" ")}
     >
       {/* Header row: title left, step right */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-start gap-3">
-          <div className="mt-0.5 inline-flex h-9 w-9 items-center justify-center rounded-xl bg-amber-100">
-            <Icon className="h-5 w-5 text-amber-700" />
+      <div className="flex min-w-0 flex-col items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
+        <div className="flex min-w-0 items-start gap-3">
+          <div className="mt-0.5 inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-emerald-100">
+            <Icon className="h-5 w-5 text-emerald-800" />
           </div>
 
-          <div>
-            <div className="text-base font-semibold text-amber-900">
+          <div className="min-w-0">
+            <div className="break-words text-base font-semibold text-slate-900">
               {ui.title}
             </div>
-            <div className="mt-1 text-sm text-amber-800/80">
+            <div className="mt-1 max-w-2xl break-words text-sm leading-6 text-slate-600">
               {ui.description}
             </div>
           </div>
         </div>
 
-        <div className="shrink-0 rounded-full bg-white/60 px-3 py-1 text-xs font-medium text-amber-900/70">
+        <div className="shrink-0 self-start rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-medium text-slate-600">
           {ui.stepLabel}
         </div>
       </div>
@@ -198,8 +193,8 @@ export default function CompanyOnboardingBanner({
             disabled={ui.ctaAction === "resend" ? resendLoading : false}
             className={[
               "inline-flex items-center justify-center gap-2 rounded-xl",
-              "min-h-[44px] bg-amber-600 px-4 py-2 text-sm font-semibold text-white",
-              "hover:bg-amber-700 disabled:opacity-60 disabled:cursor-not-allowed",
+              "min-h-[44px] bg-emerald-900 px-4 py-2 text-sm font-semibold text-white",
+              "hover:bg-emerald-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-emerald-700 disabled:opacity-60 disabled:cursor-not-allowed",
               "transition",
             ].join(" ")}
           >
@@ -214,15 +209,15 @@ export default function CompanyOnboardingBanner({
         </div>
 
         {/* RIGHT SIDE – MESSAGE */}
-        <div className="text-sm">
+        <div className="text-sm" aria-live="polite">
           {resendMessage?.type === "success" && (
-            <div className="text-amber-900/80">{resendMessage.text}</div>
+            <div className="text-emerald-800">{resendMessage.text}</div>
           )}
           {resendMessage?.type === "error" && (
             <div className="text-red-700">{resendMessage.text}</div>
           )}
         </div>
       </div>
-    </div>
+    </section>
   );
 }

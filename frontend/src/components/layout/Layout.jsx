@@ -50,7 +50,7 @@ export default function Layout() {
 
   return (
 
-    <div className="flex min-h-screen bg-gray-50">
+    <div className="flex min-h-screen min-w-0 bg-gray-50">
 
       {/* SIDEBAR — Desktop */}
       <div className={isNativeApp ? "hidden" : "hidden lg:block"}>
@@ -58,7 +58,7 @@ export default function Layout() {
       </div>
 
       {/* MAIN AREA */}
-      <div className="flex-1 flex flex-col">
+      <div className="flex min-w-0 flex-1 flex-col">
 
         {/* TOPBAR */}
         <header
@@ -188,9 +188,9 @@ export default function Layout() {
         </header>
 
         {/* PAGE CONTENT */}
-        <main className="flex-1 px-4 sm:px-6 md:px-10 pt-4 sm:pt-6 pb-32 lg:pb-10">
+        <main className="min-w-0 flex-1 overflow-x-hidden px-4 pt-4 pb-32 sm:px-6 sm:pt-6 md:px-10 lg:pb-10">
 
-          <div className="max-w-6xl mx-auto space-y-8">
+          <div className="mx-auto w-full min-w-0 max-w-6xl space-y-8">
 
             {/* COMPANY ONBOARDING */}
             {isCompany && (

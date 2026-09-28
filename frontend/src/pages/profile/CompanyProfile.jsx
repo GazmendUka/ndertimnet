@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
+import { companyProfileProgress } from "../../utils/companyProfileProgress";
 
 const STEPS = [
   { id: 1, key: "basic", title: "Informacioni bazë", short: "Bazë", icon: Building2 },
@@ -70,7 +71,7 @@ const getApiErrorMessage = (error, fallback) => {
 };
 
 export default function CompanyProfile() {
-  const { access, logout, user } = useAuth();
+  const { access, logout, user, refreshMe } = useAuth();
   const navigate = useNavigate();
   const logoInputRef = useRef(null);
   const documentInputRef = useRef(null);
@@ -209,9 +210,8 @@ export default function CompanyProfile() {
     verification: Boolean(company?.registration_document),
   }), [company?.city?.id, company?.email_verified, company?.registration_document, form]);
 
-  const completedCount = REQUIRED_STEP_KEYS.filter((key) => sectionStatus[key]).length;
-  const progress = Math.round((completedCount / REQUIRED_STEP_KEYS.length) * 100);
-  const allComplete = completedCount === REQUIRED_STEP_KEYS.length;
+  const { completed: completedCount, total, percent: progress } = companyProfileProgress(sectionStatus);
+  const allComplete = REQUIRED_STEP_KEYS.every((key) => sectionStatus[key]);
   const isLocked = !user?.email_verified;
 
   const markDirty = (step = currentStep) => {
@@ -294,6 +294,8 @@ export default function CompanyProfile() {
       const response = await api.patch("/accounts/profile/company/", buildStepPayload(currentStep));
       const updated = response.data?.data || response.data;
       setCompany(updated);
+      // Refresh the shared banner from saved data, never from unsaved form fields.
+      if (refreshMe) await refreshMe().catch(() => undefined);
       if (currentStep === 1 && form.website && !/^https?:\/\//i.test(form.website)) {
         setForm((current) => ({ ...current, website: `https://${current.website}` }));
       }
@@ -357,24 +359,25 @@ export default function CompanyProfile() {
   }
 
   return (
-    <div className="premium-container py-6 md:py-8">
+    <div className="premium-container w-full min-w-0 max-w-full py-6 md:py-8">
       <header className="mb-7 flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-        <div>
+        <div className="min-w-0">
           <p className="text-label">Profili i kompanisë</p>
           <h1 className="mt-1 text-2xl font-bold text-gray-900 sm:text-3xl">Plotësoni profilin tuaj</h1>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-gray-500">
             Ndiqni gjashtë hapa të qartë. Mund të kaloni në çdo seksion dhe të vazhdoni më vonë.
           </p>
         </div>
-        <div className="min-w-[220px] rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">
+        <div className="w-full min-w-0 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm sm:w-auto sm:min-w-[220px]">
           <div className="flex items-center justify-between text-sm">
             <span className="font-medium text-gray-700">Progresi i profilit</span>
             <strong>{progress}%</strong>
           </div>
-          <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-100">
+          <div role="progressbar" aria-label="Progresi i profilit" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress} className="mt-3 h-2 overflow-hidden rounded-full bg-gray-100">
             <div className="h-full rounded-full bg-gray-900 transition-all duration-500" style={{ width: `${progress}%` }} />
           </div>
-          <p className="mt-2 text-xs text-gray-500">{completedCount} nga {REQUIRED_STEP_KEYS.length} hapa të detyrueshëm</p>
+          <p className="mt-2 text-xs text-gray-500">{completedCount} nga {total} hapa të plotësuar</p>
+          <p className="mt-1 text-xs text-gray-500">Hapi 5 është opsional.</p>
         </div>
       </header>
 
@@ -384,7 +387,7 @@ export default function CompanyProfile() {
         </div>
       )}
 
-      <nav className="mb-6 overflow-x-auto rounded-2xl border border-gray-200 bg-white p-2 shadow-sm" aria-label="Hapat e profilit">
+      <nav className="mb-6 w-full max-w-full overflow-x-auto rounded-2xl border border-gray-200 bg-white p-2 shadow-sm" aria-label="Hapat e profilit">
         <div className="flex min-w-max gap-1 lg:grid lg:min-w-0 lg:grid-cols-6">
           {STEPS.map((step) => {
             const Icon = step.icon;
