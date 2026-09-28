@@ -4,6 +4,7 @@ import logging
 from datetime import timedelta
 
 from django.db import transaction
+from django.db.models import Case, CharField, Count, Q, Value, When
 from payments.billing import create_publication_charge
 from django.utils import timezone
 
@@ -332,7 +333,7 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
                     )
                     .select_related("customer", "city", "profession")
                     .prefetch_related("offers")
-                    .order_by("-created_at")
+                    .order_by("-created_at", "-pk")
                 )
 
             return JobRequest.objects.none()
@@ -346,14 +347,14 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
                 )
                 .select_related("customer", "city", "profession")
                 .prefetch_related("offers")
-                .order_by("-created_at")
+                .order_by("-created_at", "-pk")
             )
 
         # Company → only active jobs (och kräver aktiv company)
         if getattr(user, "role", None) == "company":
             company_profile = getattr(user, "company_profile", None)
             if company_profile and company_profile.is_active:
-                return (
+                queryset = (
                     JobRequest.objects.filter(
                         is_active=True,
                         moderation_status=JobRequest.MODERATION_APPROVED,
@@ -361,11 +362,40 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
                     )
                     .select_related("customer", "city", "profession")
                     .prefetch_related("offers")
-                    .order_by("-created_at")
+                    .order_by("-created_at", "-pk")
                 )
+                # Filter before pagination so pages and totals describe available jobs.
+                if getattr(self, "action", None) == "list" and params.get("without_my_offer") == "1":
+                    queryset = queryset.exclude(offers__company=company_profile)
+                return queryset
             return JobRequest.objects.none()
 
         return JobRequest.objects.none()
+
+    @action(detail=False, methods=["get"], url_path="summary")
+    def summary(self, request):
+        if getattr(request.user, "role", None) != "customer":
+            raise PermissionDenied("Vetëm klientët mund ta shohin përmbledhjen.")
+
+        # Never aggregate the paginated list or another customer's requests.
+        jobs = JobRequest.objects.filter(customer=request.user, is_deleted=False)
+        states = jobs.annotate(summary_state=Case(
+            When(Q(is_completed=True) | Q(status="completed"), then=Value("completed")),
+            When(status="cancelled", then=Value("closed")),
+            When(status="in_progress", then=Value("in_progress")),
+            When(~Q(moderation_status=JobRequest.MODERATION_APPROVED), then=Value("unpublished")),
+            When(is_active=True, then=Value("active")),
+            default=Value("closed"), output_field=CharField(),
+        )).order_by().values("summary_state").annotate(count=Count("pk"))
+        stats = dict.fromkeys(("active", "in_progress", "completed", "unpublished", "closed"), 0)
+        for row in states:
+            stats[row["summary_state"]] = row["count"]
+        stats["total"] = sum(stats.values())
+        latest = jobs.select_related("city", "profession").order_by("-created_at", "-pk")[:5]
+        return Response({
+            "stats": stats,
+            "latest_jobs": JobRequestListSerializer(latest, many=True, context=self.get_serializer_context()).data,
+        })
 
     # --------------------------------------------------------
     # 📝 Skapa ny job request → koppla till customer_profile
