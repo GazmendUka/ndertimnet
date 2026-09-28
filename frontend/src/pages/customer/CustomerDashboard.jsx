@@ -10,8 +10,7 @@ import { FileText, PlusCircle, CheckCircle2, Clock4 } from "lucide-react";
 
 // UI components
 import StatCard from "../../components/ui/StatCard";
-import StatusBadge from "../../components/ui/StatusBadge";
-import ModerationBadge from "../../components/ui/ModerationBadge";
+import JobStatusBadge from "../../components/ui/JobStatusBadge";
 
 const jobRequestsPath = "/customer/jobrequests";
 const createJobPath = "/customer/jobrequests/create";
@@ -20,9 +19,11 @@ export default function CustomerDashboard() {
   const { user, access, isCustomer } = useAuth();
 
 
-  const [stats, setStats] = useState({ total: "—", active: "—", closed: "—" });
+  const [stats, setStats] = useState(null);
   const [latestJobs, setLatestJobs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [retry, setRetry] = useState(0);
 
 
 
@@ -30,38 +31,33 @@ export default function CustomerDashboard() {
   // LOAD JOB REQUESTS – only the logged-in customer's jobs
   // ============================================================
   useEffect(() => {
-    if (!access) {
+    let cancelled = false;
+    setStats(null);
+    setLatestJobs([]);
+    if (!access || !isCustomer) {
       setLoading(false);
       return;
     }
+    setLoading(true);
+    setError(false);
 
     async function fetchJobs() {
       try {
-        const res = await api.get("jobrequests/?mine=1");
-
-        const list = res.data.results || res.data || [];
-        const jobs = Array.isArray(list) ? list : [];
-
-        const total = jobs.length;
-        const active = jobs.filter((j) => j.is_active && j.moderation_status === "approved").length;
-        const closed = total - active;
-
-        setStats({ total, active, closed });
-
-        setLatestJobs(
-          jobs
-            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-            .slice(0, 5)
-        );
+        const { data } = await api.get("jobrequests/summary/");
+        if (!data?.stats || !Array.isArray(data.latest_jobs)) throw new Error("Invalid summary");
+        if (cancelled) return;
+        setStats(data.stats);
+        setLatestJobs(data.latest_jobs);
       } catch (err) {
-        console.warn("Kunde inte hämta job requests:", err);
+        if (!cancelled) setError(true);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     fetchJobs();
-  }, [access]);
+    return () => { cancelled = true; };
+  }, [access, isCustomer, retry]);
 
   // ============================================================
   // GUARDS
@@ -87,22 +83,34 @@ export default function CustomerDashboard() {
         <section className="grid grid-cols-1 sm:grid-cols-3 gap-4 sm:gap-6">
           <StatCard
             label="Kërkesat gjithsej"
-            value={stats.total}
+            value={stats?.total ?? "—"}
             icon={<FileText size={18} />}
           />
           <StatCard
             label="Kërkesa aktive"
-            value={stats.active}
+            value={stats?.active ?? "—"}
             icon={<Clock4 size={18} />}
           />
           <StatCard
-            label="Kërkesa të mbyllura"
-            value={stats.closed}
+            label="Punë në proces"
+            value={stats?.in_progress ?? "—"}
+            icon={<Clock4 size={18} />}
+          />
+          <StatCard
+            label="Punë të përfunduara"
+            value={stats?.completed ?? "—"}
             icon={<CheckCircle2 size={18} />}
           />
+          <StatCard label="Kërkesa të papublikuara" value={stats?.unpublished ?? "—"} icon={<FileText size={18} />} />
+          <StatCard label="Kërkesa të mbyllura / anuluara" value={stats?.closed ?? "—"} icon={<FileText size={18} />} />
         </section>
 
-        <MainContent latestJobs={latestJobs} loading={loading} />
+        {error ? (
+          <div role="alert" className="premium-section">
+            <p>Nuk mund të ngarkoheshin kërkesat. Provoni përsëri.</p>
+            <button className="premium-btn btn-light mt-3" onClick={() => setRetry(value => value + 1)}>Provo përsëri</button>
+          </div>
+        ) : <MainContent latestJobs={latestJobs} loading={loading} />}
       </div>
     </div>
   );
@@ -202,11 +210,7 @@ function RequestsTable({ latestJobs }) {
               <Td>{job.title || "—"}</Td>
               <Td>{job.city_detail?.name || "Pa qytet"}</Td>
               <Td>
-                {job.moderation_status ? (
-                  <ModerationBadge status={job.moderation_status} compact />
-                ) : (
-                  <StatusBadge active={job.is_active} />
-                )}
+                <JobStatusBadge job={job} />
               </Td>
               <Td className="text-right">
                 <Link

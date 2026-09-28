@@ -1,23 +1,30 @@
 // src/pages/jobrequests/JobRequestList.jsx
 
 import React, { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
 
 import { ArrowLeft, MapPin, Euro, Tag, Briefcase, Lock } from "lucide-react";
 import StatusBadge from "../../components/ui/StatusBadge";
-import ModerationBadge from "../../components/ui/ModerationBadge";
+import JobStatusBadge from "../../components/ui/JobStatusBadge";
 import OfferIntroduction from "../../components/payments/OfferIntroduction";
 
 export default function JobRequestList() {
   const { user, access, isCompany, isCustomer } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const pageParam = Number(searchParams.get("page") || 1);
+  const page = Number.isSafeInteger(pageParam) && pageParam > 0 ? pageParam : 1;
 
   const [company, setCompany] = useState(null);
   const [companyLoading, setCompanyLoading] = useState(true);
 
   const [requests, setRequests] = useState([]);
+  const [pagination, setPagination] = useState({ count: 0, next: false, previous: false });
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+  const [retry, setRetry] = useState(0);
 
   // ============================================================
   // LOAD COMPANY (same as dashboard)
@@ -31,6 +38,7 @@ export default function JobRequestList() {
         return;
       }
 
+      setCompanyLoading(true);
       try {
         const res = await api.get("accounts/profile/company/");
         if (isMounted) setCompany(res.data?.data || res.data || null);
@@ -55,6 +63,7 @@ export default function JobRequestList() {
     isCompany &&
     !companyLoading &&
     !canAccessMarketplace;
+  const waitingForCompany = isCompany && companyLoading;
 
   // ============================================================
   // PREMIUM PLACEHOLDERS
@@ -70,43 +79,46 @@ export default function JobRequestList() {
   // LOAD JOB REQUESTS
   // ============================================================
   useEffect(() => {
-    if (!access) return;   // 🔥 VIKTIGT
+    let cancelled = false;
+    setRequests([]);
+    setPagination({ count: 0, next: false, previous: false });
+    setError(false);
+    if (!access || waitingForCompany || uiLocked) {
+      setLoading(Boolean(access && waitingForCompany));
+      return;
+    }
+    setLoading(true);
 
     async function fetchRequests() {
-      if (uiLocked) {
-        setRequests([]);
-        return;
-      }
-
       try {
         const endpoint = isCustomer
-          ? "jobrequests/?mine=1"
-          : "jobrequests/";
+          ? `jobrequests/?mine=1&page=${page}`
+          : `jobrequests/?without_my_offer=1&page=${page}`;
 
         const res = await api.get(endpoint);
-
-        const list = Array.isArray(res.data?.results)
-          ? res.data.results
-          : Array.isArray(res.data)
-          ? res.data
-          : [];
-
-        const filtered = isCompany
-          ? list.filter((req) => !req.has_offer)
-          : list;
-
-        setRequests(filtered);
-        if (!uiLocked) {
-          localStorage.setItem("lastVisitJobRequests", new Date().toISOString());
-        }
+        if (!Array.isArray(res.data?.results)) throw new Error("Invalid job list");
+        if (cancelled) return;
+        setRequests(res.data.results);
+        setPagination({ count: res.data.count, next: Boolean(res.data.next), previous: Boolean(res.data.previous) });
+        try { localStorage.setItem("lastVisitJobRequests", new Date().toISOString()); } catch { /* Storage may be disabled. */ }
 
       } catch (err) {
-        console.error("Error fetching jobrequests:", err);
+        if (!cancelled) setError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
       }
     }
 
     fetchRequests();
-  }, [access, isCustomer, isCompany, uiLocked]);
+    return () => { cancelled = true; };
+  }, [access, isCustomer, waitingForCompany, uiLocked, page, retry]);
+
+  function goToPage(nextPage) {
+    const params = new URLSearchParams(searchParams);
+    if (nextPage === 1) params.delete("page");
+    else params.set("page", String(nextPage));
+    setSearchParams(params);
+  }
 
 
 
@@ -174,6 +186,17 @@ export default function JobRequestList() {
       </div>
 
       {/* LIST */}
+      {!uiLocked && loading && <p role="status" className="text-dim mb-4">Duke ngarkuar kërkesat...</p>}
+      {!uiLocked && error && (
+        <div role="alert" className="premium-card p-5 mb-4">
+          <p>Nuk mund të ngarkoheshin kërkesat. Provoni përsëri.</p>
+          <button className="premium-btn btn-light mt-3" onClick={() => setRetry(value => value + 1)}>Provo përsëri</button>
+          {page > 1 && <button className="premium-btn btn-light mt-3 ml-2" onClick={() => goToPage(1)}>Kthehu te faqja e parë</button>}
+        </div>
+      )}
+      {!uiLocked && !loading && !error && requests.length === 0 && (
+        <p className="text-dim mb-4">{isCustomer ? "Ende nuk keni krijuar asnjë kërkesë pune." : "Nuk ka kërkesa të reja pune për momentin."}</p>
+      )}
       <div className="space-y-5">
         {displayRequests.map((req) => {
           const isPlaceholder = !!req.__placeholder;
@@ -213,7 +236,7 @@ export default function JobRequestList() {
                         {req.title}
                       </h2>
                       {isCustomer ? (
-                        <ModerationBadge status={req.moderation_status} compact />
+                        <JobStatusBadge job={req} />
                       ) : (
                         <StatusBadge active={req.is_active} />
                       )}
@@ -298,6 +321,13 @@ export default function JobRequestList() {
           );
         })}
       </div>
+      {!uiLocked && !loading && !error && pagination.count > 0 && (
+        <nav aria-label="Faqet e kërkesave" className="flex flex-wrap items-center justify-between gap-3 mt-6">
+          <button className="premium-btn btn-light disabled:opacity-50" disabled={!pagination.previous} onClick={() => goToPage(page - 1)}>E mëparshme</button>
+          <p role="status" className="text-sm text-gray-600">Faqja {page} nga {Math.ceil(pagination.count / 10)} · {pagination.count} kërkesa</p>
+          <button className="premium-btn btn-light disabled:opacity-50" disabled={!pagination.next} onClick={() => goToPage(page + 1)}>Tjetra</button>
+        </nav>
+      )}
     </div>
   );
 }
