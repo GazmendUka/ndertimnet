@@ -434,3 +434,7 @@ LISTING_INTRODUCTORY_FREE = env_bool("LISTING_INTRODUCTORY_FREE", default=True)
 BILLING_JOBS_ENABLED = env_bool("BILLING_JOBS_ENABLED", default=False)
 
 EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend")
+
+# Contact delivery is explicit: missing SendGrid configuration must fail, not fake success.
+CONTACT_EMAIL_BACKEND = os.environ.get("CONTACT_EMAIL_BACKEND", "core.email_backend.SendGridBackend")
+CONTACT_RECIPIENT_EMAIL = os.environ.get("CONTACT_RECIPIENT_EMAIL", "info@group-globale.com")

@@ -1,4 +1,5 @@
 from django.urls import path
+from .contact import ContactView
 
 from .views import (
     ActiveHeroAdvertisementView,
@@ -9,6 +10,7 @@ from .views import (
 
 
 urlpatterns = [
+    path("contact/", ContactView.as_view(), name="contact"),
     path("reklama/hero/", ActiveHeroAdvertisementView.as_view(), name="hero-advertisement-albanian"),
     path("reklama/<slug:slug>/", HeroAdvertisementDetailView.as_view(), name="hero-advertisement-detail-albanian"),
     path("advertisements/hero/", ActiveHeroAdvertisementView.as_view(), name="hero-advertisement"),

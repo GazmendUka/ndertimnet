@@ -3,6 +3,13 @@ from django.db import models
 from django.utils.text import slugify
 
 
+class ContactSubmissionGuard(models.Model):
+    """One locked row shared by all workers; no message text or raw addresses."""
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    attempts = models.JSONField(default=list)
+
+
 class PlatformUpdate(models.Model):
     class Status(models.TextChoices):
         IN_PROGRESS = "in_progress", "Në zhvillim"

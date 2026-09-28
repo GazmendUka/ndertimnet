@@ -159,7 +159,8 @@ api.interceptors.response.use(
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    console.error("API ERROR:", err?.response || err);
+    // Contact messages must not be copied into console logs through Axios config.data.
+    if (!err?.config?.skipErrorLog) console.error("API ERROR:", err?.response || err);
     return Promise.reject(err);
   }
 );

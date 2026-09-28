@@ -3,7 +3,7 @@ import os
 from django.core.exceptions import ImproperlyConfigured
 from django.core.mail.backends.base import BaseEmailBackend
 from sendgrid import SendGridAPIClient
-from sendgrid.helpers.mail import Mail
+from sendgrid.helpers.mail import Mail, ReplyTo
 
 
 class SendGridBackend(BaseEmailBackend):
@@ -25,6 +25,8 @@ class SendGridBackend(BaseEmailBackend):
                     raise ValueError('The reminder transport does not support attachments.')
                 message = Mail(from_email=email.from_email, to_emails=email.to,
                                subject=email.subject, plain_text_content=email.body)
+                if email.reply_to:
+                    message.reply_to = ReplyTo(email.reply_to[0])
                 for recipient in email.cc:
                     message.add_cc(recipient)
                 for recipient in email.bcc:
