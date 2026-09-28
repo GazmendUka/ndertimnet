@@ -251,8 +251,8 @@ export default function CompanyJobDetails() {
         <p className="text-label mb-1">Detajet e punës</p>
 
         <div className="flex flex-col sm:flex-row sm:justify-between gap-3">
-          <div>
-            <h1 className="page-title">{job.title}</h1>
+          <div className="min-w-0">
+            <h1 className="page-title [overflow-wrap:anywhere]">{job.title}</h1>
             <p className="text-dim">Shikoni detajet dhe menaxhoni ofertën tuaj.</p>
           </div>
 
@@ -275,54 +275,117 @@ export default function CompanyJobDetails() {
         </div>
       )}
 
-      {/* CONTENT */}
-      <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* LEFT */}
-        <div className="lg:col-span-1">
-          <div className="premium-card p-6 space-y-3 text-gray-700">
-            <h2 className="font-semibold text-lg flex items-center gap-2">
-              <Briefcase size={18} />
-              Informacioni i kërkesës
-            </h2>
+      {/* Description first on mobile; customer details in the desktop sidebar. */}
+      <section className="grid grid-cols-1 items-start gap-6 lg:grid-cols-3">
+        <section
+          aria-labelledby="job-info-heading"
+          className="premium-card min-w-0 p-6 sm:p-8 lg:col-span-2 lg:col-start-2 lg:row-start-1"
+        >
+          <h2 id="job-info-heading" className="font-semibold text-lg flex items-center gap-2 mb-5">
+            <Briefcase size={18} className="shrink-0" />
+            Informacioni i kërkesës
+          </h2>
 
-            <p>{job.description || "Nuk ka përshkrim."}</p>
+          <p className="max-w-prose whitespace-pre-wrap text-base leading-7 text-gray-700 [overflow-wrap:anywhere]">
+            {job.description || "Nuk ka përshkrim."}
+          </p>
 
-            <p className="flex items-center gap-2">
-              <MapPin size={16} />
-              Lokacioni: {job.city_detail?.name || "—"}
-            </p>
+          <dl className="mt-6 grid grid-cols-1 gap-4 border-t border-gray-100 pt-5 text-sm text-gray-700 sm:grid-cols-2">
+            <div className="min-w-0">
+              <dt className="flex items-center gap-2 text-gray-500"><MapPin size={16} /> Lokacioni</dt>
+              <dd className="mt-1 font-medium [overflow-wrap:anywhere]">{job.city_detail?.name || "—"}</dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="flex items-center gap-2 text-gray-500"><Euro size={16} /> Buxheti</dt>
+              <dd className="mt-1 font-medium">{formatBudget(job.budget)}</dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="flex items-center gap-2 text-gray-500"><Tag size={16} /> Kategoria</dt>
+              <dd className="mt-1 font-medium [overflow-wrap:anywhere]">
+                {job.profession_detail?.industry_detail?.name
+                  ? `${job.profession_detail.industry_detail.name} / ${job.profession_detail.name}`
+                  : job.profession_detail?.name || "—"}
+              </dd>
+            </div>
+            <div className="min-w-0">
+              <dt className="flex items-center gap-2 text-gray-500"><Clock size={16} /> Krijuar më</dt>
+              <dd className="mt-1 font-medium">{formatDate(job.created_at)}</dd>
+            </div>
+          </dl>
+        </section>
 
-            <p className="flex items-center gap-2">
-              <Euro size={16} />
-              Buxheti: {formatBudget(job.budget)}
-            </p>
+        <aside aria-label="Klienti dhe këshilla" className="min-w-0 space-y-4 lg:col-start-1 lg:row-start-1 lg:row-span-2">
+            {/* ============================
+                CUSTOMER / PAYMENT GATE
+               ============================ */}
+            <section aria-labelledby="customer-info-heading" className="premium-card min-w-0 p-6 [overflow-wrap:anywhere]">
+              <h2 id="customer-info-heading" className="font-semibold text-lg mb-3">Informacioni i klientit</h2>
 
-            <p className="flex items-center gap-2">
-              <Tag size={16} />
-              Kategoria:{" "}
-              {job.profession_detail?.industry_detail?.name
-                ? `${job.profession_detail.industry_detail.name} / ${job.profession_detail.name}`
-                : job.profession_detail?.name || "—"}
-            </p>
+              {!leadUnlocked ? (
+                <div className="relative">
+                  <div className="blur-sm pointer-events-none select-none space-y-2">
+                    <div className="h-4 max-w-full w-48 bg-gray-200 rounded" />
+                    <div className="h-4 max-w-full w-64 bg-gray-200 rounded" />
+                    <div className="h-4 max-w-full w-40 bg-gray-200 rounded" />
+                  </div>
 
-            <p className="text-xs text-gray-500 flex items-center gap-2">
-              <Clock size={14} />
-              Krijuar më: {formatDate(job.created_at)}
-            </p>
-          </div>
+                  <div className="mt-4 flex items-start gap-3 [&>svg]:shrink-0">
+                    <Lock size={18} />
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium">Lead është i mbyllur</p>
+                      <p className="text-sm text-gray-600">
+                        Biseda hapet pasi dërgoni ofertën. Kontaktet direkte hapen pasi dërgoni ofertën dhe tarifa paguhet ose përfshihet.
+                      </p>
 
-          <div className="premium-card p-5 bg-gray-900 text-white mt-4">
+                      <div className="mt-2 text-sm">
+                        <span className="font-semibold text-green-600">
+                          {unlockLeadPriceLabel}
+                        </span>
+                        <p className="text-xs text-gray-500 mt-1">
+                          {unlockLeadHint}
+                        </p>
+                      </div>
+
+                      <button
+                        onClick={handleUnlockLead}
+                        disabled={unlocking}
+                        className="mt-3 premium-btn btn-dark inline-flex items-center gap-2 disabled:opacity-50"
+                      >
+                        <Unlock size={16} />
+                        {unlocking
+                          ? "Po hapet..."
+                          : "Përgatit ofertën"}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2 text-sm">
+                  <p>
+                    <strong>Emri:</strong> {[job.customer?.user?.first_name, job.customer?.user?.last_name].filter(Boolean).join(" ") || "—"}
+                  </p>
+                  {job.customer?.address && (
+                    <p>
+                      <strong>Adresa:</strong> {job.customer.address}
+                    </p>
+                  )}
+                  {job.customer?.phone && <p><strong>Telefoni:</strong> {job.customer.phone}</p>}
+                  {job.customer?.user?.email && <p><strong>Email:</strong> {job.customer.user.email}</p>}
+                </div>
+              )}
+            </section>
+
+          <div className="premium-card p-5 bg-gray-900 text-white">
             <h3 className="font-semibold text-sm mb-1">Këshillë</h3>
             <p className="text-gray-300 text-sm">
               Ofertat profesionale kanë përshkrim të qartë, afat dhe çmim.
             </p>
           </div>
-        </div>
+        </aside>
 
-        {/* RIGHT */}
-        <div className="lg:col-span-2">
-          <div className="premium-section space-y-4">
-            <h2 className="text-lg font-semibold">Menaxhimi i ofertës</h2>
+        <section aria-labelledby="offer-management-heading" className="min-w-0 lg:col-span-2 lg:col-start-2 lg:row-start-2">
+          <div className="premium-section space-y-4 min-w-0 [overflow-wrap:anywhere]">
+            <h2 id="offer-management-heading" className="text-lg font-semibold">Menaxhimi i ofertës</h2>
 
             {/* JOB CLOSED */}
             {isClosed && (
@@ -390,66 +453,6 @@ export default function CompanyJobDetails() {
               </div>
             )}
 
-            {/* ============================
-                CUSTOMER / PAYMENT GATE
-               ============================ */}
-            <div className="premium-card p-6">
-              <h3 className="font-semibold text-lg mb-3">Informacioni i klientit</h3>
-
-              {!leadUnlocked ? (
-                <div className="relative">
-                  <div className="blur-sm pointer-events-none select-none space-y-2">
-                    <div className="h-4 w-48 bg-gray-200 rounded" />
-                    <div className="h-4 w-64 bg-gray-200 rounded" />
-                    <div className="h-4 w-40 bg-gray-200 rounded" />
-                  </div>
-
-                  <div className="mt-4 flex items-start gap-3">
-                    <Lock size={18} />
-                    <div className="flex-1">
-                      <p className="font-medium">Lead është i mbyllur</p>
-                      <p className="text-sm text-gray-600">
-                        Biseda hapet pasi dërgoni ofertën. Kontaktet direkte hapen pasi dërgoni ofertën dhe tarifa paguhet ose përfshihet.
-                      </p>
-
-                      <div className="mt-2 text-sm">
-                        <span className="font-semibold text-green-600">
-                          {unlockLeadPriceLabel}
-                        </span>
-                        <p className="text-xs text-gray-500 mt-1">
-                          {unlockLeadHint}
-                        </p>
-                      </div>
-
-                      <button
-                        onClick={handleUnlockLead}
-                        disabled={unlocking}
-                        className="mt-3 premium-btn btn-dark inline-flex items-center gap-2 disabled:opacity-50"
-                      >
-                        <Unlock size={16} />
-                        {unlocking
-                          ? "Po hapet..."
-                          : "Përgatit ofertën"}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-2 text-sm">
-                  <p>
-                    <strong>Emri:</strong> {[job.customer?.user?.first_name, job.customer?.user?.last_name].filter(Boolean).join(" ") || "—"}
-                  </p>
-                  {job.customer?.address && (
-                    <p>
-                      <strong>Adresa:</strong> {job.customer.address}
-                    </p>
-                  )}
-                  {job.customer?.phone && <p><strong>Telefoni:</strong> {job.customer.phone}</p>}
-                  {job.customer?.user?.email && <p><strong>Email:</strong> {job.customer.user.email}</p>}
-                </div>
-              )}
-            </div>
-
             {/* AUDIT LOGS (VISIBLE ONLY AFTER UNLOCK) */}
             {leadUnlocked && Array.isArray(job.audit_logs) && (
               <div className="premium-card p-6">
@@ -470,7 +473,7 @@ export default function CompanyJobDetails() {
               </div>
             )}
           </div>
-        </div>
+        </section>
       </section>
     </div>
   );
