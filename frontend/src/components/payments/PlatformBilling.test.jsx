@@ -1,5 +1,5 @@
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
-import { ListingPrice, OfferBilling, SubscriptionBilling } from "./PlatformBilling";
+import { ListingPrice, OfferBilling, SubscriptionBilling, PublicationBilling } from "./PlatformBilling";
 import { billingService, isNativeBilling } from "../../services/billingService";
 
 jest.mock("react-router-dom", () => ({ Link: ({ children }) => <span>{children}</span> }));
@@ -26,6 +26,13 @@ test("publication displays both planned price and zero introductory amount", asy
   render(<ListingPrice />);
   expect(await screen.findByText(/Për të paguar tani: 0.00/)).toBeInTheDocument();
   expect(screen.getByText(/Çmimi i planifikuar: 3.95/)).toBeInTheDocument();
+});
+
+test("paid publication confirms payment without inventing a moderation state", async () => {
+  billingService.history.mockResolvedValue({ data: [{ id: 1, job_request_id: 1, status: 'paid', amount: '0.00' }] });
+  render(<PublicationBilling jobId={1} />);
+  expect(await screen.findByText('Tarifa e publikimit është përfunduar.')).toBeInTheDocument();
+  expect(screen.queryByText(/i nënshtrohet shqyrtimit/)).not.toBeInTheDocument();
 });
 
 test("unconfigured bank prevents subscription signing and explains free availability", async () => {

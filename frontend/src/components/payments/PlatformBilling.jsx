@@ -184,7 +184,7 @@ export function PublicationBilling({ jobId }) {
   return <section className="premium-card p-4 my-4 text-sm">
     <h2 className="font-semibold">Publikimi i kërkesës</h2>
     {charge && <><p>Çmimi: {charge.regular_amount} € · Zbritja: {charge.discount_amount} € · Shuma: {charge.amount} €</p>
-      <p>{charge.status === "paid" ? "Tarifa është përfunduar. Kërkesa i nënshtrohet shqyrtimit." : "Publikimi pret pagesën dhe shqyrtimin."}</p>
+      <p>{charge.status === "paid" ? "Tarifa e publikimit është përfunduar." : "Publikimi pret pagesën dhe shqyrtimin."}</p>
       {charge.status !== "paid" && (isNativeBilling() ? <p>Blerjet në aplikacion nuk janë aktivizuar ende.</p> : <button className="premium-btn btn-dark" disabled={busy} onClick={pay}>Paguaj {charge.amount} €</button>)}</>}
     {error && <p role="alert">{error}</p>}<button className="underline mt-2" onClick={refresh}>Përditëso statusin</button>
   </section>;

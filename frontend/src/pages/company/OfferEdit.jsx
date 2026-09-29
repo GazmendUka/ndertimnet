@@ -39,14 +39,9 @@ export default function OfferEdit() {
   const navigate = useNavigate();
   const { user, access } = useAuth();
 
-  const profileStep =
-    user?.company?.profile_step ??
-    user?.company_profile?.profile_step ??
-    access?.company?.profile_step ??
-    access?.data?.company?.profile_step ??
-    0;
-
-  const canSign = profileStep >= 2;
+  // Use the server's marketplace requirements, not the legacy wizard step.
+  const company = user?.company ?? user?.company_profile;
+  const canSign = company?.can_access_marketplace === true;
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -313,11 +308,12 @@ export default function OfferEdit() {
     );
 
     try {
-      await api.patch("accounts/profile/company/", {
-        default_offer_presentation: presentation,
-      });
+      const profileData = new FormData();
+      profileData.append("default_offer_presentation", presentation);
+      await api.patch("accounts/profile/company/", profileData);
     } catch (e) {
       console.warn("Could not save default_offer_presentation", e);
+      toast.error("Prezantimi u ruajt në ofertë, por jo si tekst për ofertat e ardhshme. Provoni përsëri nga profili.");
     }
 
     goStep(2);
@@ -503,8 +499,8 @@ export default function OfferEdit() {
           </h1>
 
           <p className="text-dim max-w-xl mx-auto mb-8">
-            Klienti tani mund ta shohë ofertën tuaj. Nëse klienti e pranon,
-            chati hapet automatikisht dhe ju mund të vazhdoni komunikimin.
+            Klienti tani mund ta shohë ofertën tuaj. Biseda dhe kontaktet janë
+            të hapura pasi oferta u dërgua dhe tarifa u pagua ose u përfshi.
           </p>
 
           <div className="flex flex-col sm:flex-row justify-center gap-3">

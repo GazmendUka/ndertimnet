@@ -10,6 +10,7 @@ import { toast } from "react-hot-toast";
 
 import { ArrowLeft, MapPin, Euro, Tag, Users, Clock, ShieldCheck } from "lucide-react";
 import ModerationBadge from "../../components/ui/ModerationBadge";
+import JobStatusBadge from "../../components/ui/JobStatusBadge";
 import DeleteModal from "../../components/ui/DeleteModal";
 import CompanyRatingSummary from "../../components/reviews/CompanyRatingSummary";
 
@@ -107,11 +108,11 @@ export default function CustomerJobDetails() {
     const hasAccepted = offers.some(o => o.status === "accepted");
     const hasPending = offers.some(o => o.status === "signed");
 
-    if (job.is_completed || job.winner_offer) {
+    if (job.is_completed || job.completed_at) {
       return "Kërkesa është përfunduar";
     }
 
-    if (hasAccepted) {
+    if (hasAccepted || job.winner_offer) {
       return "Ka një ofertë të pranuar";
     }
 
@@ -345,7 +346,7 @@ export default function CustomerJobDetails() {
           </div>
 
           <div className="flex flex-col items-start sm:items-end gap-2">
-            <ModerationBadge status={job.moderation_status} />
+            <JobStatusBadge job={job} />
 
             {acceptedOffer && <div className="text-sm space-y-2">
               <p>{job.completed_at ? "Puna ka përfunduar" : "Oferta u pranua — puna në vazhdim"}</p>
@@ -363,7 +364,9 @@ export default function CustomerJobDetails() {
               </p>
             )}
 
-            {!job.is_active && !acceptedOffer && (
+            {!job.is_active && !acceptedOffer && !job.winner_offer &&
+              job.moderation_status === "approved" && !job.is_completed &&
+              job.status !== "cancelled" && (
               <p className="text-xs text-gray-500">
                 Kjo kërkesë është mbyllur pa ofertë fituese.
               </p>
