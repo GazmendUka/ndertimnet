@@ -350,13 +350,19 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
                 .order_by("-created_at", "-pk")
             )
 
-        # Company → only active jobs (och kräver aktiv company)
+        # Marketplace lists stay active-only. A winner may read its own history.
         if getattr(user, "role", None) == "company":
             company_profile = getattr(user, "company_profile", None)
             if company_profile and company_profile.is_active:
+                visible_jobs = Q(is_active=True, winner_offer__isnull=True)
+                if getattr(self, "action", None) == "retrieve":
+                    visible_jobs |= Q(
+                        winner_offer__company=company_profile,
+                        winner_offer__status="accepted",
+                    )
                 queryset = (
                     JobRequest.objects.filter(
-                        is_active=True,
+                        visible_jobs,
                         moderation_status=JobRequest.MODERATION_APPROVED,
                         is_deleted=False
                     )

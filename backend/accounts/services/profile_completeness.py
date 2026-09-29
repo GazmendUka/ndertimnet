@@ -32,9 +32,6 @@ def get_company_profile_step(company) -> int:
     if not company.phone:
         return step
 
-    if not company.website:
-        return step
-
     step = 2
 
     # STEP 3 – Profilinnehåll
@@ -44,7 +41,7 @@ def get_company_profile_step(company) -> int:
     if not company.professions.exists():
         return step
 
-    if not company.cities.exists():
+    if not company.has_service_area():
         return step
 
     step = 3
