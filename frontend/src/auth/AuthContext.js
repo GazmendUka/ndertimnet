@@ -1,9 +1,10 @@
 // frontend/src/auth/AuthContext.jsx
 
-import { createContext, useCallback, useContext, useState, useEffect } from "react";
+import { createContext, useCallback, useContext, useState, useEffect, useRef } from "react";
 import api from "../api/axios";
 import { resetOfferIntroduction } from "../components/payments/offerIntroductionSession";
 import { deactivateCurrentPushDevice } from "../services/notificationService";
+import { getSession, isCurrentSession, clearSession, startSession, SESSION_EVENT } from "./session";
 
 const AuthContext = createContext();
 
@@ -11,27 +12,11 @@ const AuthContext = createContext();
 // 🔧 Storage helpers
 // ------------------------------------------------------------
 
-const getAccessToken = () =>
-  localStorage.getItem("access") || sessionStorage.getItem("access");
+const getAccessToken = () => getSession()?.access;
 
-const getRefreshToken = () =>
-  localStorage.getItem("refresh") || sessionStorage.getItem("refresh");
-
-const getStorage = () => {
-  if (localStorage.getItem("access")) return localStorage;
-  if (sessionStorage.getItem("access")) return sessionStorage;
-  return localStorage;
-};
-
-const clearStorage = () => {
+const clearStorage = (expected) => {
   resetOfferIntroduction();
-  localStorage.removeItem("access");
-  localStorage.removeItem("refresh");
-  localStorage.removeItem("user");
-
-  sessionStorage.removeItem("access");
-  sessionStorage.removeItem("refresh");
-  sessionStorage.removeItem("user");
+  return clearSession(expected);
 };
 
 // ============================================================
@@ -43,18 +28,41 @@ export const AuthProvider = ({ children }) => {
   const [access, setAccess] = useState(null);
   const [refresh, setRefresh] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [authError, setAuthError] = useState(false);
+  const sessionId = useRef(getSession()?.id);
+
+  useEffect(() => {
+    const sync = () => {
+      const session = getSession();
+      if (sessionId.current !== session?.id) setUser(null);
+      sessionId.current = session?.id;
+      setAccess(session?.access || null);
+      setRefresh(session?.refresh || null);
+      if (!session) setAuthError(false);
+    };
+    window.addEventListener(SESSION_EVENT, sync);
+    window.addEventListener("storage", sync);
+    return () => {
+      window.removeEventListener(SESSION_EVENT, sync);
+      window.removeEventListener("storage", sync);
+    };
+  }, []);
 
   // ============================================================
   // 🚪 LOGOUT
   // ============================================================
 
   const logout = useCallback(async () => {
+    const session = getSession();
     await deactivateCurrentPushDevice().catch(() => undefined);
-    clearStorage();
+    if (session && !isCurrentSession(session)) return;
+    if (!session && getSession()) return;
+    clearStorage(session);
     setUser(null);
     setAccess(null);
     setRefresh(null);
     setLoading(false);
+    setAuthError(false);
 
     window.location.href = "/";
   }, []);
@@ -63,25 +71,21 @@ export const AuthProvider = ({ children }) => {
   // 👤 Fetch current user
   // ============================================================
 
-  const fetchCurrentUser = useCallback(async (forcedToken = null) => {
+  const fetchCurrentUser = useCallback(async () => {
+    const session = getSession();
     try {
-      const res = await api.get(
-        "accounts/me/",
-        forcedToken
-          ? {
-              headers: {
-                Authorization: `Bearer ${forcedToken}`,
-              },
-            }
-          : undefined
-      );
+      const res = await api.get("accounts/me/");
+      if (!isCurrentSession(session)) {
+        const cancelled = new Error("Session changed");
+        cancelled.code = "ERR_CANCELED";
+        throw cancelled;
+      }
 
       const usr = res.data?.data || res.data;
 
       setUser(usr);
-
-      const storage = getStorage();
-      storage.setItem("user", JSON.stringify(usr));
+      setAuthError(false);
+      session.storage.setItem("user", JSON.stringify(usr));
 
       return usr;
     } catch (err) {
@@ -89,22 +93,23 @@ export const AuthProvider = ({ children }) => {
 
       console.warn("fetchCurrentUser failed:", status);
 
-      if (status === 401) {
-        logout();
+      if (status === 401 && isCurrentSession(session)) {
+        clearStorage(session);
+        setUser(null);
       }
 
       throw err;
     }
-  }, [logout]);
+  }, []);
 
   // ============================================================
   // 🔧 Init auth (on app load)
   // ============================================================
 
-  useEffect(() => {
-    const initAuth = async () => {
-      const token = getAccessToken();
-      const refreshToken = getRefreshToken();
+  const initAuth = useCallback(async () => {
+      const session = getSession();
+      const token = session?.access;
+      const refreshToken = session?.refresh;
 
       if (!token || !refreshToken) {
         setLoading(false);
@@ -113,19 +118,19 @@ export const AuthProvider = ({ children }) => {
 
       setAccess(token);
       setRefresh(refreshToken);
+      setLoading(true);
+      setAuthError(false);
 
       try {
-        await fetchCurrentUser(token);
+        await fetchCurrentUser();
       } catch (err) {
-        console.warn("Auth init failed");
-        logout();
+        if (isCurrentSession(session) && err.code !== "ERR_CANCELED") setAuthError(true);
       } finally {
         setLoading(false);
       }
-    };
+  }, [fetchCurrentUser]);
 
-    initAuth();
-  }, [fetchCurrentUser, logout]);
+  useEffect(() => { initAuth(); }, [initAuth]);
 
   // ============================================================
   // 🔑 LOGIN
@@ -147,16 +152,18 @@ export const AuthProvider = ({ children }) => {
 
       resetOfferIntroduction();
       const data = res.data?.data || res.data;
-      const storage = rememberMe ? localStorage : sessionStorage;
-
-      storage.setItem("access", data.access);
-      storage.setItem("refresh", data.refresh);
+      const session = startSession(data, rememberMe);
 
       setAccess(data.access);
       setRefresh(data.refresh);
 
       // ✅ ENDA source of truth
-      await fetchCurrentUser(data.access);
+      try {
+        await fetchCurrentUser();
+      } catch (error) {
+        if (isCurrentSession(session) && error.code !== "ERR_CANCELED") setAuthError(true);
+        throw error;
+      }
 
       return data.user;
     } catch (err) {
@@ -207,7 +214,7 @@ export const AuthProvider = ({ children }) => {
     if (!token) return;
 
     try {
-      await fetchCurrentUser(token);
+      await fetchCurrentUser();
     } catch (err) {
       console.warn("refreshMe failed");
     }
@@ -216,6 +223,19 @@ export const AuthProvider = ({ children }) => {
   // ============================================================
   // CONTEXT VALUE
   // ============================================================
+
+  if (authError && !user) {
+    return (
+      <main className="min-h-screen flex items-center justify-center p-6">
+        <div role="alert" className="max-w-md rounded-2xl border bg-white p-6 text-center shadow-sm">
+          <h1 className="text-xl font-semibold">Lidhja nuk mund të verifikohet</h1>
+          <p className="mt-3 text-gray-600">Kontrolloni lidhjen me internetin dhe provoni përsëri. Të dhënat e hyrjes janë ruajtur.</p>
+          <button className="premium-btn btn-dark mt-5" onClick={initAuth} disabled={loading}>Provo përsëri</button>
+          <button className="block mx-auto mt-4 underline" onClick={logout}>Dil nga llogaria</button>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <AuthContext.Provider
