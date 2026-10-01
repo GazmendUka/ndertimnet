@@ -6,6 +6,7 @@ from django.shortcuts import redirect
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 from django.conf import settings
 from django.conf.urls.static import static
+from core.health import health
 
 
 def admin_root_redirect(request):
@@ -22,6 +23,7 @@ except ImportError:
     SPECTACULAR_ENABLED = False
 
 urlpatterns = [
+    path("health/", health, name="health"),
     path("", admin_root_redirect),
 
     # 🧱 Admin panel

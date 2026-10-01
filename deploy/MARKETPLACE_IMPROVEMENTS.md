@@ -87,3 +87,13 @@ npm run build
 ## Återgång
 
 De nya tabellerna och nullable-fälten är additiva. Radera inte produktionsdata eller rulla tillbaka databasmigreringar som en snabb felsökningsåtgärd. Vid kodåtergång ska aviseringskön och väntande raderingar först hanteras med en kompatibel arbetare; avsluta inte tyst redan mottagna begäranden. Bevara raderingsspår och filuppgifter tills respektive åtgärd har slutförts.
+
+## Separat Render-staging (1 oktober)
+
+Användaren har därefter godkänt en stagingmiljö och publicering efter godkända kontroller. Staging skapas med egen PostgreSQL-databas, backend, statisk frontend och de två nya schemalagda arbetarna. Produktionsuppgifter eller produktionshemligheter kopieras inte. Automatiska deployer är avstängda i staging för kontrollerad versionshantering.
+
+Backend och stagingarbetare använder `DJANGO_SETTINGS_MODULE=ndertimnet.staging_settings`, `ENVIRONMENT=production` och `DEBUG=false`. Konfigurationen kräver databasnamnet `ndertimnet_staging` och ett explicit matchande `STAGING_DATABASE_HOST`. Externa betalnings-, mejl-, Firebase- och Cloudinary-hemligheter blockeras tills dessa tester uttryckligen förberetts. Vanliga systemmejl skickas inte; kontaktformuläret får inte rapportera verklig leverans. Testkonton är fiktiva. Hälsokontrollen `/health/` kontrollerar databasen utan att lämna ut anslutningsinformation.
+
+Frontend byggs med `REACT_APP_DEPLOYMENT_ENVIRONMENT=staging` och staging-API:s adress. Efter ordinarie bygge körs `node scripts/mark-staging.cjs`, som märker HTML-sidorna och skriver en blockerande robots.txt. Render ska dessutom sätta `X-Robots-Tag: noindex, nofollow, noarchive` på alla stagingfrontendsvar; stagingbackend sätter samma header. Detta förhindrar inte besök och är inte ett åtkomstskydd. Appens vanliga autentisering och behörighetskontroller gäller fortsatt.
+
+Användaren har uttryckligen valt att lämna tester av bilduppladdning och extern filradering spärrade i väntan på separat testlagring. `BlockedMediaStorage` förhindrar därför all sådan åtkomst i staging. Ett passerat övrigt testflöde ska inte beskrivas som verifierad bildlagring, bankcheckout eller faktisk leverans till en telefon. Produktionsinställningarna aktiverar inte stagingspärrarna.
