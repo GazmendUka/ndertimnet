@@ -34,12 +34,56 @@
 
 1. Pusha den valda releasekandidaten och testa den i staging först. Staging har redan den fullständiga aviseringsmigrationen; rulla inte tillbaka eller radera kötabeller som en del av denna koduppdelning. Planera separat hantering av den gamla staging-aviseringsarbetaren och eventuella väntande testhändelser. En befintlig worker får inte bytas till denna gren: kommandot finns inte här.
 2. Bekräfta produktionsbackup/återgång och ansvarig för portfoliogranskning och skyddade raderingsärenden. Ordna vid behov separat kostnadsgodkännande för raderingsarbetaren. Produktionsnotisinställningar ska lämnas oförändrade; Apple- och banktest behöver inte aktiveras för denna webbleverans.
-3. Samordna automatisk deploy före merge så att frontend inte går före backend. Publicera backend med endast de nya migreringarna `accounts.0018` och `jobrequests.0013`, och konfigurera hälsokontroll `/health/`.
+3. Samordna automatisk deploy på **alla fem befintliga produktionstjänster** före merge så att frontend och schemalagda jobb inte uppdateras före backend. Publicera backend med endast de nya migreringarna `accounts.0018` och `jobrequests.0013`, och konfigurera hälsokontroll `/health/`.
 4. Kör `python manage.py process_account_deletions` exempelvis var femte minut med samma release, databas och produktionsfillagring som backend. Den behövs också för sparade portfolioraderingar. **Skapa ingen ny aviseringsworker för denna release.**
 5. Publicera frontend med 16 SEO-rewrites före SPA-regeln. Inga stagingnycklar, STAGING-märkning eller noindex får följa med. Verifiera inloggning, projektutkast, filter, offertjämförelse, rollbehörigheter och HTTP-svar; använd endast godkända testkonton för skrivande kontroller.
 6. Övervaka fel och raderingsärenden efteråt. Vid återgång, bevara kompatibel hantering av redan mottagna raderingar; rulla inte tillbaka databasmigreringar eller förstör affärsdata.
 
 När mobiltestet senare är möjligt måste aviseringsändringarna återinföras uttryckligen, med granskning och tester inklusive kopplingen till kontoradering. En vanlig merge från den ursprungliga grenen räcker inte automatiskt: denna releasegren utgår från den och har exkluderat dess aviseringsändringar.
+
+### Produktionsförberedelser, kontrollerade 1 oktober 2026
+
+**Endast förberedelse – ingen produktionsinställning, deploy, migration, merge eller betaltjänst ändrad.** Användaren har uttryckligen tagit ansvar för granskning av referensbilder och raderingsärenden. Separat publiceringsbeslut och godkännande av den nya raderingscronens kostnad återstår. Uppgifterna nedan är en ögonblicksbild och ska kontrolleras igen vid publicering.
+
+#### Låst underlag och befintlig drift
+
+- Releasegrenens fjärrrevision: `2efc3a1149010825fd8fd6ca249d41a50b54c4c8`. Backend/frontend är oförändrade sedan stagingtestade `3452bbe66cf051e520f19564e544c88c8f0d4411`; mellanskillnaden är dokumentation.
+- Main: `7b23372033526e59ac02b5b2187729c4b2fba145`. Produktionsbackend kör `e06aef7987ec7823cf86eaa5675db75710eb9ab5`; produktionsfrontend kör mainrevisionen. Diff mot den körande backendversionen har exakt de två nya migrationsfilerna ovan. Kontrollera även faktisk migrationsplan före utrullning; Git-diff bevisar inte databasens migrationsstatus.
+- Samtliga tjänster i tabellen har `autoDeploy=yes`, gren `main`. Spara aktuell konfiguration och deploy-ID:n säkert före framtida ändring. Miljöhemligheter ska inte hamna i Git, loggar eller checklistor.
+
+| Tjänst | Render-ID | Nuvarande körning |
+| --- | --- | --- |
+| Backend | `srv-d6jgkn6a2pns739da9ug` | Webbtjänst, root `backend` |
+| Frontend | `srv-d61eb41r0fns73ftkqr0` | Statisk webb, root `frontend` |
+| Betalningsavstämning | `crn-dapmatad0e5s739keepg` | `run_billing_maintenance reconcile --apply`, `*/5 * * * *` |
+| Daglig betalningshantering | `crn-dapmb63bc2fs73b8h2tg` | `run_billing_maintenance daily --apply`, `15 3 * * *` |
+| Profilpåminnelser | `crn-d9ef2rreo5us73fv7ko0` | `send_profile_completion_reminders`, `0 9 * * *` |
+
+Betalningskoden och påminnelsekommandot har ingen diff mot main i denna release. De ska ändå inte få en okontrollerad koduppdatering genom merge. Stäng vid utrullning av **automatisk deploy**, inte ordinarie schemalagd körning, tills backend är redo. Ändra inte betalningsflaggor, scheman, mottagare eller befintlig Firebase-/pushkonfiguration.
+
+#### Backup och återgång
+
+- Produktionsdatabas `dpg-d6jgc7ngi27c73f7rt10-a`: Render rapporterade recovery `AVAILABLE`, med historik från `2026-09-28T07:02:45Z`. Exportlistan var tom. Ingen ny export eller kopia skapades.
+- Staging har en lyckad återställningsövning; **produktion och Cloudinary är inte provåterställda**. Kontrollera återställningsfönstret igen vid publicering. Skapa efter godkännande en aktuell databasexport via Render och invänta lyckat resultat före migration. Ladda inte ned kunddata lokalt och spara inte signerade exportlänkar i dokumentationen.
+- Bevara backendens och frontendens gamla deploy-ID:n/revisioner. Vid kodåtergång: frontend först till tidigare version, därefter backend efter kontroll av kompatibilitet och pågående raderingar. Rulla inte tillbaka de additiva migrationerna.
+- Raderingsarbetaren måste kunna fortsätta hantera redan mottagna begäranden även om den gamla frontend/backendversionen återställs. Vid misstänkt felaktig radering: pausa just raderingsjobbet och utred, i stället för att fortsätta automatiskt. Kodåtergång återskapar inte borttagna konton eller bilder. Återställning av hela databasen kräver ett separat incidentbeslut och hantering av senare affärshändelser/raderingsbegäranden.
+
+#### Förberedda produktionsinställningar – ännu inte tillämpade
+
+- Backend: behåll byggkommandot `pip install -r requirements.txt && python manage.py collectstatic --noinput`. Nuvarande pre-deploy är `python manage.py migrate`, och även startkommandot kör migrate före gunicorn. Vid samordnad utrullning: använd `python manage.py migrate --noinput` endast före deploy och `gunicorn ndertimnet.wsgi:application` som startkommando, motsvarande befintlig serverstart utan dubbel migrationskörning. Kontrollera konfiguration och lyckad pre-deploy innan trafik växlas. Sätt hälsokontroll `/health/` tillsammans med nya versionen, inte som fristående ändring av den gamla versionen.
+- Frontend: behåll `npm install && npm run build`, publiceringskatalog `build` och befintlig produktions-API-adress. Nu finns endast `/* → /index.html` och inga egna headers. Lägg de 16 exakta omskrivningarna i SEO-avsnittet före SPA-regeln. Kopiera inte stagingens miljövariabler, byggtillägg, robots.txt eller noindex-header.
+- Ny tjänst, föreslaget namn `ndertimnet-account-deletions`: Python-cron, root `backend`, produktionsgren `main`, samma godkända apprevision som backend, auto-deploy av under utrullningen. Bygg `pip install -r requirements.txt`; kör `python manage.py process_account_deletions`; schema `*/5 * * * *`. Kör inga migrationer i cronens startkommando.
+- Raderingscron behöver samma produktionsdatabas, Django-inställningar och Cloudinary-konfiguration som backend, överförda direkt mellan skyddade tjänstemiljöer. Behåll `ENVIRONMENT=production`, `DEBUG=false` och produktionssettings (inte `ndertimnet.staging_settings`). Verifiera DB-/lagringslikhet utan att skriva ut värden. Kopiera inte `STAGING_*`, och ge inte tjänsten bank-, mejl- eller Firebase-hemligheter som kommandot inte behöver. Push kan uttryckligen vara av på **den nya cron-tjänsten**, utan ändring av backend.
+- Render anger **minst 1 USD per månad per cron-tjänst**, med faktisk kostnad beroende på körtid. Detta är ett nytt tillägg, inte totalpriset för hela driften. Ingen sådan produktionstjänst är skapad eller kostnadsgodkänd i detta steg. [Render: cron-debitering](https://render.com/docs/cronjobs).
+
+#### Kontrollpunkter vid ett senare godkänt genomförande
+
+1. Bekräfta oförändrade grenar, körande revisioner, produktionsmål och backupstatus. Samordna alla fem tjänsters automatiska deploy innan merge. Om main ändrats sedan denna kontroll: granska och testa den faktiska sammanslagna koden igen.
+2. Säkerställ att aktuell migrationsplan bara innehåller väntade ändringar. Publicera backend, verifiera pre-deploy och `/health/` med HTTP 200. Avbryt frontendutrullning om backend eller behörighetskontroller fallerar.
+3. Skapa och verifiera den kostnadsgodkända raderingscron från samma revision. En lyckad cron-körning är **inte bevis på att alla bilder raderats**: lagringsfel lämnar kvar filuppgifter för återförsök utan att kommandot nödvändigtvis misslyckas. Kontrollera även kvarvarande `AccountFileErasure` med `completed_at IS NULL`, `erasing_files` och `needs_review`. Inget generellt automatiskt larm för detta är verifierat.
+4. Publicera frontend och SEO-rutter. Kontrollera samtliga 16 råa HTTP-svar: rätt titel/canonical/huvudrubrik, ingen stagingmärkning/noindex och fungerande privata direktlänkar. Kör läsande inloggnings-/behörighetskontroller; skrivande produktionsprov kräver avgränsade godkända testkonton och särskilt beslut om testdata/rensning.
+5. Uppdatera de tre befintliga cron-tjänsterna kontrollerat efter backend, bevara deras scheman och granska nästa ordinarie körning. Utlös inte manuellt betalnings- eller påminnelsejobb enbart som röktest. Återställ sparade inställningar för auto-deploy först när utrullningen är verifierad.
+6. Följ hälsokontroll, fel, nästa raderingskörningar och ovanstående kvarvarande uppgifter efter publicering. Användaren granskar portfolio och skyddade raderingar i admin. Raderingsadmin är läsande; `needs_review` har ingen automatisk slutförandeknapp. Bekräfta lagringskategorier och dokumentera handläggning innan skyddad information tas bort. Ingen generell tremånadersgallring införs.
 
 ---
 
