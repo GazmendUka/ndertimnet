@@ -74,10 +74,11 @@ test("empty response shows an explicit empty state", async () => {
 test("company list waits for access check and uses server-side offer filtering", async () => {
   useAuth.mockReturnValue({ ...customer, isCustomer: false, isCompany: true });
   let resolveProfile;
-  api.get.mockImplementationOnce(() => new Promise(resolve => { resolveProfile = resolve; }))
-    .mockResolvedValueOnce(result("Available project"));
+  api.get.mockImplementation(url => url.includes("profile/company")
+    ? new Promise(resolve => { resolveProfile = resolve; })
+    : Promise.resolve(url.startsWith("jobrequests/") ? result("Available project") : {data:[]}));
   show();
-  expect(api.get).toHaveBeenCalledTimes(1);
+  expect(api.get.mock.calls.filter(([url]) => url.startsWith("jobrequests/"))).toHaveLength(0);
   await act(async () => resolveProfile({ data: { can_access_marketplace: true } }));
   await screen.findByText("Available project");
   expect(api.get).toHaveBeenLastCalledWith("jobrequests/?without_my_offer=1&page=1");
@@ -88,5 +89,19 @@ test("locked company does not fetch job data", async () => {
   api.get.mockResolvedValue({ data: { can_access_marketplace: false } });
   show();
   await screen.findAllByText("Këtu do të shfaqen kërkesat reale");
-  expect(api.get).toHaveBeenCalledTimes(1);
+  expect(api.get.mock.calls.filter(([url]) => url.startsWith("jobrequests/"))).toHaveLength(0);
+});
+
+test("changing city resets page while recommendations are sent to the server", async () => {
+  useAuth.mockReturnValue({ ...customer, isCustomer: false, isCompany: true });
+  api.get.mockImplementation(url => Promise.resolve(url.includes("profile/company")
+    ? {data:{can_access_marketplace:true}}
+    : url.includes("locations/cities") ? {data:[{id:7,name:"Test city"}]}
+    : url.includes("taxonomy") ? {data:[]}
+    : result("Matched project")));
+  show("/company/jobrequests?page=3");
+  await screen.findByText("Matched project");
+  fireEvent.change(screen.getByLabelText("Qyteti"), {target:{value:"7"}});
+  await act(async () => {});
+  expect(api.get).toHaveBeenCalledWith("jobrequests/?without_my_offer=1&page=1&city=7");
 });

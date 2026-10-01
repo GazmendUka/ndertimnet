@@ -1,0 +1,19 @@
+{% extends "admin/base_site.html" %}
+{% block content %}
+<form method="get">
+  <label for="days">Jobb och sparade utkast skapade de senaste</label>
+  <select name="days" id="days">
+    <option value="7" {% if days == "7" %}selected{% endif %}>7 dagarna</option>
+    <option value="30" {% if days == "30" %}selected{% endif %}>30 dagarna</option>
+    <option value="90" {% if days == "90" %}selected{% endif %}>90 dagarna</option>
+    <option value="365" {% if days == "365" %}selected{% endif %}>365 dagarna</option>
+  </select><button type="submit">Visa</button>
+</form>
+<p>Utfall räknas för jobb skapade under perioden, inte för alla händelser som inträffat under perioden. Raderade jobb ingår inte. Första offert mäts från publicering till första signerade version.</p>
+<table><caption>Sammanställda affärsmått, utan personuppgifter</caption>
+  <thead><tr><th scope="col">Mått</th><th scope="col">Värde</th></tr></thead>
+  <tbody>{% for label, value in rows %}<tr><th scope="row">{{ label }}</th><td>{{ value|default_if_none:"Underlag saknas" }}</td></tr>{% endfor %}</tbody>
+</table>
+<p>Utkast som bara finns i besökarens webbläsare räknas inte. Historiska jobb kan sakna publiceringstid. Avgifter är inte total kundanskaffningskostnad: abonnemang, kompensationskrediter och återbetalningar ingår inte. Noll och saknat underlag visas separat.</p>
+<p><a href="{% url 'admin:jobrequests_jobrequest_changelist' %}">Tillbaka till jobben</a></p>
+{% endblock %}

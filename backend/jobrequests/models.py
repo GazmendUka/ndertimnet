@@ -277,6 +277,8 @@ class JobRequest(models.Model):
 
 
 class JobRequestDraft(models.Model):
+    client_draft_id = models.UUIDField(null=True, blank=True, editable=False)
+    submitted_job = models.OneToOneField("JobRequest", null=True, blank=True, on_delete=models.SET_NULL, related_name="source_draft")
     customer = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
@@ -316,6 +318,7 @@ class JobRequestDraft(models.Model):
 
     class Meta:
         ordering = ["-created_at"]
+        constraints = [models.UniqueConstraint(fields=["customer", "client_draft_id"], name="unique_guest_draft_per_customer")]
 
     def __str__(self):
         return f"Draft #{self.pk} – {getattr(self.customer, 'email', 'unknown')} (step {self.current_step})"

@@ -108,6 +108,7 @@ class JobRequestAdmin(admin.ModelAdmin):
 
     def get_urls(self):
         custom_urls = [
+            path("marketplace-metrics/", self.admin_site.admin_view(self.marketplace_metrics_view), name="jobrequests_marketplace_metrics"),
             path(
                 "send-customer-email-preview/",
                 self.admin_site.admin_view(self.send_customer_email_preview),
@@ -115,6 +116,32 @@ class JobRequestAdmin(admin.ModelAdmin):
             ),
         ]
         return custom_urls + super().get_urls()
+
+    def marketplace_metrics_view(self, request):
+        if not request.user.is_superuser:
+            raise PermissionDenied
+        from main.marketplace_metrics import marketplace_metrics
+        days = request.GET.get("days", "30")
+        if days not in ("7", "30", "90", "365"):
+            days = "30"
+        report = marketplace_metrics(int(days))
+        labels = {
+            "drafts_started": "Sparade projektutkast", "drafts_submitted": "Inskickade utkast",
+            "draft_submission_percent": "Inskickade utkast (%)", "jobs_created": "Skapade jobb",
+            "jobs_published": "Godkända jobb", "jobs_with_offer": "Jobb med skickad offert",
+            "offer_coverage_percent": "Jobb med offert (%)", "offers_sent": "Skickade offerter",
+            "mean_hours_to_first_offer": "Genomsnittlig tid till första offert (timmar)",
+            "first_offer_sample_size": "Antal jobb med mätbar första offert",
+            "jobs_with_accepted_offer": "Jobb med accepterad offert", "jobs_completed": "Slutförda jobb",
+            "offer_fees_eur": "Betalda offertavgifter (EUR)",
+            "offer_fees_per_won_job_eur": "Offertavgifter per vunnet jobb, hela marknaden (EUR)",
+            "returning_companies": "Företag som offererat på minst två jobb",
+        }
+        return TemplateResponse(request, "admin/jobrequests/jobrequest/metrics.html", {
+            **self.admin_site.each_context(request), "title": "Marknadsplatsens statistik",
+            "opts": self.model._meta, "days": days,
+            "rows": [(label, report[key]) for key, label in labels.items()],
+        })
 
     def send_customer_email_preview(self, request):
         if not request.user.is_superuser:

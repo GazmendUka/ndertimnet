@@ -39,7 +39,7 @@ test("saving offer presentation refreshes shared saved profile state",async()=>{
   await screen.findByText("4 nga 6 hapa të plotësuar");
   // Navigate explicitly so the test does not depend on initial step selection.
   fireEvent.click(screen.getByRole("button",{name:/Hapi 5 Oferta/}));
-  const field=screen.getByRole("textbox");
+  const field=document.querySelector('textarea[name="default_offer_presentation"]');
   fireEvent.change(field,{target:{value:company.default_offer_presentation}});
   expect(refreshMe).not.toHaveBeenCalled();
   api.patch.mockResolvedValue({data:company});

@@ -29,7 +29,7 @@ import {
 import api from "../api/axios";
 
 const defaultHero = {
-  title: "Gjej kompaninë e duhur për ndërtim dhe renovim.",
+  title: "Gjeni kompaninë për projektin tuaj.",
   subtitle:
     "Publiko projektin me ofertën hyrëse 0 € dhe merr oferta nga kompani të interesuara. Krahaso mundësitë dhe zgjidh ekipin që të përshtatet.",
   imageUrl:
@@ -251,11 +251,11 @@ export default function LandingPage() {
       <Helmet>
         <html lang="sq" />
         <title>
-          Kompani ndërtimi dhe renovimi në Kosovë dhe Shqipëri | Ndertimnet
+          Gjeni kompaninë për projektin tuaj | Ndertimnet
         </title>
         <meta
           name="description"
-          content="Gjej kompani ndërtimi dhe renovimi në Kosovë dhe Shqipëri. Publiko projektin dhe merr oferta nga ndërtues të verifikuar në Prishtinë, Tiranë dhe më shumë."
+          content="Përshkruani projektin, merrni oferta dhe krahasoni kompanitë në Kosovë dhe Shqipëri."
         />
         <meta name="robots" content="index, follow" />
         <meta property="og:locale" content="sq_AL" />
@@ -263,11 +263,11 @@ export default function LandingPage() {
         <meta property="og:type" content="website" />
         <meta
           property="og:title"
-          content="Gjej kompani ndërtimi dhe renovimi | Ndertimnet"
+          content="Gjeni kompaninë për projektin tuaj | Ndertimnet"
         />
         <meta
           property="og:description"
-          content="Publiko projektin dhe merr oferta nga kompani ndërtimi të verifikuara."
+          content="Përshkruani projektin, merrni oferta dhe krahasoni kompanitë në Kosovë dhe Shqipëri."
         />
         <meta property="og:image" content="https://ndertimnet.com/og-image.jpg" />
         <meta
@@ -276,8 +276,7 @@ export default function LandingPage() {
         />
         <meta property="og:url" content="https://ndertimnet.com/" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:site" content="@ndertimnet" />
-        <meta name="twitter:title" content="Ndertimnet - Ndërtim dhe renovim" />
+        <meta name="twitter:title" content="Gjeni kompaninë për projektin tuaj | Ndertimnet" />
         <meta
           name="twitter:description"
           content="Platforma që lidh klientët me kompani ndërtimi dhe renovimi."
@@ -339,12 +338,14 @@ export default function LandingPage() {
                 {defaultHero.title}
               </h1>
 
+              <p className="mt-4 text-xl font-medium text-white sm:text-2xl">Nga ideja te Shtëpia juaj</p>
+
               <p className="mt-5 max-w-2xl text-base leading-7 text-white/85 sm:mt-6 sm:text-lg sm:leading-8">
                 {defaultHero.subtitle}
               </p>
 
               <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap">
-                <PrimaryButton to="/login">Publiko projektin</PrimaryButton>
+                <PrimaryButton to="/nis-projektin">Fillo projektin</PrimaryButton>
                 <SecondaryButton to="/register/company">Për kompanitë</SecondaryButton>
               </div>
 
@@ -386,7 +387,7 @@ export default function LandingPage() {
               />
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
                 <Link
-                  to="/login"
+                  to="/nis-projektin"
                   className="inline-flex min-h-[48px] items-center justify-center rounded-lg bg-[#ef7d22] px-6 py-3 text-sm font-semibold text-white transition hover:bg-[#d96814]"
                 >
                   Publiko projekt
@@ -463,6 +464,7 @@ export default function LandingPage() {
             </div>
 
             <div className="rounded-lg border border-white/20 bg-white p-4 text-[#12251b] shadow-2xl sm:p-5">
+              <p className="mb-3 text-xs text-gray-600">Shembull demonstrues — shifrat nuk janë të dhëna reale.</p>
               <div className="flex items-center justify-between gap-4 border-b border-[#e8e2d8] pb-4">
                 <div>
                   <div className="text-sm font-semibold text-[#ef7d22]">
@@ -615,7 +617,7 @@ export default function LandingPage() {
               </p>
             </div>
             <div className="flex flex-col gap-3 sm:flex-row lg:flex-col xl:flex-row">
-              <PrimaryButton to="/login">Publiko projekt</PrimaryButton>
+              <PrimaryButton to="/nis-projektin">Fillo projektin</PrimaryButton>
               <SecondaryButton to="/register/company">
                 Regjistro kompaninë
               </SecondaryButton>

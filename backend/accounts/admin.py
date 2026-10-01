@@ -413,3 +413,30 @@ class EmailVerificationTokenAdmin(admin.ModelAdmin):
     list_filter = ("is_used",)
     search_fields = ("user__email", "token")
     ordering = ("-created_at",)
+
+
+from .models import PortfolioProject
+
+@admin.register(PortfolioProject)
+class PortfolioProjectAdmin(admin.ModelAdmin):
+    list_display = ("title", "company", "approved", "created_at")
+    list_filter = ("approved",)
+    readonly_fields = ("company", "title", "description", "scope", "image", "created_at")
+
+    def has_add_permission(self, request):
+        return False
+
+
+from .models import AccountDeletionRequest
+
+@admin.register(AccountDeletionRequest)
+class AccountDeletionRequestAdmin(admin.ModelAdmin):
+    list_display = ("id", "user", "status", "reason", "created_at", "completed_at")
+    list_filter = ("status",)
+    readonly_fields = ("user", "status", "reason", "created_at", "completed_at")
+
+    def has_add_permission(self, request):
+        return False
+
+    def has_delete_permission(self, request, obj=None):
+        return False

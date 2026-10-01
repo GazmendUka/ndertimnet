@@ -300,6 +300,11 @@ export default function JobRequestCreate() {
 
     const initDrafts = async () => {
       try {
+        const requestedDraft = new URLSearchParams(window.location.search).get("draft");
+        if (requestedDraft && /^\d+$/.test(requestedDraft)) {
+          const selected = await jobRequestDraftService.getDraft(requestedDraft);
+          if (!selected.is_submitted) { hydrateFromDraft(selected); return; }
+        }
         const drafts = await jobRequestDraftService.getMyDrafts();
         const openDrafts = (drafts || []).filter((d) => !d.is_submitted);
 

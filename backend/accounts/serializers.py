@@ -285,6 +285,11 @@ class CompanySerializer(serializers.ModelSerializer):
 
 
 class PublicCompanySerializer(serializers.ModelSerializer):
+    portfolio = serializers.SerializerMethodField()
+
+    def get_portfolio(self, obj):
+        from .portfolio import PortfolioSerializer
+        return PortfolioSerializer(obj.portfolio_projects.filter(approved=True), many=True, context=self.context).data
     def to_representation(self, instance):
         from offers.contact_policy import company_contacts_allowed, redact_company
         data = super().to_representation(instance)
@@ -312,6 +317,7 @@ class PublicCompanySerializer(serializers.ModelSerializer):
             "is_verified",
             "created_at",
             "rating_summary",
+            "portfolio",
         ]
 
     def get_logo_url(self, obj):
@@ -348,6 +354,8 @@ class RegisterCompanySerializer(serializers.ModelSerializer):
         if user.is_active:
             raise serializers.ValidationError("Ky email është tashmë i regjistruar.")
 
+        if hasattr(user, "deletion_request"):
+            raise serializers.ValidationError("Llogaria është në proces fshirjeje.")
         # User exists but inactive
         if user.role != "company":
             raise serializers.ValidationError("Ky email është përdorur me një rol tjetër.")
@@ -413,6 +421,9 @@ class RegisterCustomerSerializer(serializers.ModelSerializer):
 
         if user.role != "customer":
             raise serializers.ValidationError("Ky email është përdorur me një rol tjetër.")
+
+        if hasattr(user, "deletion_request"):
+            raise serializers.ValidationError("Llogaria është në proces fshirjeje.")
 
         return value
 

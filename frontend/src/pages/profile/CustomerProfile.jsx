@@ -31,6 +31,7 @@ export default function CustomerProfile() {
   const [cities, setCities] = useState([]);
 
   const handleDeactivate = async () => {
+    if (saving) return;
     setError("");
 
     if (!password.trim()) {
@@ -38,12 +39,14 @@ export default function CustomerProfile() {
       return;
     }
 
+    setSaving(true);
     try {
-      await api.post("/accounts/account/delete/", {
+      const result = await api.post("/accounts/account/delete/", {
         password,
         refresh,
       });
 
+      window.alert(result.data.message);
       setPassword("");
       setShowDeactivate(false);
 
@@ -52,9 +55,9 @@ export default function CustomerProfile() {
     } catch (err) {
       setError(
         err.response?.data?.message ||
-        "Nuk ishte e mundur të çaktivizohej llogaria."
+        "Kërkesa për fshirje nuk u regjistrua."
       );
-    }
+    } finally { setSaving(false); }
   };
 
   // --------------------------------------------------
@@ -286,12 +289,12 @@ export default function CustomerProfile() {
 
       <section className="rounded-2xl border border-red-100 bg-red-50/50 p-4 sm:p-6">
         <h3 className="text-lg font-semibold mb-2">
-          Çaktivizo llogarinë
+          Fshi llogarinë
         </h3>
 
         <p className="text-sm text-gray-600 mb-4">
-          Kjo do të çaktivizojë llogarinë tuaj.
-          Mund ta riaktivizoni përmes email-it.
+          Kërkoni fshirjen e llogarisë dhe të dhënave tuaja. Qasja mbyllet menjëherë. Kontratat, pagesat dhe çështjet e hapura shqyrtohen para fshirjes; kopjet rezervë kanë cikël të veçantë ruajtjeje.
+          Kjo nuk është çaktivizim i përkohshëm dhe nuk ofron riaktivizim.
         </p>
 
         <button
@@ -302,7 +305,7 @@ export default function CustomerProfile() {
         }}
           className="inline-flex min-h-[44px] items-center rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 hover:bg-red-50"
         >
-          Çaktivizo llogarinë
+          Kërko fshirjen
         </button>
       </section>
 
@@ -314,9 +317,11 @@ export default function CustomerProfile() {
               Konfirmo fjalëkalimin
               </span>
             </h3>
-
+            <p className="text-sm text-gray-600 mb-4">Qasja mbyllet menjëherë dhe kërkohet fshirja e të dhënave. Kontratat, pagesat dhe çështjet e hapura shqyrtohen veçmas. Kjo nuk mund të anulohet nga ky ekran.</p>
+            {error && <p role="alert" className="text-red-700 mb-3">{error}</p>}
             <input
               type="password"
+              aria-label="Fjalëkalimi për fshirjen"
               disabled={saving}
               placeholder="Fjalëkalimi"
               value={password}

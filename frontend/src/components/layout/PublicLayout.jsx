@@ -215,7 +215,7 @@ export default function PublicLayout() {
             <div className="grid grid-cols-5 items-end">
               <PublicNavItem to="/" icon={Home} label="Ballina" active={publicPathIsActive("/")} />
               <PublicNavItem to="/#sherbimet" icon={Hammer} label="Shërbime" active={servicesAreActive} />
-              <PublicNavItem to="/login" icon={Plus} label="Publiko" emphasized />
+              <PublicNavItem to="/nis-projektin" icon={Plus} label="Publiko" emphasized />
               <PublicNavItem to="/perditesime" icon={Newspaper} label="Të reja" active={publicPathIsActive("/perditesime")} />
               <button
                 type="button"

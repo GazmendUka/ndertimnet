@@ -463,12 +463,13 @@ class JobRequestDraftSerializer(serializers.ModelSerializer):
             "profession",
             "current_step",
             "is_submitted",
+            "submitted_job",
             "created_at",
             "updated_at",
             "address",
             "postal_code",
         ]
-        read_only_fields = ["id", "is_submitted", "created_at", "updated_at"]
+        read_only_fields = ["id", "is_submitted", "submitted_job", "created_at", "updated_at"]
 
         extra_kwargs = {
             "title": {"required": False, "allow_blank": True},

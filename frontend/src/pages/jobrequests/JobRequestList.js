@@ -25,6 +25,25 @@ export default function JobRequestList() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [retry, setRetry] = useState(0);
+  const [cities, setCities] = useState([]);
+  const [professions, setProfessions] = useState([]);
+  const city = searchParams.get("city") || "";
+  const profession = searchParams.get("profession") || "";
+  const recommended = searchParams.get("recommended") === "1";
+  useEffect(() => {
+    if (!isCompany) return;
+    let active = true;
+    Promise.all([api.get("locations/cities/"), api.get("taxonomy/professions/")])
+      .then(([c, p]) => { if (active) { setCities(c.data.results || c.data); setProfessions(p.data.results || p.data); } })
+      .catch(() => { /* The list remains usable without lookup filters. */ });
+    return () => { active = false; };
+  }, [isCompany]);
+  function filter(name, value) {
+    const params = new URLSearchParams(searchParams);
+    params.delete("page");
+    if (value) params.set(name, value); else params.delete(name);
+    setSearchParams(params);
+  }
 
   // ============================================================
   // LOAD COMPANY (same as dashboard)
@@ -93,7 +112,7 @@ export default function JobRequestList() {
       try {
         const endpoint = isCustomer
           ? `jobrequests/?mine=1&page=${page}`
-          : `jobrequests/?without_my_offer=1&page=${page}`;
+          : `jobrequests/?without_my_offer=1&page=${page}${city ? `&city=${encodeURIComponent(city)}` : ""}${profession ? `&profession=${encodeURIComponent(profession)}` : ""}${recommended ? "&recommended=1" : ""}`;
 
         const res = await api.get(endpoint);
         if (!Array.isArray(res.data?.results)) throw new Error("Invalid job list");
@@ -111,7 +130,7 @@ export default function JobRequestList() {
 
     fetchRequests();
     return () => { cancelled = true; };
-  }, [access, isCustomer, waitingForCompany, uiLocked, page, retry]);
+  }, [access, isCustomer, waitingForCompany, uiLocked, page, retry, city, profession, recommended]);
 
   function goToPage(nextPage) {
     const params = new URLSearchParams(searchParams);
@@ -186,6 +205,12 @@ export default function JobRequestList() {
       </div>
 
       {/* LIST */}
+      {isCompany && !uiLocked && <section aria-label="Filtro kërkesat" className="premium-card p-4 mb-6 flex flex-wrap gap-4">
+        <label>Qyteti<select className="block border rounded p-2 max-w-full" value={city} onChange={e => filter("city", e.target.value)}><option value="">Të gjitha qytetet</option>{cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
+        <label>Shërbimi<select className="block border rounded p-2 max-w-full" value={profession} onChange={e => filter("profession", e.target.value)}><option value="">Të gjitha shërbimet</option>{professions.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}</select></label>
+        <label className="flex items-center gap-2"><input type="checkbox" checked={recommended} onChange={e => filter("recommended", e.target.checked ? "1" : "")} />Për zonat dhe specialitetet e profilit tim</label>
+        <button className="premium-btn btn-light" onClick={() => setSearchParams({})}>Pastro filtrat</button>
+      </section>}
       {!uiLocked && loading && <p role="status" className="text-dim mb-4">Duke ngarkuar kërkesat...</p>}
       {!uiLocked && error && (
         <div role="alert" className="premium-card p-5 mb-4">

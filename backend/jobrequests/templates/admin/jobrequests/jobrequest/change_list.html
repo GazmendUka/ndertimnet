@@ -2,6 +2,7 @@
 
 {% block object-tools-items %}
   {% if request.user.is_superuser %}
+    <li><a href="{% url 'admin:jobrequests_marketplace_metrics' %}">Marknadsplatsens statistik</a></li>
     <li>
       <a href="{% url 'admin:jobrequests_jobrequest_send_customer_email_preview' %}">
         Skicka kundmejl-preview

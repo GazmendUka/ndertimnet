@@ -142,7 +142,8 @@ class FullMarketplaceJourneyTests(APITestCase):
             {"password": new_password},
             format="json",
         )
-        self.assertEqual(deleted.status_code, 200, deleted.data)
+        self.assertEqual(deleted.status_code, 202, deleted.data)
+        self.assertEqual(deleted.data["status"], "requested")
         user.refresh_from_db()
         self.assertFalse(user.is_active)
         self.assertFalse(user.email_verified)

@@ -52,7 +52,7 @@ export default function Renovime() {
 
               <div className="mt-8 flex gap-4">
                 <Link
-                  to="/register/customer"
+                  to="/nis-projektin"
                   className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800"
                 >
                   Publiko projektin
@@ -174,7 +174,7 @@ export default function Renovime() {
               "/renovim-kuzhine",
               "/elektricist",
               "/fasada",
-              "/lyrje",
+              "/lyerje",
               "/cati",
               "/pllakashtrues",
               "/dysheme",
@@ -225,7 +225,7 @@ export default function Renovime() {
 
             <div className="mt-6 flex gap-4">
               <Link
-                to="/register/customer"
+                to="/nis-projektin"
                 className="inline-flex items-center justify-center rounded-xl bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
               >
                 Publiko projektin

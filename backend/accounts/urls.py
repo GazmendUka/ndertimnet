@@ -25,6 +25,8 @@ from .views import (
 
 
 router = DefaultRouter()
+from .portfolio import PortfolioViewSet
+router.register(r"portfolio", PortfolioViewSet, basename="portfolio")
 router.register(r"users", UserViewSet)
 router.register(r"customers", CustomerViewSet)
 

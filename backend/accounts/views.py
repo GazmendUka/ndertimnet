@@ -12,6 +12,7 @@ from django.conf import settings
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError
 from django.shortcuts import get_object_or_404
+from django.db import transaction
 
 from rest_framework import viewsets, status, generics
 from rest_framework.decorators import (
@@ -222,6 +223,7 @@ class LoginView(APIView):
 class VerifyEmailView(APIView):
     permission_classes = [AllowAny]
 
+    @transaction.atomic
     def post(self, request):
         token = request.data.get("token")
         if not token:
@@ -235,9 +237,12 @@ class VerifyEmailView(APIView):
             )
 
         try:
-            user = User.objects.get(id=user_id)
+            user = User.objects.select_for_update().get(id=user_id)
         except User.DoesNotExist:
             return Response({"detail": "Përdoruesi nuk u gjet"}, status=status.HTTP_404_NOT_FOUND)
+
+        if hasattr(user, "deletion_request"):
+            return Response({"detail": "Llogaria është në proces fshirjeje."}, status=400)
 
         # ✅ Bestäm reactivation mer robust:
         # - user var inaktiv, eller
@@ -424,7 +429,7 @@ class RegisterCustomerView(generics.CreateAPIView):
 
         if existing_user:
             # If user exists but is inactive → reactivation flow
-            if not existing_user.is_active:
+            if not existing_user.is_active and not hasattr(existing_user, "deletion_request"):
                 token = generate_email_verification_token(existing_user)
                 send_verification_email(existing_user, token)
 
@@ -570,7 +575,7 @@ class CustomerConsentView(APIView):
 
 
 # ======================================================
-# 🇦🇱 SOFT DELETE USER
+# Confirm an irreversible account erasure request
 # ======================================================
 
 class DeleteAccountView(APIView):
@@ -580,7 +585,6 @@ class DeleteAccountView(APIView):
     def post(self, request):
         user = request.user
         password = request.data.get("password")
-        refresh_token = request.data.get("refresh")
 
         if not password:
             return error("Ju lutem konfirmoni fjalëkalimin.", 400)
@@ -588,28 +592,10 @@ class DeleteAccountView(APIView):
         if not user.check_password(password):
             return error("Fjalëkalimi është i pasaktë.", 400)
 
-        # 🔐 Blacklist refresh token (log out immediately)
-        if refresh_token:
-            try:
-                token = RefreshToken(refresh_token)
-                token.blacklist()
-            except TokenError:
-                pass
-
-        # 🔹 Soft deactivate company if exists
-        if hasattr(user, "company_profile"):
-            company = user.company_profile
-            company.is_active = False
-            company.archived_at = timezone.now()
-            company.save(update_fields=["is_active", "archived_at"])
-
-        # 🔐 Soft deactivate user
-        user.is_active = False
-        user.email_verified = False
-        user.email_verified_at = None
-        user.save(update_fields=["is_active", "email_verified", "email_verified_at"])
-
-        return success("Llogaria u çaktivizua me sukses.")
+        from accounts.services.deletion import request_deletion
+        deletion = request_deletion(user)
+        return Response({"status": "requested", "request_id": deletion.pk,
+            "message": "Kërkesa për fshirje u regjistrua dhe qasja u mbyll. Të dhënat pa detyrime ruhen vetëm deri në përpunimin e fshirjes. Kontratat, pagesat dhe çështjet e hapura kërkojnë shqyrtim të veçantë."}, status=202)
     
 # ======================================================
 # 🇦🇱 RESET PASSWORD

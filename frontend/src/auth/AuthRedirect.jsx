@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import LandingPage from "../pages/landing_page";
+import { readGuestProject } from "../utils/guestProject";
 
 const AuthRedirect = () => {
   const { user, loading } = useAuth();
@@ -23,7 +24,7 @@ const AuthRedirect = () => {
 
   // 🔀 INLOGGAD → RÄTT DASHBOARD
   if (user.role === "customer") {
-    return <Navigate to="/customer" replace />;
+    return <Navigate to={readGuestProject() ? "/nis-projektin" : "/customer"} replace />;
   }
 
   if (user.role === "company") {

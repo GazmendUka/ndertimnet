@@ -19,7 +19,7 @@ def initiate_company_reactivation(email: str, request=None) -> bool:
     except User.DoesNotExist:
         return False
 
-    if user.is_active:
+    if user.is_active or hasattr(user, "deletion_request"):
         return False
 
     # 🔐 Generate new verification token

@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useAuth } from "./AuthContext";
+import { readGuestProject } from "../utils/guestProject";
 import { useNavigate, Link } from "react-router-dom";
 import {
   AlertCircle,
@@ -51,7 +52,7 @@ const Login = () => {
         return;
       }
 
-      navigate("/");
+      navigate(user.role === "customer" && readGuestProject() ? "/nis-projektin" : "/");
     } catch (err) {
       setError(
         err?.response?.data?.message ||

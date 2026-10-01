@@ -112,6 +112,14 @@ export default function PublicCompanyProfile() {
           </section>
 
           <section className="premium-card p-6 sm:p-8">
+            {company.portfolio?.length > 0 && <section className="mb-8">
+              <h2 className="text-xl font-semibold">Projektet referuese</h2>
+              <p className="text-sm text-gray-600 my-3">Referenca të publikuara nga kompania. Nuk janë vlerësime apo punë të verifikuara nga Ndertimnet.</p>
+              <div className="grid gap-4 sm:grid-cols-2">{company.portfolio.map(project => <article key={project.id} className="border rounded-xl overflow-hidden">
+                <img src={project.image} alt={project.title} loading="lazy" className="w-full h-48 object-cover" />
+                <div className="p-4"><h3 className="font-semibold">{project.title}</h3><p className="text-sm text-gray-500">{project.scope}</p><p className="whitespace-pre-wrap break-words mt-2">{project.description}</p></div>
+              </article>)}</div>
+            </section>}
             <p className="text-label">Përvoja të verifikuara</p>
             <h2 className="mt-1 text-xl font-semibold">Vlerësimet e klientëve</h2>
             <div className="mt-6"><CompanyReviews companyId={company.id} showAll /></div>

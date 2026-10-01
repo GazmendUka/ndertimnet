@@ -13,6 +13,7 @@ import ModerationBadge from "../../components/ui/ModerationBadge";
 import JobStatusBadge from "../../components/ui/JobStatusBadge";
 import DeleteModal from "../../components/ui/DeleteModal";
 import CompanyRatingSummary from "../../components/reviews/CompanyRatingSummary";
+import OfferComparison, { offerPrice } from "../../components/offers/OfferComparison";
 
 export default function CustomerJobDetails() {
   const { id } = useParams();
@@ -161,20 +162,33 @@ export default function CustomerJobDetails() {
       setLoadingOffers(false);
       return;
     }
-
+    let cancelled = false;
+    setLoadingOffers(true);
+    setOffers([]);
     async function fetchOffers() {
       try {
-        const res = await api.get(`offers/?job_request=${id}`);
-        const list = res.data.results || res.data || [];
-        setOffers(Array.isArray(list) ? list : []);
+        const list = [];
+        let page = 1;
+        while (!cancelled) {
+          // Keep credentials on our own endpoint; never follow an absolute next URL.
+          const res = await api.get(`offers/?job_request=${id}${page > 1 ? `&page=${page}` : ""}`);
+          const rows = res.data.results || res.data;
+          if (!Array.isArray(rows)) throw new Error("Invalid offer list");
+          list.push(...rows);
+          if (!res.data.next) break;
+          if (!rows.length || page >= 100) throw new Error("Incomplete offer list");
+          page += 1;
+        }
+        if (!cancelled) setOffers([...new Map(list.map(o => [o.id, o])).values()]);
       } catch (err) {
-        console.error("Error loading offers:", err);
+        if (!cancelled) setError("Ofertat nuk u ngarkuan. Ringarkoni faqen për të provuar përsëri.");
       } finally {
-        setLoadingOffers(false);
+        if (!cancelled) setLoadingOffers(false);
       }
     }
 
     fetchOffers();
+    return () => { cancelled = true; };
   }, [id, access]);
 
   // ============================================================
@@ -443,6 +457,7 @@ export default function CustomerJobDetails() {
               </p>
             </div>
 
+            {!loadingOffers && <OfferComparison key={id} offers={offers} />}
             {job.moderation_status !== "approved" ? (
               <div className="rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 text-sm text-gray-600">
                 Ofertat do të aktivizohen pasi kërkesa të miratohet dhe publikohet.
@@ -459,10 +474,7 @@ export default function CustomerJobDetails() {
                   const isAccepted = offer.status === "accepted";
                   const isDeclined = offer.status === "declined";
 
-                  const displayPrice =
-                    offer.current_version?.price_amount ||
-                    job.budget ||
-                    null;
+                  const displayPrice = offerPrice(offer.current_version);
 
                   return (
                     <Link
@@ -517,9 +529,7 @@ export default function CustomerJobDetails() {
                         <span className="text-sm flex items-center gap-1">
                           <Euro size={14} />
                           Oferta:{" "}
-                          {displayPrice
-                            ? formatBudget(displayPrice)
-                            : "Pa çmim"}
+                          {displayPrice}
                         </span>
 
                         {/* VIEW OFFER BUTTON */}

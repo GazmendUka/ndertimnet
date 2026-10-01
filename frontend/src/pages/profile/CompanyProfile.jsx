@@ -19,6 +19,7 @@ import {
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
 import { companyProfileProgress } from "../../utils/companyProfileProgress";
+import PortfolioEditor from "../../components/company/PortfolioEditor";
 
 const STEPS = [
   { id: 1, key: "basic", title: "Informacioni bazë", short: "Bazë", icon: Building2 },
@@ -334,7 +335,8 @@ export default function CompanyProfile() {
     setDeleting(true);
     setDeleteError("");
     try {
-      await api.post("/accounts/account/delete/", { password: deletePassword });
+      const result = await api.post("/accounts/account/delete/", { password: deletePassword });
+      window.alert(result.data.message);
       logout();
       navigate("/");
     } catch (requestError) {
@@ -493,11 +495,12 @@ export default function CompanyProfile() {
         </section>
       )}
 
+      <PortfolioEditor />
       <section className="mt-8 rounded-2xl border border-red-100 bg-white p-5">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h2 className="text-sm font-semibold text-gray-900">Menaxhimi i llogarisë</h2>
-            <p className="mt-1 text-xs text-gray-500">Çaktivizimi i llogarisë është një veprim i rëndësishëm.</p>
+            <p className="mt-1 text-xs text-gray-500">Kërkoni fshirjen e llogarisë dhe të dhënave tuaja.</p>
           </div>
           <button type="button" onClick={() => setShowDeleteModal(true)} className="text-sm font-semibold text-red-600 hover:text-red-700">Fshi llogarinë</button>
         </div>
@@ -730,7 +733,7 @@ function DeleteAccountModal({ password, setPassword, error, deleting, onDelete, 
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
       <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
         <h2 className="text-lg font-semibold text-red-600">Konfirmo fshirjen e llogarisë</h2>
-        <p className="mt-2 text-sm leading-6 text-gray-600">Shkruani fjalëkalimin për ta çaktivizuar llogarinë.</p>
+        <p className="mt-2 text-sm leading-6 text-gray-600">Konfirmoni fshirjen me fjalëkalim. Qasja mbyllet menjëherë. Fshirja përpunohet më pas; kontratat, pagesat dhe çështjet e hapura shqyrtohen për të përcaktuar çfarë duhet ruajtur. Kopjet rezervë kanë cikël të veçantë ruajtjeje. Ky veprim nuk anulohet nga riaktivizimi.</p>
         <input type="password" value={password} onChange={(event) => setPassword(event.target.value)} placeholder="Fjalëkalimi" className="premium-input mt-4" />
         {error && <p className="mt-2 text-sm text-red-600">{error}</p>}
         <div className="mt-6 flex justify-end gap-3">

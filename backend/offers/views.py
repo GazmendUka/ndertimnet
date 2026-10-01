@@ -335,6 +335,7 @@ class OfferViewSet(viewsets.ModelViewSet):
 
         schedule_push_notification(
             user=offer.job_request.customer,
+            event_key=f"signed:{offer.pk}:{offer.current_version_id}",
             category="offer_updates",
             title="Ofertë e re në Ndërtimnet",
             body="Një kompani ka dërguar një ofertë të re për kërkesën tuaj.",
@@ -358,9 +359,6 @@ class OfferViewSet(viewsets.ModelViewSet):
     def decision(self, request, pk=None):
         offer = self.get_object()
         user = request.user
-        previous_status = offer.status
-        previous_accepted_id = offer.accepted_version_id
-        previous_rejected_id = offer.versions.filter(customer_rejected_at__isnull=False).values_list("pk", flat=True).first()
 
         if getattr(user, "role", None) != "customer":
             return Response(
@@ -381,24 +379,6 @@ class OfferViewSet(viewsets.ModelViewSet):
 
         serializer.is_valid(raise_exception=True)
         decided_offer = serializer.save()
-
-        latest_rejected_id = decided_offer.versions.filter(customer_rejected_at__isnull=False).values_list("pk", flat=True).first()
-        if previous_status != decided_offer.status or previous_accepted_id != decided_offer.accepted_version_id or previous_rejected_id != latest_rejected_id:
-            schedule_push_notification(
-                user=decided_offer.company.user,
-                category="offer_updates",
-                title="Përditësim i ofertës",
-                body=(
-                    "Klienti e pranoi ofertën tuaj."
-                    if serializer.validated_data["decision"] == "accept"
-                    else "Klienti nuk e pranoi ofertën tuaj."
-                ),
-                data={
-                    "type": f"offer_version_{serializer.validated_data['decision']}" if previous_status == OfferStatus.ACCEPTED else f"offer_{decided_offer.status}",
-                    "offer_id": decided_offer.id,
-                    "path": f"/company/offers/{decided_offer.id}",
-                },
-            )
 
         return Response(
             {"success": True, "status": decided_offer.status},
@@ -612,18 +592,11 @@ class OfferViewSet(viewsets.ModelViewSet):
             else:
                 return Response({"detail": "Invalid sender"}, status=403)
 
-        schedule_push_notification(
-            user=recipient,
-            category="chat_messages",
-            title="Mesazh i ri në Ndërtimnet",
-            body="Keni një mesazh të ri në bisedën tuaj.",
-            data={
-                "type": "chat_message",
-                "offer_id": offer.id,
-                "message_id": message.id,
-                "path": recipient_path,
-            },
-        )
+            schedule_push_notification(
+                user=recipient, category="chat_messages", event_key=f"message:{message.pk}",
+                title="Mesazh i ri në Ndërtimnet", body="Keni një mesazh të ri në bisedën tuaj.",
+                data={"type": "chat_message", "offer_id": offer.id, "message_id": message.id, "path": recipient_path},
+            )
 
         if user.role == "customer":
             from jobrequests.activity import record_customer_activity

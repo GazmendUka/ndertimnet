@@ -331,10 +331,7 @@ class Company(models.Model):
         return bool(self.pk and self.professions.exists())
 
     def has_portfolio(self):
-        """
-        Förberedd för framtida gallery/portfolio-system.
-        """
-        return False
+        return bool(self.pk and self.portfolio_projects.filter(approved=True).exists())
 
     # ======================================================
     # ACCESS METHODS (BLOCKING)
@@ -525,6 +522,33 @@ class Company(models.Model):
 # ======================================================
 # EMAIL TOKEN
 # ======================================================
+
+class AccountDeletionRequest(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, null=True, on_delete=models.SET_NULL, related_name="deletion_request")
+    status = models.CharField(max_length=20, default="requested", choices=[(v, v) for v in ("requested", "needs_review", "erasing_files", "completed")])
+    reason = models.CharField(max_length=80, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+
+class AccountFileErasure(models.Model):
+    request = models.ForeignKey(AccountDeletionRequest, on_delete=models.CASCADE, related_name="files", null=True, blank=True)
+    name = models.CharField(max_length=1000)
+    completed_at = models.DateTimeField(null=True, blank=True)
+
+
+class PortfolioProject(models.Model):
+    company = models.ForeignKey(Company, on_delete=models.CASCADE, related_name="portfolio_projects")
+    title = models.CharField(max_length=150)
+    description = models.TextField(max_length=3000)
+    scope = models.CharField(max_length=200, blank=True)
+    image = models.ImageField(upload_to="portfolio/")
+    approved = models.BooleanField(default=False, help_text="Review images/text for privacy and contact details before publication. Not verification of the work itself.")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+
 
 class EmailVerificationToken(models.Model):
     user = models.ForeignKey(

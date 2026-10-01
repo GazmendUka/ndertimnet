@@ -1,5 +1,6 @@
 from django.urls import path
 from .contact import ContactView
+from .marketplace_metrics import MarketplaceMetricsView
 
 from .views import (
     ActiveHeroAdvertisementView,
@@ -10,6 +11,7 @@ from .views import (
 
 
 urlpatterns = [
+    path("marketplace/metrics/", MarketplaceMetricsView.as_view(), name="marketplace-metrics"),
     path("contact/", ContactView.as_view(), name="contact"),
     path("reklama/hero/", ActiveHeroAdvertisementView.as_view(), name="hero-advertisement-albanian"),
     path("reklama/<slug:slug>/", HeroAdvertisementDetailView.as_view(), name="hero-advertisement-detail-albanian"),

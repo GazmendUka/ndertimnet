@@ -52,7 +52,7 @@ export default function NdertimPrizren() {
 
         {/* CTA */}
         <Link
-          to="/login"
+          to="/nis-projektin"
           className="inline-block bg-orange-500 text-white px-8 py-4 rounded-xl font-semibold hover:bg-orange-600 transition"
         >
           Publiko projekt
@@ -167,7 +167,7 @@ export default function NdertimPrizren() {
         {/* FINAL CTA */}
         <div className="mt-16 text-center">
           <Link
-            to="/login"
+            to="/nis-projektin"
             className="bg-orange-500 text-white px-8 py-4 rounded-xl text-lg font-semibold"
           >
             Filloni tani – Publikoni projektin tuaj

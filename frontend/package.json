@@ -31,7 +31,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "NODE_OPTIONS=--no-deprecation CI=false react-scripts build",
+    "build": "NODE_OPTIONS=--no-deprecation CI=false react-scripts build && node scripts/prerender-seo.cjs",
     "mobile:sync": "npm run build && cap sync",
     "mobile:android": "npm run mobile:sync && cap open android",
     "mobile:ios": "npm run mobile:sync && cap open ios",

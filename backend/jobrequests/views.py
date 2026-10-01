@@ -127,6 +127,41 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save()
 
+    @action(detail=False, methods=["post"], url_path="import-guest")
+    @transaction.atomic
+    def import_guest(self, request):
+        from uuid import UUID
+        from rest_framework.exceptions import ValidationError
+        try:
+            key = UUID(str(request.data.get("client_draft_id", "")))
+        except ValueError:
+            raise ValidationError({"client_draft_id": "Drafti nuk është i vlefshëm."})
+        payload = {k: request.data.get(k) for k in ("title", "description", "city", "profession")}
+        if not isinstance(payload["description"], str) or not 20 <= len(payload["description"]) <= 10000:
+            raise ValidationError({"description": "Shkruani 20–10000 karaktere."})
+        if not isinstance(payload["title"], str) or len(payload["title"].strip()) < 5:
+            raise ValidationError({"title": "Shkruani të paktën 5 karaktere."})
+        serializer = self.get_serializer(data=payload)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
+        if not data.get("city") or not data["city"].is_active or not data.get("profession") or not data["profession"].is_active:
+            raise ValidationError({"detail": "Zgjidhni qytetin dhe shërbimin aktiv."})
+        draft, created = JobRequestDraft.objects.select_for_update().get_or_create(
+            customer=request.user, client_draft_id=key, defaults={**data, "current_step": 1},
+        )
+        # A lost response can be retried with newly edited local content. Never
+        # acknowledge older content as saved, or overwrite a newer server draft.
+        if not created and (
+            draft.title != data["title"] or draft.description != data["description"]
+            or draft.city_id != data["city"].pk or draft.profession_id != data["profession"].pk
+        ):
+            return Response({
+                "code": "guest_draft_conflict",
+                "detail": "Drafti i ruajtur ka përmbajtje tjetër. Ndryshimet tuaja nuk janë mbishkruar.",
+                "draft": self.get_serializer(draft).data,
+            }, status=status.HTTP_409_CONFLICT)
+        return Response(self.get_serializer(draft).data, status=201 if created else 200)
+
     # --------------------------------------------------------
     # 🚀 POST /jobrequest-drafts/<id>/submit/
     # Konvertera draft → riktig JobRequest
@@ -219,7 +254,8 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
             create_publication_charge(job)
 
             draft.is_submitted = True
-            draft.save(update_fields=["is_submitted"])
+            draft.submitted_job = job
+            draft.save(update_fields=["is_submitted", "submitted_job"])
 
             JobRequestAudit.objects.create(
                 job_request=job,
@@ -373,6 +409,22 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
                 # Filter before pagination so pages and totals describe available jobs.
                 if getattr(self, "action", None) == "list" and params.get("without_my_offer") == "1":
                     queryset = queryset.exclude(offers__company=company_profile)
+                if getattr(self, "action", None) == "list":
+                    for field in ("city", "profession"):
+                        value = params.get(field)
+                        if value:
+                            if not value.isdigit() or len(value) > 9:
+                                from rest_framework.exceptions import ValidationError
+                                raise ValidationError({field: "Zgjidhni një vlerë të vlefshme."})
+                            queryset = queryset.filter(**{field + "_id": int(value)})
+                    if params.get("recommended") == "1":
+                        areas = list(company_profile.cities.values_list("pk", flat=True))
+                        if company_profile.city_id:
+                            areas.append(company_profile.city_id)
+                        queryset = queryset.filter(
+                            city_id__in=areas,
+                            profession__in=company_profile.professions.all(),
+                        )
                 return queryset
             return JobRequest.objects.none()
 
