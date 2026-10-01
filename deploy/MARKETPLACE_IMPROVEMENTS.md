@@ -2,7 +2,7 @@
 
 ## Aktuell release: webbförbättringar med befintliga aviseringar
 
-**Detta avsnitt gäller grenen `codex/web-improvements-release` och ersätter de äldre publiceringskraven längre ned.** Den fullständiga aviseringslösningen finns kvar på `codex/marketplace-improvements` (`763011e`). Uppdelningen är lokal; den är inte pushad eller driftsatt. Den tidigare stagingmiljön kör fortfarande hela paketet, inte denna uppdelade release.
+**Detta avsnitt gäller grenen `codex/web-improvements-release` och ersätter de äldre publiceringskraven längre ned.** Den fullständiga aviseringslösningen finns kvar på `codex/marketplace-improvements` (`763011e`). Releasekandidaten `3452bbe` är pushad och driftsatt i staging efter användarens godkännande. Produktion och main är oförändrade.
 
 ### Ingår och undantas
 
@@ -16,7 +16,19 @@
 - 222 backendtester och 123 frontendtester i 17 sviter godkända; frontendbygget producerar 16 SEO-sidor.
 - Åtta nya kompatibilitetstester täcker leverans efter commit, ingen leverans efter rollback, avsaknad av köberoende, avstängningsval vid leverans, kontoradering före väntande callback, accepterad/avvisad offert samt chatt. Transporten är mockad; testerna verifierar inte telefonmottagning.
 - Sju köspecifika tester är endast relevanta för den fullständiga grenen och ingår inte här. Samtidiga acceptansanrop testas fortsatt för korrekt vinnare, men påstås inte längre ge exakt en avisering.
-- Tidigare bild-/återställningsprov gäller den fullständiga stagingversionen. De ersätter inte ett stagingprov av denna nya releasekandidat.
+- Tidigare återställningsprov gäller den fullständiga stagingversionen. Stagingproven av just den uppdelade releasekandidaten dokumenteras nedan.
+
+### Stagingprov av `3452bbe`, 1 oktober
+
+- Backend, frontend och raderingscron kör releasekandidaten från `codex/web-improvements-release`, med automatisk deploy fortsatt av. Backend publicerades före frontend. Inga nya betaltjänster skapades.
+- Gamla staging-aviseringscron är **pausad**, kvar på `codex/marketplace-improvements`. Tre befintliga testhändelser, samtliga väntande och utan leveransposter, bevarades i databasen. Inga kötabeller raderades och inga migrationer rullades tillbaka. Releasekoden använder inte dessa tabeller.
+- Driftsatt flödestest med fiktiva uppgifter täckte två signerade gratisofferter, jämförelseunderlag, chatt, upprepad acceptans, korrekt vinnare/förloraråtkomst, separat slutförande och kontoradering både med/utan skyddade affärskopplingar. Direkta notisanrop fångades med mockad transport. Hela testtransaktionen rullades tillbaka; befintlig testkö förblev oförändrad.
+- Externa HTTP-anrop verifierade kund-/företags-/admininloggning, behörigheter, affärsmått, filtrering och bevarat slutfört testjobb. Bankkatalogen rapporterade fortsatt att bankbetalningar är avstängda.
+- Webbläsartest verifierade startsida/STAGING-märkning, utkast över omladdning och inloggning, verklig import och privat direktlänk. Bredder 320/390/768/1440 utan observerad överbredd, JavaScript-undantag eller produktions-API-anrop. Det skapade testutkastet raderades och GET 404 bekräftades.
+- Bildflödet upprepades i riktig webbläsare: syntetisk uppladdning, dold före granskning, nekad radering av annan användare, admin-godkännande, kundvisning vid 390/1440, ägarradering och molnresurs 404. Ett första försök stoppades lokalt före uppladdning på grund av oläsbar arbetskatalog; omkörning från temporär katalog passerade.
+- Ett separat test på stagingbackend raderade ett nytt fiktivt konto inklusive företag, portfoliopost och verklig bild i isolerad testlagring. Ordinarie raderingskod användes. Testkontot och bilden är borta; raderingsspår behålls. Detta engångsprov ska inte förväxlas med ett specifikt schemalagt körningstillfälle.
+- Samtliga 16 SEO-URL:er verifierade över HTTP: unik titel, huvudrubrik, canonical och noindex. Staginghealth och produktionshemsida gav 200. Backend/raderingscron använder samma isolerade databas och testlagringsuppgifter.
+- Produktion verifierades oförändrad: backend `e06aef7`, frontend/main `7b23372`. Ingen bankaktivering eller riktig telefon-/mejlleverans ingår. Publicering till produktion kräver ett separat beslut och återstående driftförberedelser enligt checklistan.
 
 ### Publiceringsordning efter separat godkännande
 
