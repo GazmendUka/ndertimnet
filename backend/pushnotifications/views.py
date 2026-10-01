@@ -36,7 +36,10 @@ class DeviceRegisterView(APIView):
                 platform=device.platform,
             ).exclude(pk=device.pk).update(active=False)
 
-        NotificationPreference.objects.get_or_create(user=request.user)
+        preference, _ = NotificationPreference.objects.get_or_create(user=request.user)
+        if not preference.push_enabled:
+            preference.push_enabled = True
+            preference.save(update_fields=["push_enabled", "updated_at"])
 
         return Response(
             {"registered": True, "platform": device.platform},

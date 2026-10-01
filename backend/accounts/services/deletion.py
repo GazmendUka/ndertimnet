@@ -26,8 +26,6 @@ def request_deletion(user):
         BlacklistedToken.objects.get_or_create(token=token)
     EmailVerificationToken.objects.filter(user=user).delete()
     user.notification_devices.all().delete()
-    from pushnotifications.models import NotificationEvent
-    NotificationEvent.objects.filter(user=user).delete()
     user.is_active = False
     user.email_verified = False
     user.email_verified_at = None

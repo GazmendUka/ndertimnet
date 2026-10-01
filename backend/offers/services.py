@@ -12,15 +12,6 @@ class OfferAcceptanceError(Exception):
     pass
 
 
-def notify_decision(offer, decision, version_id):
-    from pushnotifications.services import schedule_push_notification
-    schedule_push_notification(user=offer.company.user, category="offer_updates",
-        title="Përditësim i ofertës",
-        body="Klienti e pranoi ofertën tuaj." if decision == "accept" else "Klienti nuk e pranoi ofertën tuaj.",
-        data={"type": f"offer_{decision}", "offer_id": offer.pk, "path": f"/company/offers/{offer.pk}"},
-        event_key=f"decision:{offer.pk}:{version_id}:{decision}")
-
-
 def accept_offer(*, offer_id, customer, version_id=None):
     """Accept an offer and close its job in one transaction.
 
@@ -60,7 +51,6 @@ def accept_offer(*, offer_id, customer, version_id=None):
                     action="offer_accepted", message=f"Klienti pranoi ndryshimin v{version.version_number}.")
                 from jobrequests.activity import record_customer_activity
                 record_customer_activity(job.pk)
-                notify_decision(offer, "accept", version.pk)
                 return offer, job
             raise OfferAcceptanceError("Kjo kërkesë ka tashmë një ofertë fituese.")
 
@@ -147,7 +137,6 @@ def accept_offer(*, offer_id, customer, version_id=None):
 
         from payments.credits import compensate_job_offers
         transaction.on_commit(lambda: compensate_job_offers(job.pk), robust=True)
-        notify_decision(offer, "accept", offer.accepted_version_id)
         return offer, job
 
 
@@ -170,7 +159,6 @@ def decide_version(*, offer_id, customer, version_id, decision):
         if not version.customer_rejected_at:
             version.customer_rejected_at = timezone.now()
             version.save(update_fields=["customer_rejected_at"])
-            notify_decision(offer, "reject", version.pk)
         if offer.status != OfferStatus.ACCEPTED:
             offer.status = OfferStatus.REJECTED
             offer.rejected_at = timezone.now()

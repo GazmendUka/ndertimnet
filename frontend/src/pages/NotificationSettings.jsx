@@ -49,7 +49,7 @@ export default function NotificationSettings() {
           setMessage("Leja për njoftime nuk u dha. Mund ta ndryshoni te cilësimet e telefonit.");
           return;
         }
-        const { data } = await updateNotificationPreferences({ push_enabled: true });
+        const { data } = await getNotificationPreferences();
         setPreferences(data);
         setMessage("Njoftimet u aktivizuan.");
       }

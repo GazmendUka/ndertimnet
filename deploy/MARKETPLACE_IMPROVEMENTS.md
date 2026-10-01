@@ -1,4 +1,39 @@
-# Marknadsplatsförbättringar – lokal leverans 2026-10-01
+# Marknadsplatsförbättringar – uppdelad webbleverans 2026-10-01
+
+## Aktuell release: webbförbättringar med befintliga aviseringar
+
+**Detta avsnitt gäller grenen `codex/web-improvements-release` och ersätter de äldre publiceringskraven längre ned.** Den fullständiga aviseringslösningen finns kvar på `codex/marketplace-improvements` (`763011e`). Uppdelningen är lokal; den är inte pushad eller driftsatt. Den tidigare stagingmiljön kör fortfarande hela paketet, inte denna uppdelade release.
+
+### Ingår och undantas
+
+- Behålls: startsida, 16 SEO-sidor/delning, projektutkast före registrering, filter/matchning, offertjämförelse, administrativa affärsmått, modererad portfolio och kontoraderingsbegäran med skyddad affärshistorik.
+- Befintliga aviseringsfiler och offertens aviseringsanrop matchar basrevisionen `7b23372`: leverans via `transaction.on_commit`, utan den nya beständiga kön. Även aviseringsinställningarnas frontend och enhetsregistrering behåller befintligt beteende.
+- Uppskjutet i sin helhet: deduplicering av samtidiga beslut, gemensam avisering för båda acceptansvägarna, rättningen av automatiskt återaktiverat avstängningsval och beständig kö med återförsök. Dessa kända begränsningar är inte åtgärdade i denna release. Mejlaviseringar ingår inte heller.
+- `NotificationEvent`, `NotificationDelivery`, kökommandot och migration `pushnotifications.0002` ingår inte. Kontoradering återkallar fortfarande enhetstoken och sessioner, men har inget beroende till de borttagna kömodellerna.
+
+### Kontroller av just denna uppdelning
+
+- 222 backendtester och 123 frontendtester i 17 sviter godkända; frontendbygget producerar 16 SEO-sidor.
+- Åtta nya kompatibilitetstester täcker leverans efter commit, ingen leverans efter rollback, avsaknad av köberoende, avstängningsval vid leverans, kontoradering före väntande callback, accepterad/avvisad offert samt chatt. Transporten är mockad; testerna verifierar inte telefonmottagning.
+- Sju köspecifika tester är endast relevanta för den fullständiga grenen och ingår inte här. Samtidiga acceptansanrop testas fortsatt för korrekt vinnare, men påstås inte längre ge exakt en avisering.
+- Tidigare bild-/återställningsprov gäller den fullständiga stagingversionen. De ersätter inte ett stagingprov av denna nya releasekandidat.
+
+### Publiceringsordning efter separat godkännande
+
+1. Pusha den valda releasekandidaten och testa den i staging först. Staging har redan den fullständiga aviseringsmigrationen; rulla inte tillbaka eller radera kötabeller som en del av denna koduppdelning. Planera separat hantering av den gamla staging-aviseringsarbetaren och eventuella väntande testhändelser. En befintlig worker får inte bytas till denna gren: kommandot finns inte här.
+2. Bekräfta produktionsbackup/återgång och ansvarig för portfoliogranskning och skyddade raderingsärenden. Ordna vid behov separat kostnadsgodkännande för raderingsarbetaren. Produktionsnotisinställningar ska lämnas oförändrade; Apple- och banktest behöver inte aktiveras för denna webbleverans.
+3. Samordna automatisk deploy före merge så att frontend inte går före backend. Publicera backend med endast de nya migreringarna `accounts.0018` och `jobrequests.0013`, och konfigurera hälsokontroll `/health/`.
+4. Kör `python manage.py process_account_deletions` exempelvis var femte minut med samma release, databas och produktionsfillagring som backend. Den behövs också för sparade portfolioraderingar. **Skapa ingen ny aviseringsworker för denna release.**
+5. Publicera frontend med 16 SEO-rewrites före SPA-regeln. Inga stagingnycklar, STAGING-märkning eller noindex får följa med. Verifiera inloggning, projektutkast, filter, offertjämförelse, rollbehörigheter och HTTP-svar; använd endast godkända testkonton för skrivande kontroller.
+6. Övervaka fel och raderingsärenden efteråt. Vid återgång, bevara kompatibel hantering av redan mottagna raderingar; rulla inte tillbaka databasmigreringar eller förstör affärsdata.
+
+När mobiltestet senare är möjligt måste aviseringsändringarna återinföras uttryckligen, med granskning och tester inklusive kopplingen till kontoradering. En vanlig merge från den ursprungliga grenen räcker inte automatiskt: denna releasegren utgår från den och har exkluderat dess aviseringsändringar.
+
+---
+
+## Historik: det fullständiga paketet och dess stagingprov
+
+Följande avsnitt beskriver tidigare arbete på `codex/marketplace-improvements`, **inte checklistan för den aktuella uppdelade releasen**.
 
 ## Status och avgränsning
 
@@ -125,3 +160,26 @@ Detta ersätter bildundantaget ovan. Efter användarens bekräftelse aktiverades
 - Riktig webbläsare: företagsinloggning, syntetisk bilduppladdning, väntande bild dold för kunden, nekad radering av annan användare, godkännande via adminformulär och kundvisning vid 390/1440 px. Ägarens radering tog bort referensen och molnresursen.
 - Extra körningar på stagingbackend verifierade bildhämtning från Render, sparad raderingsuppgift efter simulerat lagringsfel och lyckat återförsök med verklig lagring. Ett nytt fiktivt konto utan affärskopplingar raderades inklusive företag, portfolio och molnbild genom ordinarie raderingskommando. Dessa var engångskörningar av arbetarkoden, inte bevis på ett specifikt schemalagt körningstillfälle.
 - Testbilderna är raderade; inga riktiga kundbilder användes. Produktionsbackend och frontend kontrollerades oförändrade. Riktig iPhone-notis väntar på Apple-medlemskap/separat testapp; banktest och återställningsövning återstår.
+
+### Slutkontroll och publiceringsplan, senare 1 oktober
+
+Detta avsnitt uppdaterar tidigare status, men är inte ett publiceringsgodkännande. Ingen produktion ändrades i slutkontrollen.
+
+- Hela sviten kördes åter: 221 backendtester och 123 frontendtester i 17 sviter godkända. Django system-/migrationskontroll samt frontendbygge med 16 förrenderade sidor godkända.
+- Alla 16 rena staging-URL:er gav åter HTTP 200 med unik titel, huvudrubrik, canonical-adress och noindex-header. Stagingens databashälsokontroll och produktionshemsidan gav 200. Produktionskatalogen rapporterade fortfarande `bank_payments_available=false`.
+- Återställningsövningen av staging är nu genomförd: separat PITR-kopia med enbart fiktiva uppgifter, 97 migrationer och samtliga 90 främmande-nyckelrelationer kontrollerade utan föräldralösa rader. Kopian raderades efter kontrollen och borttagningen bekräftades. Produktionsbackup och Cloudinary-återställning har inte provåterställts.
+- Fjärrgren `codex/marketplace-improvements` är `763011e`; applikationskoden i staging är `1ec7a61` (aviseringsarbetaren `d664c9c`, utan senare bildändringar). Main är fortsatt `7b23372`; produktion backend `e06aef7`, frontend `7b23372`.
+- Produktion har automatisk deploy från main på både backend och frontend, backend har migrationskommando före deploy men saknar konfigurerad HTTP-hälsokontroll. De nya produktionsarbetarna för aviseringar och radering finns inte ännu.
+- Produktionens pushflagga är aktiverad enligt samma normalisering som applikationen, och Firebase-konfiguration finns. Närvaro av konfiguration bevisar inte telefonleverans. Bankens sandboxuppgifter saknas fortfarande.
+
+**Rekommenderad beslutspunkt:** vänta med hela paketet tills riktig mobilnotis är verifierad, eller gör en separat granskad webb-/backendleverans som bevarar nuvarande produktionslogik för aviseringar. Att bara stänga av pushflaggan är inte en säker avgränsning: det stoppar befintliga utskick, medan den nya producenten fortsätter lägga händelser i kön. En delad leverans är ännu inte skapad eller testad.
+
+Efter beslut och uttryckligt publiceringsgodkännande:
+
+1. Lås den valda revisionen, kontrollera aktuell produktionsbackup/återställningsmöjlighet och dokumentera återgång. Ordna ansvarig för portfoliogranskning och raderingsärenden; ingen generell tremånadersgallring införs.
+2. Kontrollera automatisk deploy så att en merge inte publicerar frontend före backend. Förbered rätt produktionsmiljö för bakgrundsjobben, utan stagingnycklar, samt kostnadsgodkännande för nya tjänster.
+3. Publicera backend med de additiva migrationerna och konfigurera `/health/`. För hela paketet måste aviseringsarbetaren starta samtidigt; för en delad leverans måste befintlig aviseringsväg uttryckligen behållas. Raderingsarbetaren krävs även för portfolions filradering.
+4. Publicera frontend därefter. Lägg de 16 SEO-rewrites före SPA-regeln, utan stagingmärkning eller noindex i produktion.
+5. Kontrollera inloggning, utkast, filter, offertjämförelse, behörigheter och samtliga SEO-svar. Använd avgränsade testkonton för eventuella skrivande slutprov och rensa endast deras testdata efter godkännande. Övervaka bakgrundsjobb och köer.
+
+Bankaktivering och mejlaviseringar ingår inte i denna publiceringsplan. Saknade bankuppgifter hindrar inte i sig webbförbättringarna, förutsatt att bankfunktionerna förblir avstängda.

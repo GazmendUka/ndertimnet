@@ -11,7 +11,7 @@ from PIL import Image
 from django.core.files.uploadedfile import SimpleUploadedFile
 from django.core.management import call_command
 from django.urls import reverse
-from django.db import connection, connections, transaction
+from django.db import connections, transaction
 from django.test import override_settings, skipUnlessDBFeature
 from django.utils import timezone
 from rest_framework.test import APITestCase, APITransactionTestCase, APIClient
@@ -25,9 +25,8 @@ from jobrequests.models import JobRequest, JobRequestDraft
 from locations.models import City
 from taxonomy.models import Profession
 from offers.models import Offer, OfferVersion
-from pushnotifications.models import NotificationEvent, NotificationDevice, NotificationPreference
+from pushnotifications.models import NotificationDevice, NotificationPreference
 from pushnotifications.services import schedule_push_notification
-from pushnotifications.queue import process_one
 from main.marketplace_metrics import marketplace_metrics
 
 
@@ -286,76 +285,115 @@ class DeletionTests(Fixtures, APITestCase):
         self.assertTrue(LeadMatch.objects.filter(pk=match.pk).exists())
 
 
-@override_settings(PUSH_NOTIFICATIONS_ENABLED=True, FIREBASE_PROJECT_ID="test-only")
-class NotificationQueueTests(Fixtures, APITestCase):
-    def event(self):
-        return schedule_push_notification(user=self.user, category="offer_updates", title="Test", body="Test", event_key="stable-key")[0]
+class DirectNotificationCompatibilityTests(Fixtures, APITestCase):
+    """The web release keeps production's on-commit sender, not the new queue.
 
-    def device(self, name):
-        return NotificationDevice.objects.create(user=self.user, token="test-token-"+name, platform="android")
+    These tests prove local compatibility, not real phone receipt or fixes to
+    the known notification defects deferred to the full improvements branch.
+    """
 
-    def test_event_deduplicates_and_rolls_back_with_business_operation(self):
-        self.assertEqual(self.event().pk, self.event().pk)
-        try:
+    def schedule(self):
+        schedule_push_notification(user=self.user, category="offer_updates",
+            title="Local test", body="Synthetic message", data={"type": "test"})
+
+    @patch("pushnotifications.services.send_push_notification", return_value=1)
+    def test_delivery_runs_on_commit_without_queue_worker(self, send):
+        with self.captureOnCommitCallbacks(execute=True) as callbacks:
             with transaction.atomic():
-                schedule_push_notification(user=self.user, category="offer_updates", title="x", body="x", event_key="rolled-back")
-                raise ValueError()
-        except ValueError:
-            pass
-        self.assertEqual(NotificationEvent.objects.count(), 1)
+                self.schedule()
+                send.assert_not_called()
+        self.assertEqual(len(callbacks), 1)
+        send.assert_called_once_with(user=self.user, category="offer_updates",
+            title="Local test", body="Synthetic message", data={"type": "test"})
 
-    @patch("pushnotifications.queue.send_push_notification", return_value=1)
-    def test_retry_only_failed_device_and_stop_after_success(self, send):
-        self.device("a"); self.device("b"); event = self.event()
-        self.assertTrue(process_one())
-        send.side_effect = OSError("offline")
-        self.assertTrue(process_one())
-        self.assertEqual(event.deliveries.filter(status="sent").count(), 1)
-        self.assertFalse(process_one())
-        NotificationEvent.objects.filter(pk=event.pk).update(next_attempt_at=timezone.now())
-        send.side_effect = None
-        self.assertTrue(process_one()); self.assertFalse(process_one())
-        self.assertEqual(event.deliveries.filter(status="sent").count(), 2)
-        self.assertEqual(send.call_count, 3)
-
-    @patch("pushnotifications.queue.send_push_notification")
-    def test_opt_out_cancels_queued_delivery_and_registration_does_not_reenable(self, send):
-        self.device("a"); self.event()
-        NotificationPreference.objects.create(user=self.user, push_enabled=False)
-        self.client.force_authenticate(self.user)
-        self.assertEqual(self.client.post("/api/notifications/devices/register/", {"token": "x"*100, "platform": "android", "device_id": "other-device"}).status_code, 201)
-        self.assertFalse(NotificationPreference.objects.get(user=self.user).push_enabled)
-        self.assertTrue(process_one()); send.assert_not_called()
-        self.assertIsNotNone(NotificationEvent.objects.get().finished_at)
-
-    @patch("pushnotifications.queue.send_push_notification", side_effect=OSError("offline"))
-    def test_retry_limit_is_bounded(self, send):
-        self.device("a"); event = self.event()
-        for _ in range(8):
-            NotificationEvent.objects.filter(pk=event.pk).update(next_attempt_at=timezone.now())
-            self.assertTrue(process_one())
-        self.assertFalse(process_one())
-        self.assertEqual(event.deliveries.get().status, "failed")
-
-    def test_opted_out_events_are_not_stored_for_later_enable(self):
-        pref = NotificationPreference.objects.create(user=self.user, push_enabled=False)
-        self.assertIsNone(schedule_push_notification(user=self.user, category="offer_updates", title="Test", body="Test"))
-        pref.push_enabled = True; pref.offer_updates = False; pref.save()
-        self.assertIsNone(schedule_push_notification(user=self.user, category="offer_updates", title="Test", body="Test"))
-        self.assertFalse(NotificationEvent.objects.exists())
-
-    @override_settings(PUSH_NOTIFICATIONS_ENABLED=False)
-    @patch("pushnotifications.queue.send_push_notification")
-    def test_disabled_provider_still_expires_old_events_without_sending(self, send):
-        from io import StringIO
-        event = self.event()
-        NotificationEvent.objects.filter(pk=event.pk).update(created_at=timezone.now()-timedelta(days=8))
-        event.deliveries.create(device=self.device("old"))
-        call_command("process_notifications", stdout=StringIO())
-        event.refresh_from_db()
-        self.assertIsNotNone(event.finished_at)
-        self.assertEqual(event.deliveries.get().status, "failed")
+    @patch("pushnotifications.services.send_push_notification")
+    def test_rolled_back_operation_does_not_send(self, send):
+        with self.captureOnCommitCallbacks(execute=True) as callbacks:
+            with self.assertRaises(ValueError):
+                with transaction.atomic():
+                    self.schedule()
+                    raise ValueError("Rollback synthetic operation")
+        self.assertEqual(callbacks, [])
         send.assert_not_called()
+
+    def test_release_has_no_persistent_notification_queue_dependency(self):
+        from django.apps import apps
+        from django.core.management import get_commands
+        from django.db import connection
+        from django.db.migrations.loader import MigrationLoader
+        self.assertNotIn("notificationevent", apps.all_models["pushnotifications"])
+        self.assertNotIn("notificationdelivery", apps.all_models["pushnotifications"])
+        self.assertNotIn("process_notifications", get_commands())
+        loader = MigrationLoader(connection)
+        self.assertEqual(loader.graph.leaf_nodes("pushnotifications"),
+            [("pushnotifications", "0001_initial")])
+
+    @override_settings(PUSH_NOTIFICATIONS_ENABLED=True, FIREBASE_PROJECT_ID="local-test")
+    @patch("firebase_admin.messaging.send_each")
+    def test_existing_opt_out_is_checked_at_delivery(self, send):
+        NotificationDevice.objects.create(user=self.user, token="synthetic-token", platform="ios")
+        pref = NotificationPreference.objects.create(user=self.user)
+        with self.captureOnCommitCallbacks(execute=True):
+            self.schedule()
+            pref.push_enabled = False
+            pref.save(update_fields=["push_enabled"])
+        send.assert_not_called()
+
+    @override_settings(PUSH_NOTIFICATIONS_ENABLED=True, FIREBASE_PROJECT_ID="local-test")
+    @patch("firebase_admin.messaging.send_each")
+    def test_account_deletion_revokes_devices_before_pending_callback(self, send):
+        NotificationDevice.objects.create(user=self.user, token="synthetic-token", platform="ios")
+        with self.captureOnCommitCallbacks(execute=True):
+            self.schedule()
+            request_deletion(self.user)
+        self.assertFalse(NotificationDevice.objects.filter(user=self.user).exists())
+        send.assert_not_called()
+        deletion = AccountDeletionRequest.objects.get(user=self.user)
+        process_deletion(deletion.pk)
+        deletion.refresh_from_db()
+        self.assertEqual(deletion.status, "completed")
+
+    @patch("pushnotifications.services.send_push_notification", return_value=1)
+    def test_offer_decision_retains_direct_sender_and_existing_payload(self, send):
+        offer = self.offer()
+        self.client.force_authenticate(self.customer)
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(f"/api/offers/{offer.pk}/decision/",
+                {"decision": "accept", "version_id": offer.current_version_id})
+        self.assertEqual(response.status_code, 200, response.data)
+        send.assert_called_once()
+        self.assertEqual(send.call_args.kwargs["user"].pk, self.user.pk)
+        self.assertEqual(send.call_args.kwargs["data"]["type"], "offer_accepted")
+        with self.captureOnCommitCallbacks(execute=True):
+            again = self.client.post(f"/api/offers/{offer.pk}/decision/",
+                {"decision": "accept", "version_id": offer.current_version_id})
+        self.assertEqual(again.status_code, 200, again.data)
+        self.assertEqual(send.call_count, 1)
+
+    @patch("pushnotifications.services.send_push_notification", return_value=1)
+    def test_rejection_retains_existing_direct_payload(self, send):
+        offer = self.offer()
+        self.client.force_authenticate(self.customer)
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(f"/api/offers/{offer.pk}/decision/",
+                {"decision": "reject", "version_id": offer.current_version_id})
+        self.assertEqual(response.status_code, 200, response.data)
+        send.assert_called_once()
+        self.assertEqual(send.call_args.kwargs["data"]["type"], "offer_rejected")
+
+    @patch("pushnotifications.services.send_push_notification", return_value=1)
+    def test_chat_retains_direct_delivery_without_worker(self, send):
+        offer = self.offer()
+        offer.lead_unlocked = True
+        offer.save(update_fields=["lead_unlocked"])
+        self.client.force_authenticate(self.customer)
+        with self.captureOnCommitCallbacks(execute=True):
+            response = self.client.post(f"/api/offers/{offer.pk}/messages/",
+                {"message": "Synthetic web release message"})
+        self.assertEqual(response.status_code, 201, response.data)
+        send.assert_called_once()
+        self.assertEqual(send.call_args.kwargs["user"].pk, self.user.pk)
+        self.assertEqual(send.call_args.kwargs["data"]["type"], "chat_message")
 
 
 class MetricsTests(Fixtures, APITestCase):
@@ -401,7 +439,7 @@ class ConcurrencyTests(Fixtures, APITransactionTestCase):
             futures = [pool.submit(run, i) for i in range(2)]
             return [future.result(timeout=30) for future in futures]
 
-    def test_two_acceptance_routes_one_decision_notification(self):
+    def test_two_acceptance_routes_preserve_one_winner(self):
         offer = self.offer()
         def action(i):
             client = APIClient(); client.force_authenticate(User.objects.get(pk=self.customer.pk))
@@ -412,15 +450,10 @@ class ConcurrencyTests(Fixtures, APITransactionTestCase):
             return response.status_code, response.data
         results = self.race(action)
         self.assertEqual([r[0] for r in results], [200, 200], results)
-        self.assertEqual(NotificationEvent.objects.filter(key__contains=":decision:").count(), 1)
-
-    @override_settings(PUSH_NOTIFICATIONS_ENABLED=True, FIREBASE_PROJECT_ID="test-only")
-    @patch("pushnotifications.queue.send_push_notification", return_value=1)
-    def test_two_workers_do_not_deliver_same_event_concurrently(self, send):
-        NotificationDevice.objects.create(user=self.user, token="test-device", platform="android")
-        schedule_push_notification(user=self.user, category="offer_updates", title="Test", body="Test", event_key="concurrent")
-        self.race(lambda _: process_one())
-        self.assertEqual(send.call_count, 1)
+        self.job.refresh_from_db()
+        offer.refresh_from_db()
+        self.assertEqual(self.job.winner_offer_id, offer.pk)
+        self.assertEqual(offer.status, "accepted")
 
     def test_simultaneous_guest_imports_create_one_draft(self):
         payload = dict(client_draft_id=str(uuid4()), title="Test draft", description="Detailed draft for concurrency tests.", city=self.city.pk, profession=self.profession.pk)

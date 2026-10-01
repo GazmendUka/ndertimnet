@@ -1,6 +1,7 @@
 import logging
 
 from django.conf import settings
+from django.db import transaction
 
 from .models import NotificationDevice, NotificationPreference
 
@@ -8,24 +9,22 @@ from .models import NotificationDevice, NotificationPreference
 logger = logging.getLogger(__name__)
 
 
-def schedule_push_notification(*, user, category, title, body, data=None, event_key=None):
-    """Persist in the business transaction; a worker delivers committed events."""
-    if not user or not user.pk or not user.is_active:
+def schedule_push_notification(*, user, category, title, body, data=None):
+    """Queue delivery after the surrounding database transaction commits."""
+    if not user or not user.pk:
         return
-    preference = NotificationPreference.objects.filter(user=user).first()
-    if preference and (not preference.push_enabled or not getattr(preference, category, False)):
-        return
-    from uuid import uuid4
-    from .models import NotificationEvent
-    return NotificationEvent.objects.get_or_create(
-        key=f"{user.pk}:{event_key or uuid4().hex}",
-        defaults=dict(user=user, category=category, title=title[:100], body=body[:180], data=data or {}),
+    transaction.on_commit(
+        lambda: send_push_notification(
+            user=user,
+            category=category,
+            title=title,
+            body=body,
+            data=data,
+        )
     )
 
 
-def send_push_notification(*, user, category, title, body, data=None, device_id=None, raise_on_failure=False):
-    if not user.is_active:
-        return 0
+def send_push_notification(*, user, category, title, body, data=None):
     if not settings.PUSH_NOTIFICATIONS_ENABLED or not settings.FIREBASE_PROJECT_ID:
         return 0
 
@@ -33,10 +32,9 @@ def send_push_notification(*, user, category, title, body, data=None, device_id=
     if not preference.push_enabled or not getattr(preference, category, False):
         return 0
 
-    queryset = NotificationDevice.objects.filter(user=user, active=True)
-    if device_id is not None:
-        queryset = queryset.filter(pk=device_id)
-    devices = list(queryset.only("id", "token")[:500])
+    devices = list(
+        NotificationDevice.objects.filter(user=user, active=True).only("id", "token")[:500]
+    )
     if not devices:
         return 0
 
@@ -47,7 +45,7 @@ def send_push_notification(*, user, category, title, body, data=None, device_id=
         try:
             app = firebase_admin.get_app()
         except ValueError:
-            app = firebase_admin.initialize_app(options={"projectId": settings.FIREBASE_PROJECT_ID, "httpTimeout": 10})
+            app = firebase_admin.initialize_app(options={"projectId": settings.FIREBASE_PROJECT_ID})
 
         safe_data = {
             str(key): str(value)
@@ -78,25 +76,18 @@ def send_push_notification(*, user, category, title, body, data=None, device_id=
         ]
         result = messaging.send_each(messages, app=app)
     except Exception:
-        if raise_on_failure:
-            raise
-        logger.warning("Push notification delivery failed")
+        logger.exception("Push notification delivery failed for user %s", user.pk)
         return 0
 
     stale_ids = []
     successful = 0
-    transient_failure = False
     for device, response in zip(devices, result.responses):
         if response.success:
             successful += 1
             continue
         if isinstance(response.exception, (messaging.UnregisteredError, messaging.SenderIdMismatchError)):
             stale_ids.append(device.id)
-        else:
-            transient_failure = True
 
     if stale_ids:
         NotificationDevice.objects.filter(id__in=stale_ids).update(active=False)
-    if transient_failure and raise_on_failure:
-        raise RuntimeError("Push provider temporarily rejected delivery")
     return successful
