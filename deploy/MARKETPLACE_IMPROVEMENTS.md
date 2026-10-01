@@ -114,3 +114,14 @@ Kodrevision `d664c9c` körs i den separata stagingmiljön. Backend, frontend, Po
 - Render behövde 16 explicita SEO-rewrites före SPA-regeln. Därefter verifierades samtliga rena URL:er utan JavaScript: HTTP 200, sidtitel, huvudrubrik, canonical och noindex-header.
 
 Kvar före full produktionsutrullning: separat mobiltestapp och faktisk notismottagning, produktionsarbetare med rätt miljö samt kontrollerad backend-/frontendutrullning. Produktionsdatabasens återställningsfunktion rapporterade tillgänglig historik, men en faktisk återställningsövning har inte genomförts. Extern bildlagring förblir uttryckligen undantagen från stagingtestet; bank-sandbox väntar på bankuppgifter. Inga riktiga kunddata har kopierats till staging.
+
+### Separat bildlagring aktiverad och testad, senare 1 oktober
+
+Detta ersätter bildundantaget ovan. Efter användarens bekräftelse aktiverades en separat kostnadsfri Cloudinary-testmiljö. Produktionslagringen jämfördes läsande och är inte samma miljö. Inga produktionsnycklar kopierades. Stagingbackend, frontend och raderingsarbetare kör `1ec7a61`; aviseringsarbetaren är oförändrad på `d664c9c` och behöver ingen bildåtkomst.
+
+- Bildlagring är fortsatt blockerad som standard. Aktivering kräver `STAGING_MEDIA_ENABLED=true`, `STAGING_CLOUDINARY_CLOUD_NAME`, `STAGING_CLOUDINARY_API_KEY`, `STAGING_CLOUDINARY_API_SECRET` samt matchande `STAGING_EXPECTED_CLOUD_NAME`. Operatören måste först verifiera att molnet är skilt från produktion. Inställningarna lagras endast i tjänsternas skyddade miljö, inte i Git. Vanliga Cloudinary-variabler nekas även när testlagring är aktiverad.
+- Samma testinställningar finns på stagingbackend och raderingsarbetaren. Bildprefix är `staging-media`. Bank, extern mejl och Firebase är fortfarande avstängda. Stagingmärkningen anger att endast fiktiva data/bilder får användas; noindex är kvar.
+- 32 relevanta lokala tester, Django system-/migrationskontroll och frontendbygge med 16 förrenderade sidor godkända. Säkerhetstester täcker saknade/felmatchade testinställningar och förbjudna leverantörsvariabler.
+- Riktig webbläsare: företagsinloggning, syntetisk bilduppladdning, väntande bild dold för kunden, nekad radering av annan användare, godkännande via adminformulär och kundvisning vid 390/1440 px. Ägarens radering tog bort referensen och molnresursen.
+- Extra körningar på stagingbackend verifierade bildhämtning från Render, sparad raderingsuppgift efter simulerat lagringsfel och lyckat återförsök med verklig lagring. Ett nytt fiktivt konto utan affärskopplingar raderades inklusive företag, portfolio och molnbild genom ordinarie raderingskommando. Dessa var engångskörningar av arbetarkoden, inte bevis på ett specifikt schemalagt körningstillfälle.
+- Testbilderna är raderade; inga riktiga kundbilder användes. Produktionsbackend och frontend kontrollerades oförändrade. Riktig iPhone-notis väntar på Apple-medlemskap/separat testapp; banktest och återställningsövning återstår.
