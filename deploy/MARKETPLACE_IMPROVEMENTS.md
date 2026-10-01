@@ -97,3 +97,20 @@ Backend och stagingarbetare använder `DJANGO_SETTINGS_MODULE=ndertimnet.staging
 Frontend byggs med `REACT_APP_DEPLOYMENT_ENVIRONMENT=staging` och staging-API:s adress. Efter ordinarie bygge körs `node scripts/mark-staging.cjs`, som märker HTML-sidorna och skriver en blockerande robots.txt. Render ska dessutom sätta `X-Robots-Tag: noindex, nofollow, noarchive` på alla stagingfrontendsvar; stagingbackend sätter samma header. Detta förhindrar inte besök och är inte ett åtkomstskydd. Appens vanliga autentisering och behörighetskontroller gäller fortsatt.
 
 Användaren har uttryckligen valt att lämna tester av bilduppladdning och extern filradering spärrade i väntan på separat testlagring. `BlockedMediaStorage` förhindrar därför all sådan åtkomst i staging. Ett passerat övrigt testflöde ska inte beskrivas som verifierad bildlagring, bankcheckout eller faktisk leverans till en telefon. Produktionsinställningarna aktiverar inte stagingspärrarna.
+
+### Verifierad stagingdrift, 1 oktober
+
+Kodrevision `d664c9c` körs i den separata stagingmiljön. Backend, frontend, PostgreSQL och båda schemalagda arbetarna har skapats. Detta avsnitt ersätter inte en senare kontroll av driftstatus. Produktion har ännu inte uppdaterats.
+
+- Frontend: `https://ndertimnet-staging-frontend.onrender.com`.
+- Backend: `https://ndertimnet-staging-backend.onrender.com`, med databaskontroll på `/health/`.
+- De tre additiva migreringarna är tillämpade i staging.
+- Hela lokala backendsviten inklusive stagingspärrar: 221 godkända tester. Frontend: 123 tester i 17 sviter, Django-kontroller och frontendbygge godkända.
+- Riktiga staging-API-anrop med fiktiva konton verifierade rollbehörigheter, administratörsmått, filter/matchning, utkastimport och konflikter, bevarat avstängningsval, två gratis signerade offerter och chatt. Bankbetalningar är avstängda.
+- Riktig webbläsarinloggning verifierade utkast genom omladdning och inloggning, import och offertjämförelse för fast pris/timpris. Sidbredd kontrollerades vid 320, 390, 768 och 1440 pixlar. Inga observerade JavaScript-undantag eller produktions-API-anrop i testet.
+- Upprepad acceptans, separat slutförandebekräftelse, åtkomst för vinnare/förlorare, recension och chattlåsning verifierade via API. Jämförelsen testades före acceptans; den befintliga åtkomstregeln döljer förlorade offerter efter acceptans.
+- Schemalagd kontoradering verifierades i databasen: konto utan affärskopplingar faktiskt borttaget, konto med offerter bevarat och markerat `needs_review`.
+- Driftsatt aviseringskö testad mot stagingdatabasen med en **simulerad** leverantör: deduplicering, sparad fördröjning efter fel och lyckat återförsök. Testets förändringar rullades tillbaka. Ingen Firebase-sändning eller telefonmottagning ingår i detta resultat.
+- Render behövde 16 explicita SEO-rewrites före SPA-regeln. Därefter verifierades samtliga rena URL:er utan JavaScript: HTTP 200, sidtitel, huvudrubrik, canonical och noindex-header.
+
+Kvar före full produktionsutrullning: separat mobiltestapp och faktisk notismottagning, produktionsarbetare med rätt miljö samt kontrollerad backend-/frontendutrullning. Produktionsdatabasens återställningsfunktion rapporterade tillgänglig historik, men en faktisk återställningsövning har inte genomförts. Extern bildlagring förblir uttryckligen undantagen från stagingtestet; bank-sandbox väntar på bankuppgifter. Inga riktiga kunddata har kopierats till staging.
