@@ -50,7 +50,19 @@ class StagingSafetyTests(SimpleTestCase):
         code = "from ndertimnet import staging_settings as s; assert not s.DEBUG; assert not s.PUSH_NOTIFICATIONS_ENABLED; assert not s.CORS_ALLOW_ALL_ORIGINS"
         good = subprocess.run([sys.executable, "-c", code], env=env, capture_output=True)
         self.assertEqual(good.returncode, 0, good.stderr.decode())
+        media = {"STAGING_MEDIA_ENABLED": "true", "STAGING_CLOUDINARY_CLOUD_NAME": "synthetic-test-cloud",
+                 "STAGING_EXPECTED_CLOUD_NAME": "synthetic-test-cloud", "STAGING_CLOUDINARY_API_KEY": "test-key",
+                 "STAGING_CLOUDINARY_API_SECRET": "test-secret"}
+        media_code = code + "; assert s.STORAGES['default']['BACKEND'] == 'cloudinary_storage.storage.MediaCloudinaryStorage'; assert s.CLOUDINARY_STORAGE['PREFIX'] == 'staging-media'; import os; os.environ['DJANGO_SETTINGS_MODULE']='ndertimnet.staging_settings'; from django.core.files.storage import default_storage; assert 'synthetic-test-cloud' in default_storage.url('sample')"
+        enabled = subprocess.run([sys.executable, "-c", media_code], env={**env, **media}, capture_output=True)
+        self.assertEqual(enabled.returncode, 0, enabled.stderr.decode())
+        for change in ({"STAGING_EXPECTED_CLOUD_NAME": "different-cloud"},
+                       {"STAGING_CLOUDINARY_API_SECRET": ""}, {"STAGING_MEDIA_ENABLED": "false"},
+                       {"CLOUDINARY_API_KEY": "production-key"}, {"SENDGRID_API_KEY": "blocked"}):
+            bad = subprocess.run([sys.executable, "-c", media_code], env={**env, **media, **change}, capture_output=True)
+            self.assertNotEqual(bad.returncode, 0)
         for change in ({"DATABASE_URL": "postgresql://test:test@production.invalid/prod"},
+                       {"STAGING_MEDIA_ENABLED": "true"},
                        {"DEBUG": "true"}, {"CLOUDINARY_URL": "synthetic-blocked-value"},
                        {"SENDGRID_API_KEY": "synthetic-blocked-value"}):
             bad = subprocess.run([sys.executable, "-c", code], env={**env, **change}, capture_output=True)

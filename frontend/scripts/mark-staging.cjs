@@ -13,7 +13,7 @@ function mark(dir) {
       const html = fs.readFileSync(target, 'utf8')
         .replace(/<meta\b[^>]*name=["']robots["'][^>]*>/gi, '')
         .replace('</head>', '<meta name="robots" content="noindex,nofollow,noarchive"></head>')
-        .replace(/<body([^>]*)>/, '<body$1><div role="note" style="background:#111827;color:white;padding:12px;text-align:center;font:14px system-ui">STAGING · Vetëm për testim — jo shërbimi i vërtetë. Pagesat, mesazhet dhe ngarkimi i imazheve janë të çaktivizuara.</div>');
+        .replace(/<body([^>]*)>/, '<body$1><div role="note" style="background:#111827;color:white;padding:12px;text-align:center;font:14px system-ui">STAGING · Vetëm për testim — jo shërbimi i vërtetë. Pagesat dhe njoftimet e jashtme janë të çaktivizuara. Përdorni vetëm të dhëna dhe imazhe testuese.</div>');
       fs.writeFileSync(target, html);
     }
   }
