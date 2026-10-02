@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Capacitor } from "@capacitor/core";
 import Sidebar from "./Sidebar";
 import MobileNav from "./MobileNav";
+import { LegalLink } from "../LegalLinks";
 import { Outlet, useNavigate } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 
@@ -16,6 +17,7 @@ export default function Layout() {
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+  const dropdownButtonRef = useRef(null);
   const navigate = useNavigate();
   const isNativeApp = Capacitor.isNativePlatform();
 
@@ -53,7 +55,7 @@ export default function Layout() {
     <div className="flex min-h-screen min-w-0 bg-gray-50">
 
       {/* SIDEBAR — Desktop */}
-      <div className={isNativeApp ? "hidden" : "hidden lg:block"}>
+      <div className={isNativeApp ? "hidden" : "hidden shrink-0 lg:block"}>
         <Sidebar />
       </div>
 
@@ -100,19 +102,33 @@ export default function Layout() {
             </div>
 
             {/* Avatar + Dropdown */}
-            <div className="relative" ref={dropdownRef}>
+            <div
+              className="relative"
+              ref={dropdownRef}
+              onKeyDown={(event) => {
+                if (event.key === "Escape" && dropdownOpen) {
+                  setDropdownOpen(false);
+                  dropdownButtonRef.current?.focus();
+                }
+              }}
+              onBlur={(event) => {
+                if (!event.currentTarget.contains(event.relatedTarget)) setDropdownOpen(false);
+              }}
+            >
 
               <button
                 type="button"
+                ref={dropdownButtonRef}
                 onClick={() => setDropdownOpen(!dropdownOpen)}
                 className="
-                  w-10 h-10 rounded-full overflow-hidden
+                  w-11 h-11 rounded-full overflow-hidden
                   bg-gray-200 flex items-center justify-center
                   text-gray-600 font-semibold
                   cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#ef7d22]
                 "
                 aria-label="Hap menynë e profilit"
                 aria-expanded={dropdownOpen}
+                aria-controls={dropdownOpen ? "profile-dropdown" : undefined}
               >
 
                 {user?.role === "company" ? (
@@ -142,9 +158,11 @@ export default function Layout() {
               {/* DROPDOWN */}
               {dropdownOpen && (
 
-                <div
+                <nav
+                  id="profile-dropdown"
+                  aria-label="Menuja e profilit"
                   className="
-                    absolute right-0 mt-2 w-44
+                    absolute right-0 mt-2 w-64 max-w-[calc(100vw-2rem)]
                     bg-white border border-gray-200
                     rounded-lg shadow-lg
                     py-2 z-50
@@ -163,21 +181,35 @@ export default function Layout() {
                       setDropdownOpen(false);
 
                     }}
-                    className="w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                    className="min-h-11 w-full text-left px-4 py-3 text-sm hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ef7d22]"
                   >
                     Profil
                   </button>
+
+                  {isCompany && (
+                    <div className="my-1 border-y border-gray-100 py-1">
+                      <LegalLink
+                        className="flex min-h-11 items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ef7d22]"
+                        onClick={() => setDropdownOpen(false)}
+                      />
+                      <LegalLink
+                        deletion
+                        className="flex min-h-11 items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ef7d22]"
+                        onClick={() => setDropdownOpen(false)}
+                      />
+                    </div>
+                  )}
 
                   <button
                     onClick={() => {
                       logout();
                     }}
-                    className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                    className="min-h-11 w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ef7d22]"
                   >
                     Dil
                   </button>
 
-                </div>
+                </nav>
 
               )}
 

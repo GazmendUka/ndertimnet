@@ -158,7 +158,7 @@ export default function MobileNav({ alwaysVisible = false }) {
         <SheetLink to="/perditesime" icon={Newspaper}>Përditësime</SheetLink>
         <SheetLink to="/about" icon={Info}>Rreth nesh</SheetLink>
         <SheetLink to="/contact" icon={Mail}>Kontakt</SheetLink>
-        <LegalLinks onClick={() => setMoreOpen(false)} />
+        {!isCompany && <LegalLinks onClick={() => setMoreOpen(false)} />}
         <button
           type="button"
           onClick={handleLogout}
