@@ -1,6 +1,9 @@
 # backend/accounts/views.py
 
 from datetime import timedelta
+import logging
+
+from cloudinary.exceptions import Error as CloudinaryError
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from .models import Customer, Company
@@ -40,6 +43,7 @@ from .emails import (
 )
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 from .serializers import (
     UserSerializer,
@@ -539,7 +543,16 @@ def company_profile(request):
     )
 
     if serializer.is_valid():
-        serializer.save()
+        try:
+            with transaction.atomic():
+                serializer.save()
+        except CloudinaryError as exc:
+            # Provider messages can contain credentials. Log only the error class.
+            logger.error("Company profile upload failed (%s)", type(exc).__name__)
+            return error(
+                "Ngarkimi i skedarit nuk është i disponueshëm tani. Provoni përsëri më vonë.",
+                status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
         return success(
             message="Profili i kompanisë u përditësua me sukses.",
             data=serializer.data,

@@ -57,14 +57,17 @@ const createForm = (company) => ({
 });
 
 const getApiErrorMessage = (error, fallback) => {
+  if (!error.response || error.response.status >= 500) return fallback;
   const response = error.response?.data;
   const details = response?.message ?? response;
+  const isPlainMessage = (value) =>
+    typeof value === "string" && value.trim() && !/<[^>]+>/.test(value);
 
-  if (typeof details === "string" && details.trim()) return details;
+  if (isPlainMessage(details)) return details;
   if (details && typeof details === "object") {
     const value = Object.values(details)
       .flatMap((item) => (Array.isArray(item) ? item : [item]))
-      .find((item) => typeof item === "string" && item.trim());
+      .find(isPlainMessage);
     if (value) return value;
   }
 
@@ -322,7 +325,9 @@ export default function CompanyProfile() {
       setError(
         getApiErrorMessage(
           requestError,
-          "Ndryshimet nuk mund të ruhen. Provoni përsëri."
+          currentStep === 6
+            ? "Dokumenti nuk mund të ngarkohet tani. Provoni përsëri më vonë. Nëse problemi vazhdon, kontaktoni mbështetjen."
+            : "Ndryshimet nuk mund të ruhen. Provoni përsëri."
         )
       );
     } finally {

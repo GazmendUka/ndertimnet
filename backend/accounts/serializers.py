@@ -1,6 +1,7 @@
 # backend/accounts/serializers.py
 
 from rest_framework import serializers
+from copy import copy
 from django.db.models import Avg, Count, Q
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -142,7 +143,9 @@ class CompanySerializer(serializers.ModelSerializer):
         ]
 
     def to_internal_value(self, data):
-        data = data.copy()
+        # QueryDict.copy() deep-copies uploaded files and fails for disk-backed
+        # uploads. A shallow copy preserves multi-value fields and file handles.
+        data = copy(data)
 
         if hasattr(data, "getlist"):
             if "professions" in data:

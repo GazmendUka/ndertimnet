@@ -48,3 +48,47 @@ test("saving offer presentation refreshes shared saved profile state",async()=>{
   expect(api.patch.mock.calls[0][0]).toBe("/accounts/profile/company/");
   expect(api.patch.mock.calls[0][1].get("default_offer_presentation")).toBe(company.default_offer_presentation);
 });
+
+const uploadFailure = "Dokumenti nuk mund të ngarkohet tani. Provoni përsëri më vonë. Nëse problemi vazhdon, kontaktoni mbështetjen.";
+async function chooseDocument() {
+  await screen.findByText("Zgjidh dokumentin e regjistrimit");
+  const file = new File(["synthetic document"], "registration.jpg", { type: "image/jpeg" });
+  fireEvent.change(document.querySelector('input[type="file"]'), { target: { files: [file] } });
+  return file;
+}
+
+test.each([
+  { response: { status: 500, data: '<!doctype html><html><h1>Server Error (500)</h1></html>' } },
+  { response: { status: 503, data: { message: "Internal provider diagnostics" } } },
+  { response: { status: 413, data: '<html><h1>Request too large</h1></html>' } },
+  { message: "Network Error" },
+])("failed document upload shows a safe message and retains the file for retry (%#)", async (failure) => {
+  view();
+  const file = await chooseDocument();
+  api.patch.mockRejectedValueOnce(failure);
+  fireEvent.click(screen.getByRole("button", { name: /Përfundo profilin/ }));
+  expect(await screen.findByText(uploadFailure)).toBeInTheDocument();
+  expect(screen.queryByText(/doctype|Internal provider diagnostics|Request too large/)).not.toBeInTheDocument();
+  expect(screen.getByText("registration.jpg")).toBeInTheDocument();
+  expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "83");
+  expect(refreshMe).not.toHaveBeenCalled();
+
+  api.patch.mockResolvedValueOnce({ data: { data: {
+    ...company, registration_document: "/registration.jpg",
+    profile_sections: { ...company.profile_sections, verification: true },
+  } } });
+  fireEvent.click(screen.getByRole("button", { name: /Përfundo profilin/ }));
+  expect(await screen.findByText("Profili juaj është i plotë")).toBeInTheDocument();
+  expect(api.patch.mock.calls[1][1].get("registration_document")).toBe(file);
+  expect(screen.getByRole("progressbar")).toHaveAttribute("aria-valuenow", "100");
+});
+
+test("document validation errors remain readable", async () => {
+  view();
+  await chooseDocument();
+  api.patch.mockRejectedValueOnce({ response: { status: 400, data: {
+    message: { registration_document: ["Dokumenti duhet të jetë 5 MB ose më i vogël."] },
+  } } });
+  fireEvent.click(screen.getByRole("button", { name: /Përfundo profilin/ }));
+  expect(await screen.findByText("Dokumenti duhet të jetë 5 MB ose më i vogël.")).toBeInTheDocument();
+});
