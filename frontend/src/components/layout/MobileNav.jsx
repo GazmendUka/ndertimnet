@@ -18,7 +18,6 @@ import {
 import { useAuth } from "../../auth/AuthContext";
 import api from "../../api/axios";
 import MobileMoreSheet from "./MobileMoreSheet";
-import LegalLinks from "../LegalLinks";
 
 export default function MobileNav({ alwaysVisible = false }) {
   const { isCustomer, isCompany, logout, access } = useAuth();
@@ -158,7 +157,6 @@ export default function MobileNav({ alwaysVisible = false }) {
         <SheetLink to="/perditesime" icon={Newspaper}>Përditësime</SheetLink>
         <SheetLink to="/about" icon={Info}>Rreth nesh</SheetLink>
         <SheetLink to="/contact" icon={Mail}>Kontakt</SheetLink>
-        {!isCompany && <LegalLinks onClick={() => setMoreOpen(false)} />}
         <button
           type="button"
           onClick={handleLogout}

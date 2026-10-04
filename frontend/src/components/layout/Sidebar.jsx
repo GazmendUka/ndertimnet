@@ -5,7 +5,6 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import api from "../../api/axios";
-import LegalLinks from "../LegalLinks";
 
 import { Bell, Home, User, LogOut, Briefcase, FileText, ReceiptText } from "lucide-react";
 
@@ -90,11 +89,7 @@ export default function Sidebar() {
   return (
     <aside
       aria-label={isCompany ? "Menuja e kompanisë" : "Menuja e klientit"}
-      className={`hidden lg:flex flex-col border-r border-gray-200 ${
-        isCompany
-          ? "sticky top-0 h-dvh w-56 bg-gray-100/80 px-3 pt-7 pb-4"
-          : "w-64 premium-card pt-8 pb-6 px-6"
-      }`}
+      className="hidden lg:flex flex-col border-r border-gray-200 sticky top-0 h-dvh w-56 bg-gray-100/80 px-3 pt-7 pb-4"
     >
       {/* LOGO */}
       <div className="mb-8 shrink-0">
@@ -118,7 +113,7 @@ export default function Sidebar() {
       <div className="h-px shrink-0 bg-gray-200 mb-6" />
 
       {/* MENU */}
-      <nav aria-label="Navigimi kryesor" className={`flex-1 space-y-1 ${isCompany ? "min-h-0 overflow-y-auto" : ""}`}>
+      <nav aria-label="Navigimi kryesor" className="flex-1 space-y-1 min-h-0 overflow-y-auto">
 
         {/* CUSTOMER MENU */}
         {isCustomer && (
@@ -145,14 +140,13 @@ export default function Sidebar() {
       </nav>
 
       {/* LOGOUT */}
-      {!isCompany && <LegalLinks />}
       <button
         onClick={handleLogout}
         className={`
           flex items-center gap-3 
           shrink-0 p-3 mt-6 rounded-lg
           text-red-600 hover:bg-red-50 transition
-          ${isCompany ? "border-t border-gray-200 rounded-none pt-5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ef7d22]" : ""}
+          border-t border-gray-200 rounded-none pt-5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ef7d22]
         `}
       >
         <LogOut size={18} />

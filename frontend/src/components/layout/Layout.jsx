@@ -186,7 +186,7 @@ export default function Layout() {
                     Profil
                   </button>
 
-                  {isCompany && (
+                  {(isCompany || isCustomer) && (
                     <div className="my-1 border-y border-gray-100 py-1">
                       <LegalLink
                         className="flex min-h-11 items-center px-4 py-3 text-sm text-gray-700 hover:bg-gray-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#ef7d22]"
