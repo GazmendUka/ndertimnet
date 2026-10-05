@@ -750,11 +750,7 @@ export default function JobRequestCreate() {
   const Step2 = (
     <div className="space-y-4">
       <div>
-        <CategoryPicker categories={categoryOptions} value={selectedCategory} disabled={saving || submitting || lookupsLoading} onChange={value => {
-          setFormData(prev => ({ ...prev, profession: null, industry: /^\d+$/.test(value) ? Number(value) : null, category_mode: /^\d+$/.test(value) ? "" : value }));
-        }} />
-        {!selectedCategory && <p className="jr-help">Zgjidhni një kategori ose “Nuk jam i sigurt”.</p>}
-        <label className="block mb-1 mt-5 font-medium">Titulli i punës *</label>
+        <label className="block mb-1 font-medium">Titulli i punës *</label>
         <input
           type="text"
           className={`premium-input ${
@@ -768,6 +764,13 @@ export default function JobRequestCreate() {
         {stepErrors.title && (
           <p className="jr-help jr-help-error">{stepErrors.title}</p>
         )}
+      </div>
+
+      <div>
+        <CategoryPicker categories={categoryOptions} value={selectedCategory} disabled={saving || submitting || lookupsLoading} onChange={value => {
+          setFormData(prev => ({ ...prev, profession: null, industry: /^\d+$/.test(value) ? Number(value) : null, category_mode: /^\d+$/.test(value) ? "" : value }));
+        }} />
+        {!selectedCategory && <p className="jr-help">Zgjidhni një kategori ose “Nuk jam i sigurt”.</p>}
       </div>
 
       <div className="flex justify-between mt-4">
