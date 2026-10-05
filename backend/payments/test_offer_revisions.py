@@ -33,35 +33,16 @@ class RevisionFeeTests(BillingFixture, APITestCase):
         return self.client.get('/api/billing/offer-quote/', {'offer': self.offer.pk}).data
 
     @patch('payments.billing_views.create_checkout', return_value={'order_id': 'raise-order', 'payment_url': 'https://bank.test/checkout'})
-    def test_price_raise_charges_only_difference_and_keeps_original_receipt(self, bank):
+    def test_price_raise_has_no_fee_and_keeps_original_receipt(self, bank):
         state = self.revise(500)
-        self.assertTrue(state['adjustment'])
-        self.assertEqual(Decimal(state['fee']), Decimal('3.00'))
-        self.assertEqual(self.send().data['code'], 'offer_adjustment_required')
-        r = self.client.post('/api/billing/offer-checkout/', {'offer': self.offer.pk, 'platform': 'web'})
-        self.assertEqual(r.status_code, 202, r.data)
-        self.assertEqual(Decimal(r.data['charge']['amount']), Decimal('3.00'))
-        again = self.client.post('/api/billing/offer-checkout/', {'offer': self.offer.pk, 'platform': 'web'})
-        self.assertEqual(again.status_code, 202)
-        self.assertEqual(bank.call_count, 1)
-        self.assertEqual(self.client.patch(f'/api/offers/{self.offer.pk}/', {'price_amount': '900'}).status_code, 409)
-        with patch('payments.billing_views.get_transaction_details') as verify:
-            verify.return_value = {'merchant': {'merchantAccountId': 'merchant'}, 'transaction': {
-                'transactionId': 'raise-tx', 'transactionType': 'PURCHASE', 'transactionAmount': '3.00',
-                'transactionCurrency': 'EUR', 'isProduction': False, 'statusCode': '0000', 'status': 'PAID'}}
-            payload = {'order': {'orderIdentification': 'raise-order'}, 'transaction': {'transactionId': 'raise-tx'}}
-            for _ in range(2):
-                self.assertEqual(self.client.post('/api/billing/notify/', payload, format='json').status_code, 200)
+        self.assertFalse(state['adjustment'])
+        self.assertEqual(state['fee'], '0.00')
         self.assertEqual(self.send().status_code, 200)
         self.base.refresh_from_db()
         self.assertEqual(self.base.amount, Decimal('2.95'))
         self.assertEqual(self.base.quoted_price, Decimal('100'))
-        adjustment = PlatformCharge.objects.get(offer=self.offer, kind='offer_adjustment')
-        self.assertIsNotNone(adjustment.fulfilled_at)
-        self.assertEqual(self.send().status_code, 400)
-        self.assertEqual(PlatformCheckout.objects.count(), 1)
-        state = self.revise(1950)
-        self.assertEqual(Decimal(state['fee']), Decimal('14.00'))
+        self.assertFalse(PlatformCheckout.objects.exists())
+        bank.assert_not_called()
 
     def test_reducing_and_reraising_price_does_not_charge_same_fee_twice(self):
         state = self.revise(50)
@@ -78,22 +59,24 @@ class RevisionFeeTests(BillingFixture, APITestCase):
         self.assertTrue(state['paid'])
         self.assertEqual(self.send().status_code, 200)
 
-    def test_new_free_allowance_cannot_replace_differential_payment(self):
-        self.company.free_offers_remaining = 25; self.company.save()
+    def test_historical_paid_revision_does_not_spend_free_allowance(self):
+        self.company.free_offers_remaining = 25
+        self.company.save()
         state = self.revise(500)
         self.assertFalse(state['introductory'])
-        self.assertEqual(self.send().data['code'], 'offer_adjustment_required')
+        self.assertEqual(self.send().status_code, 200)
+        self.company.refresh_from_db()
+        self.assertEqual(self.company.free_offers_remaining, 25)
 
-    def test_pending_adjustment_recalculated_only_without_bank_attempt(self):
+    def test_unstarted_historical_adjustment_cannot_be_charged(self):
         self.revise(500)
-        pending = PlatformCharge.objects.create(payer=self.user, company=self.company, offer=self.offer,
-            kind='offer_adjustment', amount='3.00', regular_amount='3.00', quoted_price='500')
+        pending = PlatformCharge.objects.create(payer=self.user, company=self.company, offer=self.offer, kind='offer_adjustment', amount='3.00', regular_amount='3.00', quoted_price='500')
         self.revise(1000)
-        with patch('payments.billing_views.create_checkout', return_value={'order_id': 'newraise', 'payment_url': 'https://bank.test/pay'}):
-            r = self.client.post('/api/billing/offer-checkout/', {'offer': self.offer.pk, 'platform': 'web'})
-        self.assertEqual(r.status_code, 202, r.data)
+        r = self.client.post(f'/api/billing/{pending.pk}/checkout/', {'platform': 'web'})
+        self.assertEqual(r.status_code, 410)
         pending.refresh_from_db()
-        self.assertEqual(pending.amount, Decimal('8.00'))
+        self.assertEqual(pending.amount, Decimal('3.00'))
+        self.assertEqual(self.send().status_code, 200)
 
 
 class ContactAndRetentionTests(BillingFixture, APITestCase):

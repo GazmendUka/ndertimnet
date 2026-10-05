@@ -12,7 +12,7 @@ from accounts.models import User, Customer
 from jobrequests.models import JobRequest
 from offers.models import Offer, OfferVersion, OfferMessage
 from payments.models import OfferCredit, PlatformCharge
-from payments.billing import prepare_offer_charge, settle_charge
+from payments.billing import settle_charge
 from payments.credits import issue_credit
 from payments.test_billing import BillingFixture
 
@@ -43,19 +43,17 @@ class BalancedFlowTests(BillingFixture, APITestCase):
         self.offer.refresh_from_db()
         return self.client.get('/api/billing/offer-quote/', {'offer':self.offer.pk}).data
 
-    def test_cumulative_hundred_euro_threshold_cannot_be_reset_by_small_edits_or_lowering(self):
-        self.assertEqual(self.send().status_code,200)
-        for total in ('1050', '1099.99'):
-            state=self.revise(total);self.assertTrue(state['paid']);self.assertEqual(state['fee_baseline'],'1000.00')
-            self.assertEqual(self.send().status_code,200)
-        state=self.revise('1100');self.assertTrue(state['adjustment']);self.assertEqual(state['fee'],'1.00')
-        self.assertEqual(self.send().data['code'],'offer_adjustment_required')
-        charge=prepare_offer_charge(self.offer,self.user);settle_charge(charge)
-        self.assertEqual(self.send().status_code,200)
-        state=self.revise('900');self.assertTrue(state['paid']);self.assertEqual(state['fee_baseline'],'1100.00')
-        self.assertEqual(self.send().status_code,200)
-        state=self.revise('1199.99');self.assertTrue(state['paid'])
-        self.assertEqual(sum(c.amount for c in PlatformCharge.objects.filter(status='paid')),Decimal('11.95'))
+    def test_revisions_never_charge_extra_preserving_historical_fee(self):
+        self.assertEqual(self.send().status_code, 200)
+        for total in ('1050', '1100', '20000', '900'):
+            state = self.revise(total)
+            self.assertTrue(state['paid'])
+            self.assertFalse(state['adjustment'])
+            self.assertEqual(state['fee'], '0.00')
+            self.assertEqual(self.send().status_code, 200)
+        self.assertEqual(PlatformCharge.objects.filter(offer=self.offer).count(), 1)
+        self.base.refresh_from_db()
+        self.assertEqual(self.base.amount, Decimal('10.95'))
 
     def test_accepted_revision_hides_draft_preserves_agreement_and_needs_exact_customer_decision(self):
         self.assertEqual(self.send().status_code,200)
@@ -89,16 +87,17 @@ class BalancedFlowTests(BillingFixture, APITestCase):
         self.offer.refresh_from_db();self.assertEqual(self.offer.status,'accepted');self.assertEqual(self.offer.accepted_version_id,new.pk)
         self.assertEqual(self.decide(pending).status_code,400)
 
-    def test_paid_amendment_requires_send_and_customer_acceptance_separately(self):
-        self.assertEqual(self.send().status_code,200);self.assertEqual(self.decide(self.version).status_code,200)
-        self.revise('1500');new=self.offer.current_version
-        self.assertEqual(self.send().data['code'],'offer_adjustment_required')
-        charge=prepare_offer_charge(self.offer,self.user);settle_charge(charge)
-        self.assertIsNone(charge.fulfilled_at)
-        self.assertEqual(self.decide(new).status_code,400)
-        self.assertEqual(self.send().status_code,200)
-        self.assertEqual(self.decide(new,'reject').status_code,200)
-        charge.refresh_from_db();self.assertEqual(charge.status,'paid');self.assertEqual(charge.amount,Decimal('5.00'))
+    def test_amendment_requires_send_and_customer_acceptance_without_extra_fee(self):
+        self.assertEqual(self.send().status_code, 200)
+        self.assertEqual(self.decide(self.version).status_code, 200)
+        self.revise('1500')
+        new = self.offer.current_version
+        self.assertEqual(self.decide(new).status_code, 400)
+        self.assertEqual(self.send().status_code, 200)
+        self.assertEqual(self.decide(new, 'reject').status_code, 200)
+        self.assertEqual(PlatformCharge.objects.filter(offer=self.offer).count(), 1)
+        self.offer.refresh_from_db()
+        self.assertEqual(self.offer.accepted_version_id, self.version.pk)
 
     def test_activity_requires_customer_open_or_reply_not_company_view(self):
         self.assertEqual(self.send().status_code,200)

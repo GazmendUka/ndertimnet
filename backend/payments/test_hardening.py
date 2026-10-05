@@ -157,17 +157,17 @@ class HardeningTests(BillingFixture, APITestCase):
         transactions.assert_not_called();attempt.refresh_from_db();self.assertIsNone(attempt.last_checked_at)
 
     def test_old_subscription_debt_remains_payable_with_new_contract(self):
-        sub=BillingSubscription.objects.create(company=self.company,plan_code='offers_3',monthly_price='39.95',monthly_offers=3,
+        sub=BillingSubscription.objects.create(company=self.company,plan_code='standard',monthly_price='29.00',monthly_offers=10,
             started_at=timezone.now()-timedelta(days=120),ends_at=timezone.now()-timedelta(days=20))
         ensure_periods(sub)
-        BillingSubscription.objects.create(company=self.company,plan_code='offers_5',monthly_price='54.95',monthly_offers=5)
+        BillingSubscription.objects.create(company=self.company,plan_code='pro',monthly_price='59.00',monthly_offers=30)
         data=self.client.get('/api/billing/history/').data
         debt=[c for c in data if c['subscription_id']==sub.pk]
         self.assertTrue(debt);self.assertTrue(all(c['payable'] for c in debt))
         self.assertTrue(all(c['period_starts_at'] for c in debt))
 
     def test_canceled_unstarted_contract_has_no_payable_debt(self):
-        sub=BillingSubscription.objects.create(company=self.company,plan_code='offers_3',monthly_price='39.95',monthly_offers=3,ends_at=timezone.now())
+        sub=BillingSubscription.objects.create(company=self.company,plan_code='standard',monthly_price='29.00',monthly_offers=10,ends_at=timezone.now())
         ensure_periods(sub)
         debt=[c for c in self.client.get('/api/billing/history/').data if c['subscription_id']==sub.pk]
         self.assertFalse(debt[0]['payable'])

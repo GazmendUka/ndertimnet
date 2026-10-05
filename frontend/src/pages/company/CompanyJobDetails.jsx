@@ -9,7 +9,6 @@ import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
 import StatusBadge from "../../components/ui/StatusBadge";
 import { toast } from "react-hot-toast";
-import { openPaymentUrl } from "../../platform/mobile";
 import paymentService from "../../services/paymentService";
 
 import {
@@ -165,7 +164,7 @@ export default function CompanyJobDetails() {
   const leadUnlocked = job.lead_unlocked === true;
   const isClosed = !job.is_active;
   const unlockLeadPriceLabel = "Pa pagesë";
-  const unlockLeadHint = "Përgatitja është falas. 25 ofertat e para dërgohen falas; më pas përdorni abonimin ose paguani për ofertë. Biseda hapet pas dërgimit; kontaktet direkte hapen pas dërgimit dhe pagesës ose përdorimit të kuotës.";
+  const unlockLeadHint = "Përgatitja është falas. Standard përfshin 10 oferta/muaj dhe Pro 30. Nuk ka pagesë për lead ose ofertë. Kontaktet dhe biseda hapen pasi dërgoni ofertën.";
 
   const formatBudget = (b) => (b ? `${b} €` : "Pa buxhet");
   const formatDate = (d) => new Date(d).toLocaleDateString("sv-SE");
@@ -184,15 +183,6 @@ export default function CompanyJobDetails() {
       setPaymentFeedback(null);
       const res = await paymentService.unlockLead(jobId);
 
-      if (res.data.requires_payment && res.data.payment_url) {
-        toast.success("Po ju dërgojmë te pagesa...");
-        await openPaymentUrl(
-          res.data.payment_url,
-          `/company/jobrequests/${jobId}?payment=return`
-        );
-        return;
-      }
-
       toast.success("Mund të përgatitni ofertën.");
 
       // 🔑 FORCE UI UPDATE
@@ -207,7 +197,7 @@ export default function CompanyJobDetails() {
     } catch (e) {
       const code = e.response?.data?.code;
       if (code === "store_billing_required") {
-        const text = "Blerja e lead-it në aplikacion do të aktivizohet pasi pagesa e dyqanit të miratohet.";
+        const text = "Blerjet e abonimit në aplikacion nuk janë aktivizuar ende. Përgatitja e ofertës është falas.";
         setPaymentFeedback({ type: "warning", text });
         toast.error(text);
       } else if (code === "payment_initializing") {
@@ -334,7 +324,7 @@ export default function CompanyJobDetails() {
                     <div className="min-w-0 flex-1">
                       <p className="font-medium">Lead është i mbyllur</p>
                       <p className="text-sm text-gray-600">
-                        Biseda hapet pasi dërgoni ofertën. Kontaktet direkte hapen pasi dërgoni ofertën dhe tarifa paguhet ose përfshihet.
+                        Kontaktet dhe biseda hapen pasi dërgoni ofertën. Nuk ka pagesë të veçantë.
                       </p>
 
                       <div className="mt-2 text-sm">

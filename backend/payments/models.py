@@ -219,16 +219,18 @@ class Payment(models.Model):
 
 
 class BillingSubscription(models.Model):
-    """A monthly company contract with three calendar months' notice."""
+    """A monthly company subscription, canceled at the current period boundary."""
     company = models.ForeignKey(Company, on_delete=models.PROTECT, related_name="billing_subscriptions")
     plan_code = models.CharField(max_length=32)
+    pending_plan_code = models.CharField(max_length=32, blank=True)
+    pending_plan_at = models.DateTimeField(null=True, blank=True)
     monthly_price = models.DecimalField(max_digits=10, decimal_places=2)
     monthly_offers = models.PositiveSmallIntegerField()
     started_at = models.DateTimeField(null=True, blank=True)
     canceled_at = models.DateTimeField(null=True, blank=True)
     ends_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
-    terms_version = models.CharField(max_length=40, default="2026-09-three-month-notice")
+    terms_version = models.CharField(max_length=40, default="2026-10-05-standard-pro-v1")
 
 
 class BillingPeriod(models.Model):
@@ -237,6 +239,8 @@ class BillingPeriod(models.Model):
     starts_at = models.DateTimeField(null=True, blank=True)
     ends_at = models.DateTimeField(null=True, blank=True)
     offers_used = models.PositiveSmallIntegerField(default=0)
+    monthly_offers = models.PositiveSmallIntegerField(default=0)
+    plan_code = models.CharField(max_length=32, blank=True)
 
     class Meta:
         constraints = [models.UniqueConstraint(fields=["subscription", "number"], name="unique_billing_period")]
@@ -323,3 +327,15 @@ class OfferCredit(models.Model):
 
     class Meta:
         permissions = [("issue_offer_credit", "Issue an offer credit after confirming an eligible fault")]
+
+
+class SubscriptionPlanChange(models.Model):
+    subscription = models.ForeignKey(BillingSubscription, on_delete=models.PROTECT, related_name="plan_changes")
+    plan_code = models.CharField(max_length=32)
+    effective_at = models.DateTimeField()
+    signed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT)
+    signer_name = models.CharField(max_length=200)
+    text = models.TextField()
+    version = models.CharField(max_length=80)
+    sha256 = models.CharField(max_length=64)
+    signed_at = models.DateTimeField(auto_now_add=True)

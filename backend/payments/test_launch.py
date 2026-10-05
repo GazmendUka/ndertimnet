@@ -27,7 +27,7 @@ class UnconfiguredBankTests(BillingFixture, APITestCase):
         from payments.models import BillingSubscription, SubscriptionAgreement
         from payments.agreements import VERSION
         response = self.client.post('/api/billing/subscribe/', {
-            'plan': 'offers_3', 'platform': 'web', 'accept_notice': True,
+            'plan': 'standard', 'platform': 'web', 'accept_notice': True,
             'signer_name': 'Test Person', 'terms_version': VERSION,
         }, format='json')
         self.assertEqual(response.status_code, 503)
@@ -92,7 +92,7 @@ class LaunchJourneyTests(BillingFixture, APITestCase):
         r=self.client.patch(f'/api/offers/{oid}/',{'price_amount':'1000','price_type':'fixed','currency':'EUR','includes_text':'Paint the room'},format='json')
         self.assertEqual(r.status_code,200,r.data)
         self.assertEqual(self.client.post(f'/api/offers/{oid}/sign/',{'personal_number':'1234'}).status_code,400)
-        self.bank_pay(oid,'10.95')
+        self.active_subscription()
         self.assertIsNone(self.client.get(f'/api/jobrequests/{job.pk}/').data['customer'])
         self.send(oid)
         self.assertEqual(self.client.get(f'/api/jobrequests/{job.pk}/').data['customer']['phone'],'+38344123456')
@@ -106,7 +106,7 @@ class LaunchJourneyTests(BillingFixture, APITestCase):
         job.refresh_from_db();self.assertFalse(job.is_completed)
         self.client.force_authenticate(self.user)
         self.assertEqual(self.client.patch(f'/api/offers/{oid}/',{'price_amount':'1200'}).status_code,200)
-        self.bank_pay(oid,'2.00');self.send(oid)
+        self.send(oid)
         offer=Offer.objects.get(pk=oid);self.assertEqual(offer.accepted_version_id,version)
         self.client.force_authenticate(self.customer)
         with self.captureOnCommitCallbacks(execute=False):
@@ -114,15 +114,15 @@ class LaunchJourneyTests(BillingFixture, APITestCase):
         self.assertEqual(r.status_code,200,r.data)
         r=self.client.post(f'/api/jobrequests/{job.pk}/complete-work/',{'confirm':True},format='json')
         self.assertEqual(r.status_code,200,r.data);self.assertIsNotNone(r.data['completed_at'])
-        self.assertEqual(sum(PlatformCharge.objects.filter(offer_id=oid,status='paid').values_list('amount',flat=True)),Decimal('12.95'))
+        self.assertEqual(sum(PlatformCharge.objects.filter(offer_id=oid,status='paid').values_list('amount',flat=True)),Decimal('0.00'))
 
     def test_overview_next_bill_and_quota_then_cancellation_end(self):
         sub=self.active_subscription()
         self.company.free_offers_remaining=3;self.company.save()
         overview=self.client.get('/api/billing/subscription/').data['overview']
-        self.assertEqual(overview['monthly_offers_remaining'],3)
+        self.assertEqual(overview['monthly_offers_remaining'],10)
         self.assertEqual(overview['free_offers_remaining'],3)
-        self.assertEqual(overview['next_payment_amount'],'39.95')
+        self.assertEqual(overview['next_payment_amount'],'29.00')
         self.assertIsNotNone(overview['next_payment_due_at'])
         self.client.post('/api/billing/cancel-subscription/')
         sub.refresh_from_db()
@@ -134,7 +134,7 @@ class LaunchJourneyTests(BillingFixture, APITestCase):
         sub.started_at=timezone.now()-timedelta(days=40);sub.save()
         overview=self.client.get('/api/billing/subscription/').data['overview']
         self.assertEqual(overview['state'],'payment_due');self.assertEqual(overview['monthly_offers_remaining'],0)
-        self.assertEqual(Decimal(overview['outstanding_amount']),Decimal('39.95'))
+        self.assertEqual(Decimal(overview['outstanding_amount']),Decimal('29.00'))
 
     @patch('payments.management.commands.run_billing_maintenance.call_command')
     def test_maintenance_dry_run_never_runs_external_actions(self,run):
@@ -179,15 +179,16 @@ class BillingConcurrencyTests(BillingFixture, APITransactionTestCase):
         return {'order_id':'order-'+uuid4().hex,'payment_url':'https://bank.test/checkout'}
 
     @patch('payments.billing_views.create_checkout',side_effect=bank)
-    def test_two_companies_checkout_last_place_only_one_reserves(self,bank):
+    def test_two_companies_without_subscription_never_start_offer_payment(self,bank):
         user,offer=self.competitor();self.job.max_offers=1;self.job.save()
         results=self.race([(self.user.pk,lambda c:c.post('/api/billing/offer-checkout/',{'offer':self.offer.pk,'platform':'web'})),(user.pk,lambda c:c.post('/api/billing/offer-checkout/',{'offer':offer.pk,'platform':'web'}))])
-        self.assertEqual(sorted(r[0] for r in results),[202,400],results)
-        self.assertEqual(PlatformCheckout.objects.count(),1);self.assertEqual(bank.call_count,1)
+        self.assertEqual(sorted(r[0] for r in results),[409,409],results)
+        self.assertEqual(PlatformCheckout.objects.count(),0);bank.assert_not_called()
 
     @patch('payments.billing_views.create_checkout',side_effect=bank)
     def test_double_click_never_creates_two_bank_attempts(self,bank):
-        fn=lambda c:c.post('/api/billing/offer-checkout/',{'offer':self.offer.pk,'platform':'web'})
+        from payments.agreements import VERSION
+        fn=lambda c:c.post('/api/billing/subscribe/',{'plan':'standard','platform':'web','accept_notice':True,'signer_name':'Test Person','terms_version':VERSION},format='json')
         results=self.race([(self.user.pk,fn),(self.user.pk,fn)])
         self.assertTrue(all(r[0] in (202,409) for r in results),results)
         self.assertEqual(PlatformCheckout.objects.count(),1);self.assertEqual(bank.call_count,1)
@@ -203,6 +204,20 @@ class BillingConcurrencyTests(BillingFixture, APITransactionTestCase):
         self.assertEqual(sorted(r[0] for r in results),[200,400],results)
         self.company.refresh_from_db();self.assertEqual(self.company.free_offers_remaining,0)
         self.assertEqual(PlatformCharge.objects.filter(status='paid').count(),1)
+
+    @patch('offers.views.schedule_push_notification')
+    def test_last_monthly_offer_cannot_be_spent_twice(self, push):
+        sub = self.active_subscription()
+        sub.periods.update(offers_used=9)
+        job = JobRequest.objects.create(customer=self.customer, city=self.city, title='Second monthly job')
+        offer = Offer.objects.create(company=self.company, job_request=job)
+        version = OfferVersion.objects.create(offer=offer, version_number=1, price_amount='1000')
+        offer.current_version = version
+        offer.save()
+        results = self.race([(self.user.pk, lambda c: c.post(f'/api/offers/{self.offer.pk}/sign/', {'personal_number': '1234'})), (self.user.pk, lambda c: c.post(f'/api/offers/{offer.pk}/sign/', {'personal_number': '1234'}))])
+        self.assertEqual(sorted(r[0] for r in results), [200, 400], results)
+        self.assertEqual(sub.periods.get(number=0).offers_used, 10)
+        self.assertEqual(PlatformCharge.objects.filter(kind='offer_fee', status='paid').count(), 1)
 
     @patch('payments.billing_views.get_transaction_details')
     def test_duplicate_callbacks_credit_only_once(self,details):

@@ -360,31 +360,6 @@ class OfferDecisionSerializer(serializers.Serializer):
 # EARLY CHAT UNLOCK (5€)
 # ======================================================
 
-class OfferEarlyChatUnlockSerializer(serializers.Serializer):
-    def create(self, validated_data):
-        offer = self.context["offer"]
-        user = self.context["request"].user
-
-        if offer.status == OfferStatus.ACCEPTED:
-            raise serializers.ValidationError("Chat is already free after accept.")
-
-        unlock, created = OfferChatUnlock.objects.get_or_create(
-            offer=offer,
-            unlock_type=UnlockType.EARLY,
-            defaults={
-                "amount": 5,
-                "currency": "EUR",
-                "created_by": user,
-            },
-        )
-
-        if not created:
-            raise serializers.ValidationError("Chat already unlocked.")
-
-        # TODO: koppla payment senare
-
-        return unlock
-
 # ======================================================
 # CHAT MESSAGE SERIALIZER
 # ======================================================

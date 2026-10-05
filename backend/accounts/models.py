@@ -291,7 +291,7 @@ class Company(models.Model):
     # ===========================
 
     free_offers_remaining = models.PositiveIntegerField(
-        default=25,
+        default=0,
         help_text="One-time introductory allowance; consumed only when an offer is sent."
     )
 

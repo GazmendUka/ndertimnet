@@ -29,7 +29,6 @@ from .serializers import (
     OfferCreateSerializer,
     OfferSignSerializer,
     OfferDecisionSerializer,
-    OfferEarlyChatUnlockSerializer,
     OfferVersionSerializer,
     OfferMessageSerializer,
     OfferReviewSerializer,

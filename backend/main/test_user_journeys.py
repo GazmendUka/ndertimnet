@@ -407,19 +407,20 @@ class FullMarketplaceJourneyTests(APITestCase):
         )
         self.assertEqual(offer_update.status_code, 200, offer_update.data)
 
-        checkout = self.client.post("/api/billing/offer-checkout/", {"offer": offer_id, "platform": "web"}, format="json")
+        from payments.agreements import VERSION
+        checkout = self.client.post("/api/billing/subscribe/", {"plan": "standard", "platform": "web", "signer_name": "Test Person", "terms_version": VERSION, "accept_notice": True}, format="json")
         self.assertEqual(checkout.status_code, 202, checkout.data)
-        self.assertEqual(checkout.data["charge"]["amount"], "19.95")
+        self.assertEqual(checkout.data["charge"]["amount"], "29.00")
         get_transaction_details.return_value = {
             "merchant": {"merchantAccountId": "journey_merchant"},
-            "transaction": {"transactionId": "journey_tx_123", "transactionAmount": "19.95",
+            "transaction": {"transactionId": "journey_tx_123", "transactionAmount": "29.00",
                 "transactionCurrency": "EUR", "isProduction": False, "transactionType": "PURCHASE",
                 "status": "SUCCESS", "statusCode": "0000"}}
         notification = self.client.post("/api/billing/notify/", {
             "order": {"orderIdentification": "journey_rai_order_123"},
             "transaction": {"transactionId": "journey_tx_123"}}, format="json")
         self.assertEqual(notification.status_code, 200, notification.data)
-        self.assertEqual(PlatformCharge.objects.get(offer_id=offer_id).status, PaymentStatus.PAID)
+        self.assertEqual(PlatformCharge.objects.get(pk=checkout.data["charge"]["id"]).status, PaymentStatus.PAID)
 
         signed = self.client.post(
             f"/api/offers/{offer_id}/sign/",

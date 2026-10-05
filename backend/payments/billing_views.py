@@ -20,7 +20,7 @@ from offers.models import Offer
 from .models import BillingSubscription, PlatformCharge, PlatformCheckout, PaymentStatus
 from .pricing import SUBSCRIPTION_PLANS, get_subscription_plan
 from .billing import (publication_price, current_subscription, ensure_periods, add_months,
-                      validate_offer_price, offer_billing_state, prepare_offer_charge, subscription_overview)
+                      validate_offer_price, offer_billing_state, subscription_overview)
 from .services.raiaccept import (create_checkout, get_transaction_details, RaiAcceptError,
                                 build_platform_payload, _credentials)
 
@@ -63,9 +63,13 @@ class BillingViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["get"], permission_classes=[AllowAny])
     def catalog(self, request):
         price = {k: str(v) if isinstance(v, Decimal) else v for k, v in publication_price().items()}
-        return Response({"listing": price, "offer": {"rate": "0.01", "minimum": "2.95", "maximum": "19.95", "rounding": "up_to_next_95"},
-                         "plans": [{"code": p.code, "monthly_price": str(p.monthly_price), "offers": p.offers_per_month} for p in SUBSCRIPTION_PLANS],
-                         "introductory_offers": 25, "notice_months": 3, "collection": "monthly_hosted_checkout",
+        return Response({"listing": price, "offer": {"per_offer_payment": False},
+                         "plans": [{"code": p.code, "name": p.name, "monthly_price": str(p.price_at()),
+                                    "introductory_price": str(p.monthly_price), "regular_price": str(p.regular_price),
+                                    "offers": p.offers_per_month} for p in SUBSCRIPTION_PLANS],
+                         "introductory_until": "2026-12-31", "regular_from": "2027-01-01",
+                         "pricing_timezone": "Europe/Stockholm",
+                         "introductory_offers": 0, "notice_months": 0, "collection": "monthly_hosted_checkout",
                          "bank_payments_available": bank_payments_available()})
 
     @action(detail=False, methods=["get"])
@@ -106,11 +110,8 @@ class BillingViewSet(viewsets.ViewSet):
             state = offer_billing_state(offer)
             if state["paid"] or state["included"] or state["legacy"] or state["introductory"] or state["credit_available"]:
                 return Response({"ready_to_sign": True, **state})
-            self.require_web(request)
-            if not bank_payments_available():
-                return bank_unavailable()
-            charge = prepare_offer_charge(offer, request.user)
-        return self.checkout(request, charge)
+            return Response({"detail": "Zgjidhni abonimin ose prisni periudhën tjetër. Nuk ka pagesë për ofertë.",
+                             "code": "subscription_quota_required", **state}, status=409)
 
     def require_web(self, request):
         platform = request.data.get("platform")
@@ -128,16 +129,19 @@ class BillingViewSet(viewsets.ViewSet):
             Company.objects.select_for_update().get(pk=company.pk)
             # Include ended contracts with outstanding bills in history.
             sub = BillingSubscription.objects.filter(company=company).order_by("-created_at").first()
+            from .models import SubscriptionPlanChange
+            plan_changes = [{"plan_code": c.plan_code, "text": c.text, "signer_name": c.signer_name, "signed_at": c.signed_at, "effective_at": c.effective_at, "sha256": c.sha256} for c in SubscriptionPlanChange.objects.filter(subscription__company=company).order_by("-signed_at")]
             agreements = [{"subscription_id": a.subscription_id, "text": a.text, "version": a.version,
                            "signer_name": a.signer_name, "signed_at": a.signed_at, "sha256": a.sha256}
                           for a in SubscriptionAgreement.objects.filter(subscription__company=company).order_by("-signed_at")]
             if not sub:
-                return Response({"overview": subscription_overview(company), "subscription": None, "agreements": agreements, "free_offers_remaining": company.free_offers_remaining})
+                return Response({"overview": subscription_overview(company), "subscription": None, "agreements": agreements, "plan_changes": plan_changes, "free_offers_remaining": company.free_offers_remaining})
             ensure_periods(sub)
             periods = [{"id": p.pk, "starts_at": p.starts_at, "ends_at": p.ends_at,
-                        "offers_used": p.offers_used, "charge": charge_data(p.charge)} for p in sub.periods.order_by("number")]
-            return Response({"overview": subscription_overview(company, sub), "agreements": agreements, "free_offers_remaining": company.free_offers_remaining, "subscription": {"id": sub.pk, "plan_code": sub.plan_code,
-                "monthly_price": str(sub.monthly_price), "monthly_offers": sub.monthly_offers,
+                        "offers_used": p.offers_used, "monthly_offers": p.monthly_offers, "plan_code": p.plan_code, "charge": charge_data(p.charge)} for p in sub.periods.order_by("number")]
+            return Response({"overview": subscription_overview(company, sub), "agreements": agreements, "plan_changes": plan_changes, "free_offers_remaining": company.free_offers_remaining, "subscription": {"id": sub.pk, "plan_code": sub.plan_code,
+                "monthly_price": str(get_subscription_plan(sub.plan_code).price_at()), "monthly_offers": sub.monthly_offers,
+                "pending_plan_code": sub.pending_plan_code, "pending_plan_at": sub.pending_plan_at,
                 "started_at": sub.started_at, "canceled_at": sub.canceled_at, "ends_at": sub.ends_at,
                 "periods": periods}})
 
@@ -158,7 +162,7 @@ class BillingViewSet(viewsets.ViewSet):
         if not bank_payments_available():
             return bank_unavailable()
         if request.data.get("accept_notice") is not True:
-            raise ValidationError({"detail": "Pranoni pagesën mujore dhe afatin e njoftimit prej 3 muajsh."})
+            raise ValidationError({"detail": "Pranoni marrëveshjen e abonimit mujor pa afat detyrues."})
         try:
             plan = get_subscription_plan(request.data.get("plan"))
         except ValueError as exc:
@@ -173,7 +177,7 @@ class BillingViewSet(viewsets.ViewSet):
                 if not 2 <= len(signer) <= 200 or request.data.get("terms_version") != AGREEMENT_VERSION:
                     raise ValidationError({"detail": "Lexoni marrëveshjen aktuale dhe shkruani emrin e plotë për ta nënshkruar."})
                 sub = BillingSubscription.objects.create(company=company, plan_code=plan.code,
-                      monthly_price=plan.monthly_price, monthly_offers=plan.offers_per_month, terms_version=AGREEMENT_VERSION)
+                      monthly_price=plan.price_at(), monthly_offers=plan.offers_per_month, terms_version=AGREEMENT_VERSION)
                 text = agreement_text(company, plan)
                 SubscriptionAgreement.objects.create(subscription=sub, signed_by=request.user,
                     signer_name=signer, company_name=company.company_name, text=text,
@@ -198,14 +202,42 @@ class BillingViewSet(viewsets.ViewSet):
                 return Response({"ends_at": sub.ends_at, "canceled_at": sub.canceled_at})
             if not sub.canceled_at:
                 sub.canceled_at = timezone.now()
-                # End on the first billing boundary after at least three months' notice.
-                earliest = add_months(sub.canceled_at, 3)
-                number = 1
-                while add_months(sub.started_at, number) < earliest:
-                    number += 1
-                sub.ends_at = add_months(sub.started_at, number)
-                sub.save(update_fields=["canceled_at", "ends_at"])
+                period = ensure_periods(sub)
+                sub.ends_at = period.ends_at
+                sub.pending_plan_code = ""
+                sub.pending_plan_at = None
+                sub.save(update_fields=["canceled_at", "ends_at", "pending_plan_code", "pending_plan_at"])
             return Response({"ends_at": sub.ends_at, "canceled_at": sub.canceled_at})
+
+    @action(detail=False, methods=["post"], url_path="change-plan")
+    def change_plan(self, request):
+        from .models import SubscriptionPlanChange
+        company = self.company(request)
+        try:
+            plan = get_subscription_plan(request.data.get("plan"))
+        except ValueError:
+            raise ValidationError({"detail": "Zgjidhni planin."})
+        signer = str(request.data.get("signer_name") or "").strip()
+        if request.data.get("accept_notice") is not True or request.data.get("terms_version") != AGREEMENT_VERSION or not 2 <= len(signer) <= 200:
+            raise ValidationError({"detail": "Lexoni dhe pranoni marrëveshjen aktuale."})
+        with transaction.atomic():
+            Company.objects.select_for_update().get(pk=company.pk)
+            sub = current_subscription(company)
+            if not sub or not sub.started_at or sub.canceled_at:
+                raise ValidationError({"detail": "Ndryshimi kërkon një abonim të filluar që nuk është anuluar."})
+            period = ensure_periods(sub)
+            if PlatformCheckout.objects.filter(charge__period__subscription=sub, status=PaymentStatus.PENDING).exists():
+                raise ValidationError({"detail": "Prisni verifikimin e pagesës përpara ndryshimit."})
+            if sub.pending_plan_code == plan.code:
+                return Response({"effective_at": sub.pending_plan_at, "plan_code": plan.code})
+            text = agreement_text(company, plan)
+            sub.pending_plan_code = plan.code if plan.code != sub.plan_code else ""
+            sub.pending_plan_at = period.ends_at if sub.pending_plan_code else None
+            sub.save(update_fields=["pending_plan_code", "pending_plan_at"])
+            SubscriptionPlanChange.objects.create(subscription=sub, plan_code=plan.code,
+                effective_at=period.ends_at, signer_name=signer, signed_by=request.user,
+                text=text, version=AGREEMENT_VERSION, sha256=hashlib.sha256(text.encode()).hexdigest())
+            return Response({"effective_at": sub.pending_plan_at, "plan_code": plan.code})
 
     @action(detail=True, methods=["post"], url_path="checkout")
     def charge_checkout(self, request, pk=None):
@@ -215,6 +247,8 @@ class BillingViewSet(viewsets.ViewSet):
 
     def checkout(self, request, charge):
         self.require_web(request)
+        if charge.kind in (PlatformCharge.Kind.OFFER, PlatformCharge.Kind.OFFER_ADJUSTMENT):
+            return Response({"detail": "Pagesat për ofertë janë mbyllur. Zgjidhni një abonim.", "code": "individual_payments_retired"}, status=410)
         # Validate merchant configuration before creating a potentially uncertain attempt.
         if not bank_payments_available():
             return bank_unavailable()
@@ -233,15 +267,18 @@ class BillingViewSet(viewsets.ViewSet):
             charge = PlatformCharge.objects.select_for_update().get(pk=charge.pk)
             if charge.period_id and not charge.period.subscription.started_at and charge.period.subscription.ends_at:
                 raise ValidationError({"detail": "Ky abonim u anulua para fillimit."})
+            if charge.period_id and not charge.period.subscription.started_at and not charge.checkouts.exists():
+                plan = get_subscription_plan(charge.period.subscription.plan_code)
+                charge.amount = plan.price_at()
+                charge.regular_amount = plan.regular_price
+                charge.discount_amount = plan.regular_price - charge.amount
+                charge.save(update_fields=["amount", "regular_amount", "discount_amount"])
             if charge.status == PaymentStatus.PAID:
                 return Response(charge_data(charge))
             if charge.offer_id:
                 state = offer_billing_state(offer)
                 if state["paid"] or state["legacy"] or state["introductory"] or state["included"] or state["credit_available"]:
                     return Response({"ready_to_sign": True, **state})
-                expected_kind = PlatformCharge.Kind.OFFER_ADJUSTMENT if state["adjustment"] else PlatformCharge.Kind.OFFER
-                if charge.kind != expected_kind or charge.amount != Decimal(state["fee"]):
-                    raise ValidationError({"detail": "Tarifa ka ndryshuar. Hapni përsëri hapin e pagesës."})
             attempt = charge.checkouts.filter(status=PaymentStatus.PENDING).order_by("-pk").first()
             if attempt:
                 if attempt.checkout_url:

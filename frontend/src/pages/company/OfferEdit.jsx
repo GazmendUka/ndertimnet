@@ -500,7 +500,7 @@ export default function OfferEdit() {
 
           <p className="text-dim max-w-xl mx-auto mb-8">
             Klienti tani mund ta shohë ofertën tuaj. Biseda dhe kontaktet janë
-            të hapura pasi oferta u dërgua dhe tarifa u pagua ose u përfshi.
+            të hapura pasi oferta u nënshkrua dhe u dërgua.
           </p>
 
           <div className="flex flex-col sm:flex-row justify-center gap-3">
@@ -763,7 +763,7 @@ export default function OfferEdit() {
                 <h2 className="text-lg font-semibold">Hapi 3 – Çmimi</h2>
                 <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6" role="note">
                   <strong>Kontrolloni me kujdes çmimin përpara dërgimit.</strong>
-                  <p>Çmimi dhe kushtet e pranuara nga klienti janë pjesë e marrëveshjes suaj dhe duhet të respektohen. Mos vendosni çmim më të ulët për të shmangur tarifën e platformës. Ndryshimet e punës ose çmimit duhen dokumentuar dhe rënë dakord me klientin, duke respektuar përjashtimet që mund të parashikojë ligji.</p>
+                  <p>Çmimi dhe kushtet e pranuara nga klienti janë pjesë e marrëveshjes suaj dhe duhet të respektohen. Ndryshimet e punës ose çmimit duhen dokumentuar dhe rënë dakord me klientin, duke respektuar përjashtimet që mund të parashikojë ligji.</p>
                   <p>{priceType === "fixed" ? "Për çmim fiks, kontrolloni shumën totale dhe tregoni qartë çfarë përfshihet ose përjashtohet, përfshirë materialet dhe taksat." : "Për çmim për orë, shënoni tarifën për orë dhe sqaroni si llogariten orët, materialet dhe taksat. Tarifa për orë nuk është një çmim total fiks."}</p>
                 </div>
 
@@ -807,7 +807,7 @@ export default function OfferEdit() {
                     disabled={saving}
                   />
                   <p className="text-xs text-gray-500 mt-2">
-                    Valuta aktualisht është EUR. Tarifa e platformës llogaritet mbi totalin e vlerësuar.
+                    Valuta aktualisht është EUR. Totali i vlerësuar llogaritet nga tarifa për orë dhe orët e vlerësuara. Nuk ka tarifë për dërgimin e ofertës.
                   </p>
                 </div>
 

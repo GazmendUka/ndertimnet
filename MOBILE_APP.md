@@ -51,15 +51,13 @@ after a server-to-server transaction verification, never from the browser
 return URL. The verified transaction id, merchant, environment, amount,
 currency and success code must match the locally stored payment.
 
-The current model charges for platform services: publishing a job request,
-sending a company offer, or a monthly company subscription. See `BILLING.md`.
-Preparing a draft is free but reveals no customer contacts or chat. Each company has
-25 free sent offers, usable on web and native; quota is consumed atomically when signing.
-After these, a subscription allowance or individual payment is required. Chat and direct contacts open when the paid/included offer is sent.
-Phone/email sharing is allowed after sending. Accepted agreements stay separate from
-proposed changes; customers approve the exact signed version. Individually paid
-price increases require only the outstanding fee difference before resending. The former 25-free-leads and 4.95 EUR unlock model
-is retired. Payments for the actual construction work are no longer offered.
+Company subscriptions: Standard EUR 29/month (EUR 49 regular), 10 offers/month;
+Pro EUR 59/month (EUR 79 regular), 30 offers/month. Introductory prices end on
+2026-12-31; the first renewal from 2027-01-01 uses regular prices. No binding
+period or per-lead/offer/chat payment. Previously granted free offers are preserved,
+but new companies receive no automatic trial quota. Sending consumes an entitlement
+atomically. Revisions do not consume another offer. Contacts and chat open on sending.
+Customer publication remains a separate discounted service. See `BILLING.md`.
 
 Native iOS/Android clients do not open external checkout for these purchases.
 Free introductory publications and existing paid subscription entitlements
@@ -122,6 +120,5 @@ iOS, the Apple APNs authentication key have been configured and tested.
    real devices.
 7. Upload an internal Android build and an iOS TestFlight build before review.
 
-Price increases below EUR 100 cumulatively from the last billed price incur no extra fee.
-At EUR 100 or more only the unpaid fee difference applies. See BILLING.md for credits,
-version decisions and platform inactivity. These rules are enforced on the server.
+Offer revisions have no supplementary fee and consume no additional quota.
+Accepted version history and customer approval remain required. See BILLING.md.

@@ -1,40 +1,34 @@
-"""Versioned subscription terms; no card mandate is claimed without bank support."""
-VERSION = "2026-09-20-monthly-v3"
+"""Versioned monthly terms; previous signed copies are immutable."""
+VERSION = "2026-10-05-standard-pro-v1"
 
 
 def agreement_text(company, plan):
     return f"""MARRËVESHJE ABONIMI — NDËRTIMNET
 Versioni: {VERSION}
 Kompania: {company.company_name}
-Plani: {plan.offers_per_month} oferta në muaj; {plan.monthly_price} EUR në muaj.
+Plani: {plan.name}; {plan.offers_per_month} oferta në muaj.
+Çmimi hyrës: {plan.monthly_price} EUR/muaj deri më 31 dhjetor 2026.
+Çmimi i rregullt: {plan.regular_price} EUR/muaj nga rinovimi i parë më ose pas
+1 janarit 2027 (zona kohore Europe/Stockholm), edhe për abonentët ekzistues.
 
-Periudha fillon me pagesën e parë të konfirmuar. Ofertat e papërdorura nuk barten.
-Kreditet e kompensimit përdoren të parat për kërkesa të tjera dhe nuk skadojnë. Më pas
-përdoren 25 ofertat hyrëse falas. Asnjëra nuk shtyn pagesat e një abonimi aktiv.
-Ofertat shtesë paguhen veçmas: 1% e totalit të ofertuar, rrumbullakosur lart në ,95 EUR,
-minimumi 2,95 EUR, maksimumi 19,95 EUR. Abonimi mund të kushtojë më shumë se pagesa për ofertë.
-Për oferta me orë përdoret tarifa për orë shumëzuar me orët e vlerësuara.
-Rishikimet e një oferte të përfshirë në abonim nuk konsumojnë një ofertë tjetër.
-Për oferta të paguara veçmas, rritjet nën 100 EUR gjithsej nga çmimi i fundit i tarifuar
-nuk sjellin tarifë shtesë. Nga 100 EUR paguhet vetëm diferenca, me maksimum 19,95 EUR
-tarifë gjithsej. Uljet nuk rimbursohen. Tarifa paguhet për dërgimin, jo për pranimin.
-Ndryshimet i dërgohen klientit për miratim; marrëveshja e mëparshme ruhet deri atëherë.
-Kredit jepet për gabime të konfirmuara nga mbështetja. Nëse pagesa konfirmohet, por
-kërkesa mbyllet përpara se oferta të dërgohet, jepet automatikisht një kredit për
-një kërkesë tjetër. Ofertat e dërguara nuk marrin kredit për mungesë përgjigjeje,
-anulim nga klienti apo zgjedhjen e një kompanie tjetër.
+Periudha fillon me pagesën e parë të konfirmuar dhe rinovohet çdo muaj.
+Ofertat e papërdorura nuk barten. Nuk ka pagesë për lead, ofertë ose bisedë.
+Leximi dhe përgatitja e ofertave janë falas. Kontaktet dhe biseda hapen pasi
+oferta nënshkruhet dhe dërgohet. Rishikimet nuk konsumojnë një ofertë tjetër.
+Kur kuota mbaron, prisni periudhën tjetër ose ndryshoni planin.
+Kreditet e kompensimit dhe ofertat falas të dhëna më parë ruhen dhe përdoren
+përpara kuotës. Ato nuk shtyjnë pagesat e një abonimi aktiv.
 
-Anulimi kërkohet te faqja e pagesave të kompanisë. Afati i njoftimit është të paktën
-3 muaj kalendarikë nga kërkesa. Abonimi mbaron në kufirin e parë mujor pas këtij afati;
-data e saktë shfaqet pas anulimit. Pagesat vazhdojnë deri në atë datë.
-Mosshfrytëzimi i ofertave nuk anulon abonimin. Pagesat e papaguara bllokojnë kuotën.
+Pa afat detyrues. Anuloni në faqen e pagesave: abonimi përfundon në fund të
+periudhës aktuale; nuk krijohen pagesa për periudha pas përfundimit.
+Pagesat e periudhave të kaluara mbeten të detyrueshme. Pagesat e papaguara
+bllokojnë kuotën. Ndryshimi i planit hyn në fuqi në periudhën tjetër;
+kuota dhe çmimi i periudhës aktuale nuk ndryshojnë. Ndryshimet e ofertës
+kërkojnë ende nënshkrim dhe miratim të klientit.
 
-Mënyra aktuale: pagesë mujore në faqen e bankës. Kjo marrëveshje NUK aktivizon debitimin
-automatik të kartës. Debitimi automatik do të kërkojë autorizim të veçantë dhe aktivizim
-nga banka. Ndërtimnet nuk ruan numrin e kartës apo kodin e sigurisë.
-
-Duke shkruar emrin dhe konfirmuar, deklaroj se jam i autorizuar të përfaqësoj kompaninë
-dhe pranoj këtë marrëveshje. Kopja e nënshkruar ruhet në faqen e pagesave të kompanisë,
-edhe pas anulimit. Ky konfirmim regjistron emrin, llogarinë, versionin dhe kohën; nuk është
-verifikim identiteti me dokument apo nënshkrim elektronik i kualifikuar.
+Pagesa mujore kryhet manualisht në faqen e bankës. Ky konfirmim nuk aktivizon
+debitimin automatik të kartës. Ndërtimnet nuk ruan numrin e kartës ose CVV.
+Duke shkruar emrin, deklaroj se jam i autorizuar të përfaqësoj kompaninë dhe
+pranoj marrëveshjen. Kopja ruhet edhe pas anulimit. Ky është regjistrim i
+pëlqimit, jo verifikim identiteti apo nënshkrim elektronik i kualifikuar.
 """

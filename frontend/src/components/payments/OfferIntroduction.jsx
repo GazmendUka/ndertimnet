@@ -52,8 +52,8 @@ export default function OfferIntroduction({ userId }) {
           <p className="text-lg font-semibold text-emerald-900">Ju kanë mbetur {remaining} oferta falas.</p>
           <p>Një ofertë falas zbritet vetëm kur e nënshkruani dhe e dërgoni. Leximi i kërkesave dhe përgatitja e ofertës nuk e ulin gjendjen tuaj.</p>
         </div>
-        <p><strong>Pasi të mbarojnë ofertat falas:</strong> përgatitni ofertën dhe shihni tarifën në hapin e fundit. Pagesa përfundon përpara nënshkrimit dhe dërgimit. Nëse keni oferta të disponueshme në abonim, përdoret një prej tyre pa pagesë të veçantë.</p>
-        <p className="text-gray-600">Biseda hapet pasi dërgoni ofertën. Kontaktet direkte hapen pasi oferta të dërgohet dhe tarifa të jetë paguar ose e përfshirë.</p>
+        <p><strong>Pasi të mbarojnë ofertat falas:</strong> zgjidhni Standard me 10 oferta/muaj ose Pro me 30. Nuk ka pagesë për lead ose ofertë. Një ofertë përdoret vetëm kur e nënshkruani dhe e dërgoni.</p>
+        <p className="text-gray-600">Biseda hapet pasi dërgoni ofertën. Kontaktet direkte hapen pasi oferta të dërgohet.</p>
       </div>
       <button type="button" autoFocus onClick={dismiss} className="premium-btn btn-dark mt-6 w-full justify-center">E kuptova — shiko kërkesat</button>
     </dialog>

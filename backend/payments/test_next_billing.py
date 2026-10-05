@@ -24,7 +24,8 @@ class BillingRulesTests(BillingFixture, APITestCase):
         self.assertEqual(r.status_code, 200, r.data)
         self.assertEqual(r.data['current_version']['estimated_total'], '1200.00')
         state = self.client.get('/api/billing/offer-quote/', {'offer': self.offer.pk}).data
-        self.assertEqual(state['fee'], '12.95')
+        self.assertEqual(state['billing_total'], '1200.00')
+        self.assertEqual(state['fee'], '0.00')
         self.assertEqual(self.client.patch(f'/api/offers/{self.offer.pk}/', {'estimated_hours': '-2'}).status_code, 400)
 
     def other_offer(self):
@@ -37,16 +38,23 @@ class BillingRulesTests(BillingFixture, APITestCase):
 
     @patch('payments.billing_views.create_checkout')
     def test_full_capacity_blocks_before_any_bank_call_or_free_quota_spend(self, bank):
-        self.job.max_offers=1;self.job.save()
-        other=self.other_offer();v=other.current_version;v.is_signed=True;v.save()
-        r=self.client.post('/api/billing/offer-checkout/', {'offer': self.offer.pk, 'platform':'web'})
-        self.assertEqual(r.status_code,400,r.data)
-        self.assertEqual(r.data['code'],'offer_limit_reached');bank.assert_not_called()
-        self.company.free_offers_remaining=25;self.company.save()
-        self.assertEqual(self.sign().status_code,400)
-        self.company.refresh_from_db();self.assertEqual(self.company.free_offers_remaining,25)
-        self.job.max_offers=6;self.job.save()
-        self.assertEqual(self.sign().status_code,200)
+        self.job.max_offers = 1
+        self.job.save()
+        other = self.other_offer()
+        v = other.current_version
+        v.is_signed = True
+        v.save()
+        self.company.free_offers_remaining = 25
+        self.company.save()
+        r = self.sign()
+        self.assertEqual(r.status_code, 400)
+        self.assertEqual(r.data['code'], 'offer_limit_reached')
+        bank.assert_not_called()
+        self.company.refresh_from_db()
+        self.assertEqual(self.company.free_offers_remaining, 25)
+        self.job.max_offers = 6
+        self.job.save()
+        self.assertEqual(self.sign().status_code, 200)
 
     def test_pending_payment_reserves_place_until_verified_failed(self):
         self.job.max_offers=1;self.job.save()
@@ -72,9 +80,9 @@ class BillingRulesTests(BillingFixture, APITestCase):
 
     @patch('payments.billing_views.create_checkout', return_value={'order_id':'contract','payment_url':'https://bank.test/checkout'})
     def test_contract_requires_signature_and_is_immutable_and_owner_only(self, bank):
-        data={'plan':'offers_3','platform':'web','accept_notice':True}
+        data={'plan':'standard','platform':'web','accept_notice':True}
         self.assertEqual(self.client.post('/api/billing/subscribe/',data,format='json').status_code,400)
-        terms=self.client.get('/api/billing/subscription-terms/',{'plan':'offers_3'}).data
+        terms=self.client.get('/api/billing/subscription-terms/',{'plan':'standard'}).data
         data.update(signer_name='Test Person',terms_version=terms['version'])
         self.assertEqual(self.client.post('/api/billing/subscribe/',data,format='json').status_code,202)
         a=SubscriptionAgreement.objects.get();self.assertEqual(a.text,terms['text'])

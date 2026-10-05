@@ -4,6 +4,9 @@ This module calculates prices only. It does not grant access, charge a card,
 or decide when an offer becomes billable.
 """
 
+from datetime import date
+from zoneinfo import ZoneInfo
+from django.utils import timezone
 from dataclasses import dataclass
 from decimal import Decimal, InvalidOperation, ROUND_HALF_UP, ROUND_CEILING
 
@@ -20,12 +23,18 @@ class SubscriptionPlan:
     code: str
     monthly_price: Decimal
     offers_per_month: int
+    regular_price: Decimal
+    name: str
+
+    def price_at(self, when=None):
+        when = when or timezone.now()
+        day = when.astimezone(ZoneInfo("Europe/Stockholm")).date() if hasattr(when, "astimezone") else when
+        return self.monthly_price if day < date(2027, 1, 1) else self.regular_price
 
 
 SUBSCRIPTION_PLANS = (
-    SubscriptionPlan("offers_3", Decimal("39.95"), 3),
-    SubscriptionPlan("offers_5", Decimal("54.95"), 5),
-    SubscriptionPlan("offers_7", Decimal("69.95"), 7),
+    SubscriptionPlan("standard", Decimal("29.00"), 10, Decimal("49.00"), "Standard"),
+    SubscriptionPlan("pro", Decimal("59.00"), 30, Decimal("79.00"), "Pro"),
 )
 
 

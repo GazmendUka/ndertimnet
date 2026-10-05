@@ -1,6 +1,7 @@
 // src/routes/PublicRoutes.jsx
 
 import { Navigate, Route, useParams } from "react-router-dom";
+import PricingPage from "../pages/PricingPage";
 import AboutPage from "../pages/about";
 import StartProject from "../pages/jobrequests/StartProject";
 import ContactPage from "../pages/ContactPage";
@@ -54,6 +55,7 @@ export default function PublicRoutes() {
 
         {/* CORE */}
         <Route path="/" element={<AuthRedirect />} />
+        <Route path="/pricing" element={<PricingPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/nis-projektin" element={<StartProject />} />
         <Route path="/contact" element={<ContactPage />} />

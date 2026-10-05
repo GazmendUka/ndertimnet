@@ -38,7 +38,7 @@ class BillingFixture:
             kind='offer_fee', regular_amount='19.95', amount='19.95', quoted_price='1950', status='paid')
 
     def active_subscription(self):
-        sub = BillingSubscription.objects.create(company=self.company, plan_code='offers_3', monthly_price='39.95', monthly_offers=3)
+        sub = BillingSubscription.objects.create(company=self.company, plan_code='standard', monthly_price='29.00', monthly_offers=10)
         period = ensure_periods(sub)
         settle_charge(period.charge)
         sub.refresh_from_db()
@@ -51,7 +51,7 @@ class PlatformBillingTests(BillingFixture, APITestCase):
     def test_send_requires_payment_and_does_not_sign(self):
         r = self.client.post(f'/api/offers/{self.offer.pk}/sign/', {'personal_number': '1234'})
         self.assertEqual(r.status_code, 400)
-        self.assertEqual(r.data['code'], 'offer_payment_required')
+        self.assertEqual(r.data['code'], 'subscription_quota_required')
         self.version.refresh_from_db()
         self.assertFalse(self.version.is_signed)
 
@@ -73,13 +73,14 @@ class PlatformBillingTests(BillingFixture, APITestCase):
         self.assertEqual(sub.periods.get(number=0).offers_used, 1)
         self.assertEqual(PlatformCharge.objects.get(offer=self.offer).amount, Decimal('0'))
 
-    def test_quota_exhaustion_requires_individual_payment(self):
+    def test_quota_exhaustion_requires_renewal(self):
         sub = self.active_subscription()
-        sub.periods.update(offers_used=3)
+        sub.periods.update(offers_used=10)
         self.assertIsNone(available_period(self.company))
         r = self.client.get('/api/billing/offer-quote/', {'offer': self.offer.pk})
         self.assertFalse(r.data['included'])
-        self.assertEqual(r.data['fee'], '19.95')
+        self.assertEqual(r.data['fee'], '0.00')
+        self.assertTrue(r.data['subscription_required'])
 
     def test_no_quota_rollover_and_unpaid_renewal_blocks_quota(self):
         sub = self.active_subscription()
@@ -92,19 +93,18 @@ class PlatformBillingTests(BillingFixture, APITestCase):
             settle_charge(period.charge)
             self.assertIsNotNone(available_period(self.company))
 
-    def test_cancel_has_at_least_three_months_paid_notice(self):
+    def test_cancel_ends_at_current_month_without_notice(self):
         sub = self.active_subscription()
         r = self.client.post('/api/billing/cancel-subscription/')
         self.assertEqual(r.status_code, 200)
         sub.refresh_from_db()
-        self.assertGreaterEqual(sub.ends_at, add_months(sub.canceled_at, 3))
+        self.assertEqual(sub.ends_at, add_months(sub.started_at, 1))
         first_end = sub.ends_at
         self.client.post('/api/billing/cancel-subscription/')
         sub.refresh_from_db()
         self.assertEqual(first_end, sub.ends_at)
         ensure_periods(sub, sub.ends_at)
-        self.assertFalse(sub.periods.filter(starts_at__gte=sub.ends_at).exists())
-        self.assertGreater(sub.periods.count(), 1)
+        self.assertEqual(sub.periods.count(), 1)
 
     def test_calendar_anchor(self):
         jan = datetime(2028, 1, 31, tzinfo=dt_timezone.utc)
@@ -131,7 +131,7 @@ class PlatformBillingTests(BillingFixture, APITestCase):
 
     def test_native_checkout_blocked(self):
         for platform in ('android', 'ios', None):
-            r = self.client.post('/api/billing/offer-checkout/', {'offer': self.offer.pk, 'platform': platform}, format='json')
+            r = self.client.post('/api/billing/subscribe/', {'plan': 'standard', 'platform': platform}, format='json')
             self.assertEqual(r.status_code, 400)
             self.assertEqual(r.data['code'], 'store_billing_required')
         self.assertFalse(PlatformCheckout.objects.exists())
@@ -165,9 +165,10 @@ class PlatformBillingTests(BillingFixture, APITestCase):
 
     @patch('payments.billing_views.create_checkout', return_value={'order_id': 'order1', 'payment_url': 'https://bank.test/checkout'})
     def test_checkout_is_reused(self, create):
-        body = {'offer': self.offer.pk, 'platform': 'web'}
-        a = self.client.post('/api/billing/offer-checkout/', body)
-        b = self.client.post('/api/billing/offer-checkout/', body)
+        from payments.agreements import VERSION
+        body = {'plan': 'standard', 'platform': 'web', 'signer_name': 'Test Person', 'accept_notice': True, 'terms_version': VERSION}
+        a = self.client.post('/api/billing/subscribe/', body, format='json')
+        b = self.client.post('/api/billing/subscribe/', body, format='json')
         self.assertEqual(a.status_code, 202, a.data)
         self.assertEqual(a.data['payment_url'], b.data['payment_url'])
         self.assertEqual(create.call_count, 1)
@@ -195,7 +196,8 @@ class PlatformBillingTests(BillingFixture, APITestCase):
 
     @override_settings(RAIACCEPT_MERCHANT_ACCOUNT_ID='')
     def test_missing_merchant_configuration_does_not_create_bank_attempt(self):
-        r = self.client.post('/api/billing/offer-checkout/', {'offer': self.offer.pk, 'platform': 'web'})
+        from payments.agreements import VERSION
+        r = self.client.post('/api/billing/subscribe/', {'plan': 'standard', 'platform': 'web', 'signer_name': 'Test Person', 'accept_notice': True, 'terms_version': VERSION}, format='json')
         self.assertEqual(r.status_code, 503)
         self.assertEqual(PlatformCheckout.objects.count(), 0)
 
@@ -227,19 +229,20 @@ class PlatformBillingTests(BillingFixture, APITestCase):
     @patch('payments.billing_views.create_checkout')
     def test_uncertain_checkout_is_not_repeated(self, create):
         from payments.services.raiaccept import RaiAcceptError
+        from payments.agreements import VERSION
         create.side_effect = RaiAcceptError('timeout')
-        body = {'offer': self.offer.pk, 'platform': 'web'}
-        self.assertEqual(self.client.post('/api/billing/offer-checkout/', body).status_code, 502)
-        self.assertEqual(self.client.post('/api/billing/offer-checkout/', body).status_code, 409)
+        body = {'plan': 'standard', 'platform': 'web', 'signer_name': 'Test Person', 'accept_notice': True, 'terms_version': VERSION}
+        self.assertEqual(self.client.post('/api/billing/subscribe/', body, format='json').status_code, 502)
+        self.assertEqual(self.client.post('/api/billing/subscribe/', body, format='json').status_code, 409)
         self.assertEqual(create.call_count, 1)
 
     @patch('payments.billing_views.create_checkout', return_value={'order_id': 'sub-order', 'payment_url': 'https://bank.test/sub'})
     def test_subscription_purchase_requires_consent_and_uses_server_price(self, create):
-        r = self.client.post('/api/billing/subscribe/', {'plan': 'offers_3', 'platform': 'web'}, format='json')
+        r = self.client.post('/api/billing/subscribe/', {'plan': 'standard', 'platform': 'web'}, format='json')
         self.assertEqual(r.status_code, 400)
-        r = self.client.post('/api/billing/subscribe/', {'plan': 'offers_3', 'platform': 'web', 'accept_notice': True, 'signer_name': 'Test Person', 'terms_version': '2026-09-20-monthly-v3', 'amount': '0.01'}, format='json')
+        r = self.client.post('/api/billing/subscribe/', {'plan': 'standard', 'platform': 'web', 'accept_notice': True, 'signer_name': 'Test Person', 'terms_version': '2026-10-05-standard-pro-v1', 'amount': '0.01'}, format='json')
         self.assertEqual(r.status_code, 202, r.data)
-        self.assertEqual(r.data['charge']['amount'], '39.95')
+        self.assertEqual(r.data['charge']['amount'], '29.00')
         self.assertIsNone(BillingSubscription.objects.get().started_at)
 
     def test_failed_signing_does_not_consume_subscription(self):
@@ -371,7 +374,7 @@ class IntroductoryOfferAccessTests(BillingFixture, APITestCase):
         self.assertEqual(self.company.free_offers_remaining, 0)
         r = self.send()
         self.assertEqual(r.status_code, 400)
-        self.assertEqual(r.data['code'], 'offer_payment_required')
+        self.assertEqual(r.data['code'], 'subscription_quota_required')
         self.assertFalse(self.client.get(f'/api/jobrequests/{self.job.pk}/').data['lead_unlocked'])
 
     def test_failed_sign_rolls_back_free_offer(self):

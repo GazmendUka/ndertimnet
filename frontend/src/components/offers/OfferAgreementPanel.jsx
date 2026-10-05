@@ -28,7 +28,7 @@ export default function OfferAgreementPanel({ offer }) {
     return () => { live = false; };
   }, [id, currentId, acceptedId, rejectedAt]);
   return <section className="premium-card p-5 space-y-4">
-    <p className="text-sm">Mund të flisni me telefon ose në bisedë pasi oferta të dërgohet dhe tarifa të jetë paguar ose e përfshirë. Dokumentoni këtu çmimin dhe punën që bini dakord; konfirmoni ndryshimet që të keni të dy një histori të përbashkët.</p>
+    <p className="text-sm">Mund të flisni me telefon ose në bisedë pasi oferta të nënshkruhet dhe të dërgohet. Dokumentoni këtu çmimin dhe punën që bini dakord; konfirmoni ndryshimet që të keni të dy një histori të përbashkët.</p>
     {offer.accepted_version && <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4">
       <h2 className="font-semibold mb-3">Marrëveshja e pranuar — v{offer.accepted_version.version_number}</h2>
       <VersionText version={offer.accepted_version} />

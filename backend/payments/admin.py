@@ -145,3 +145,10 @@ class CheckoutReviewAdmin(ReadOnlyBillingAdmin):
             result = reconcile_checkout(attempt.pk)
             self.log_change(request, attempt, "Bank reconciliation: " + result)
             self.message_user(request, f"#{attempt.pk}: {result}")
+
+from .models import SubscriptionPlanChange
+
+@admin.register(SubscriptionPlanChange)
+class PlanChangeAdmin(ReadOnlyBillingAdmin):
+    def get_list_display(self, request):
+        return ("id", "subscription", "plan_code", "effective_at", "signer_name", "signed_at")

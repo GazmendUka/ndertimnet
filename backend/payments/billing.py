@@ -9,7 +9,7 @@ from rest_framework.exceptions import ValidationError
 
 from accounts.models import Company
 from .models import BillingSubscription, BillingPeriod, PlatformCharge, PaymentStatus
-from .pricing import listing_price, offer_fee
+from .pricing import listing_price, get_subscription_plan
 
 
 def add_months(value, months):
@@ -45,7 +45,7 @@ def current_subscription(company, now=None):
 
 
 def ensure_periods(subscription, now=None):
-    """Materialise amounts due, including unpaid months during notice.
+    """Materialise monthly amounts due up to cancellation, preserving historical charges.
 
     Payment is collected with hosted checkout; this is not automatic card debit.
     Period boundaries use the original billing-day anchor (Jan 31 -> Feb 28 -> Mar 31).
@@ -78,10 +78,29 @@ def ensure_periods(subscription, now=None):
 
 def ensure_period_charge(period):
     sub = period.subscription
+    if sub.pending_plan_code and period.starts_at and period.starts_at >= sub.pending_plan_at:
+        plan = get_subscription_plan(sub.pending_plan_code)
+        sub.plan_code = plan.code
+        sub.monthly_offers = plan.offers_per_month
+        sub.monthly_price = plan.price_at(period.starts_at)
+        sub.pending_plan_code = ""
+        sub.pending_plan_at = None
+        sub.save(update_fields=["plan_code", "monthly_offers", "monthly_price", "pending_plan_code", "pending_plan_at"])
+    if not period.plan_code:
+        period.plan_code = sub.plan_code
+        period.monthly_offers = sub.monthly_offers
+        period.save(update_fields=["plan_code", "monthly_offers"])
+    existing = PlatformCharge.objects.filter(period=period).first()
+    if existing:
+        return existing
+    plan = get_subscription_plan(period.plan_code)
+    amount = plan.price_at(period.starts_at)
+    sub.monthly_price = amount
+    sub.save(update_fields=["monthly_price"])
     return PlatformCharge.objects.get_or_create(period=period, defaults={
         "payer": sub.company.user, "company": sub.company,
         "kind": PlatformCharge.Kind.SUBSCRIPTION,
-        "regular_amount": sub.monthly_price, "amount": sub.monthly_price,
+        "regular_amount": plan.regular_price, "discount_amount": plan.regular_price - amount, "amount": amount,
     })[0]
 
 
@@ -95,7 +114,7 @@ def available_period(company):
         return None
     if sub.periods.filter(starts_at__lte=now).exclude(charge__status=PaymentStatus.PAID).exists():
         return None
-    if period.charge.status == PaymentStatus.PAID and period.offers_used < sub.monthly_offers:
+    if period.charge.status == PaymentStatus.PAID and period.offers_used < period.monthly_offers:
         return period
     return None
 
@@ -103,9 +122,9 @@ def available_period(company):
 def validate_offer_price(offer):
     version = offer.current_version
     if not version or version.price_amount is None or version.price_amount <= 0:
-        raise ValidationError({"detail": "Vendosni çmimin e ofertës përpara pagesës."})
+        raise ValidationError({"detail": "Vendosni çmimin e ofertës përpara dërgimit."})
     if version.currency.upper() != "EUR":
-        raise ValidationError({"detail": "Tarifa llogaritet vetëm për oferta në EUR."})
+        raise ValidationError({"detail": "Ofertat duhet të jenë në EUR."})
     total = version.estimated_total
     if total is None or total <= 0 or total > Decimal("99999999.99"):
         raise ValidationError({"detail": "Vendosni orët e vlerësuara dhe një total të vlefshëm (maksimumi 99 999 999,99 €)."})
@@ -115,61 +134,31 @@ def validate_offer_price(offer):
 def offer_billing_state(offer):
     total = validate_offer_price(offer)
     charges = PlatformCharge.objects.filter(offer=offer)
-    base = charges.filter(kind=PlatformCharge.Kind.OFFER).first()
-    historical = not base and offer.versions.filter(is_signed=True).exists()
-    paid_charges = list(charges.filter(status=PaymentStatus.PAID))
-    paid_amount = sum((c.amount for c in paid_charges), Decimal("0.00"))
-    complimentary = bool(base and base.status == PaymentStatus.PAID and base.amount == 0
-                         and (base.discount_amount > 0 or base.included_in_period_id))
-    required = offer_fee(total)
-    due = Decimal("0.00") if historical or complimentary else max(required - paid_amount, Decimal("0.00"))
-    baseline = max((c.quoted_price for c in paid_charges if c.amount > 0 and c.quoted_price is not None), default=None)
-    small_increase = baseline is not None and total - baseline < Decimal("100.00")
-    if small_increase:
-        due = Decimal("0.00")
-    settled = bool(base and base.status == PaymentStatus.PAID and due == 0)
+    base = charges.filter(kind=PlatformCharge.Kind.OFFER, status=PaymentStatus.PAID).first()
+    historical = offer.versions.filter(is_signed=True).exists()
     pending = charges.filter(checkouts__status=PaymentStatus.PENDING).exists()
     free_remaining = Company.objects.values_list("free_offers_remaining", flat=True).get(pk=offer.company_id)
-    # New free/subscription entitlement never replaces a previously paid individual fee.
-    adjustment = bool(base and base.status == PaymentStatus.PAID and due > 0)
     from .models import OfferCredit
-    credit = OfferCredit.objects.filter(company=offer.company, redeemed_offer__isnull=True).exclude(source_offer__job_request_id=offer.job_request_id).order_by("created_at", "pk").first()
-    credit_available = bool(credit and not settled and not historical and not pending and not adjustment)
-    introductory = not credit_available and free_remaining > 0 and not settled and not historical and not pending and not adjustment
-    period = available_period(offer.company) if not credit_available and not settled and not historical and not introductory and not pending and not adjustment else None
-    return {"credit_available": credit_available, "credits_remaining": OfferCredit.objects.filter(company=offer.company, redeemed_offer__isnull=True).count(),
-            "increase_threshold": "100.00", "fee_baseline": str(baseline) if baseline is not None else None, "below_increase_threshold": small_increase, "billing_total": str(total), "fee": str(due if adjustment else required), "total_fee": str(required),
-            "already_paid": str(paid_amount), "adjustment": adjustment,
-            "currency": "EUR", "paid": settled, "included": bool(period), "legacy": historical,
-            "introductory": introductory, "free_offers_remaining": free_remaining, "pending": pending,
-            "remaining": period.subscription.monthly_offers - period.offers_used if period else 0,
+    credits = OfferCredit.objects.filter(company=offer.company, redeemed_offer__isnull=True)
+    credit = credits.exclude(source_offer__job_request_id=offer.job_request_id).exists()
+    settled = bool(base)
+    credit_available = credit and not settled and not historical and not pending
+    introductory = not credit_available and free_remaining > 0 and not settled and not historical and not pending
+    period = available_period(offer.company) if not settled and not historical and not introductory and not credit_available and not pending else None
+    ready = settled or historical or introductory or credit_available or bool(period)
+    return {"credit_available": credit_available, "credits_remaining": credits.count(),
+            "billing_total": str(total), "fee": "0.00", "total_fee": "0.00",
+            "already_paid": str(sum((c.amount for c in charges.filter(status=PaymentStatus.PAID)), Decimal("0.00"))),
+            "adjustment": False, "currency": "EUR", "paid": settled,
+            "included": bool(period), "legacy": historical, "introductory": introductory,
+            "free_offers_remaining": free_remaining, "pending": pending,
+            "remaining": period.monthly_offers - period.offers_used if period else 0,
+            "subscription_required": not ready and not pending,
             "charge_id": base.pk if base else None}
 
 
-def prepare_offer_charge(offer, payer):
-    """Caller holds the company and offer locks. Confirmed payment records are immutable."""
-    state = offer_billing_state(offer)
-    total = validate_offer_price(offer)
-    kind = PlatformCharge.Kind.OFFER_ADJUSTMENT if state["adjustment"] else PlatformCharge.Kind.OFFER
-    charges = PlatformCharge.objects.filter(offer=offer, kind=kind)
-    charge = charges.exclude(status=PaymentStatus.PAID).order_by("-pk").first()
-    due = Decimal(state["fee"])
-    if charge:
-        if charge.checkouts.filter(status=PaymentStatus.PENDING).exists():
-            if charge.amount != due or charge.quoted_price != total:
-                raise ValidationError({"detail": "Pagesa e mëparshme po verifikohet."})
-            return charge
-        charge.amount = charge.regular_amount = due
-        charge.quoted_price = total
-        charge.status = PaymentStatus.PENDING
-        charge.save(update_fields=["amount", "regular_amount", "quoted_price", "status"])
-        return charge
-    return PlatformCharge.objects.create(offer=offer, payer=payer, company=offer.company, kind=kind,
-        amount=due, regular_amount=due, quoted_price=total)
-
-
 def authorize_offer_send(offer, payer):
-    """Called in the signing transaction. Charge only the unpaid fee difference."""
+    """Called in the signing transaction. Consume a monthly entitlement once; never charge per offer."""
     company = Company.objects.select_for_update().get(pk=offer.company_id)
     total = validate_offer_price(offer)
     state = offer_billing_state(offer)
@@ -180,24 +169,19 @@ def authorize_offer_send(offer, payer):
         return
     if state["paid"]:
         for charge in charges.filter(status=PaymentStatus.PAID, fulfilled_at__isnull=True):
-            if charge.quoted_price != total:
-                raise ValidationError({"detail": "Çmimi ka ndryshuar pas pagesës."})
             charge.fulfilled_at = timezone.now()
             charge.save(update_fields=["fulfilled_at"])
         return
-    if state["adjustment"]:
-        raise ValidationError({"detail": "Paguani vetëm diferencën e tarifës për çmimin e ri.",
-                               "code": "offer_adjustment_required", "amount": state["fee"]})
     from .models import OfferCredit
     credit = OfferCredit.objects.select_for_update().filter(company=company, redeemed_offer__isnull=True).exclude(source_offer__job_request_id=offer.job_request_id).order_by("created_at", "pk").first()
     introductory = not credit and company.free_offers_remaining > 0
     period = None if introductory or credit else available_period(company)
     if not credit and not introductory and not period:
-        raise ValidationError({"detail": "Paguani tarifën ose zgjidhni një abonim përpara dërgimit.",
-                               "code": "offer_payment_required", "amount": str(offer_fee(total))})
+        raise ValidationError({"detail": "Zgjidhni një abonim ose prisni rinovimin e kuotës përpara dërgimit.",
+                               "code": "subscription_quota_required"})
     PlatformCharge.objects.update_or_create(offer=offer, kind=PlatformCharge.Kind.OFFER, defaults={
         "payer": payer, "company": offer.company,
-        "regular_amount": offer_fee(total), "discount_amount": offer_fee(total),
+        "regular_amount": Decimal("0.00"), "discount_amount": Decimal("0.00"),
         "amount": Decimal("0.00"), "quoted_price": total, "status": PaymentStatus.PAID,
         "included_in_period": period, "paid_at": timezone.now(), "fulfilled_at": timezone.now(),
     })
@@ -247,9 +231,10 @@ def subscription_overview(company, subscription=None):
     if next_debt:
         due_at, amount = next_debt.period.starts_at, next_debt.amount
     elif active and sub.started_at and period and (not sub.ends_at or period.ends_at < sub.ends_at):
-        due_at, amount = period.ends_at, sub.monthly_price
+        due_at = period.ends_at
+        amount = get_subscription_plan(sub.pending_plan_code or sub.plan_code).price_at(due_at)
     elif active and not sub.started_at:
-        amount = sub.monthly_price
+        amount = get_subscription_plan(sub.plan_code).price_at()
     if not sub:
         state = 'none'
     elif not active:
@@ -266,8 +251,8 @@ def subscription_overview(company, subscription=None):
         'state': state, 'collection': 'monthly_hosted_checkout',
         'free_offers_remaining': company.free_offers_remaining,
         'credits_remaining': OfferCredit.objects.filter(company=company, redeemed_offer__isnull=True).count(),
-        'monthly_offers_remaining': max(0, sub.monthly_offers - usable.offers_used) if usable else 0,
-        'monthly_offers_total': sub.monthly_offers if active else 0,
+        'monthly_offers_remaining': max(0, usable.monthly_offers - usable.offers_used) if usable else 0,
+        'monthly_offers_total': period.monthly_offers if active and period else 0,
         'period_ends_at': period.ends_at if active and period else None,
         'next_payment_due_at': due_at, 'next_payment_amount': str(amount) if amount is not None else None,
         'outstanding_amount': str(debts.aggregate(total=Sum('amount'))['total'] or Decimal('0.00')),

@@ -35,8 +35,8 @@ class PricingTests(TestCase):
         self.assertEqual(price["discount"], Decimal("0.00"))
 
     def test_subscription_catalog(self):
-        for count, price in ((3, "39.95"), (5, "54.95"), (7, "69.95")):
-            plan = get_subscription_plan(f"offers_{count}")
+        for code, count, price in (("standard", 10, "29.00"), ("pro", 30, "59.00")):
+            plan = get_subscription_plan(code)
             self.assertEqual(plan.monthly_price, Decimal(price))
             self.assertEqual(plan.offers_per_month, count)
 

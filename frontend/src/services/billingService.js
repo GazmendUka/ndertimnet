@@ -12,6 +12,7 @@ export const billingService = {
   terms: (plan) => api.get("billing/subscription-terms/", { params: { plan } }),
   credits: () => api.get("billing/credits/"),
   subscribe: (plan, signer_name, terms_version) => api.post("billing/subscribe/", { plan, signer_name, terms_version, accept_notice: true, platform: platform() }),
+  changePlan: (plan, signer_name, terms_version) => api.post("billing/change-plan/", { plan, signer_name, terms_version, accept_notice: true }),
   cancel: () => api.post("billing/cancel-subscription/"),
   checkout: (id) => api.post(`billing/${id}/checkout/`, { platform: platform() }),
 };

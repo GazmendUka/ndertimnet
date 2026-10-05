@@ -27,6 +27,7 @@ import {
   Zap,
 } from "lucide-react";
 import api from "../api/axios";
+import { PublicSubscriptionPricing } from "../components/payments/PlatformBilling";
 
 const defaultHero = {
   title: "Gjeni kompaninë për projektin tuaj.",
@@ -604,6 +605,7 @@ export default function LandingPage() {
           </div>
         </section>
 
+        <div className="premium-container py-12"><PublicSubscriptionPricing /></div>
         <section className="bg-[#12251b] py-16 text-white sm:py-20">
           <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:px-6 lg:grid-cols-[1fr_auto] lg:items-center lg:px-8">
             <div>
