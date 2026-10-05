@@ -750,7 +750,7 @@ export default function JobRequestCreate() {
   const Step2 = (
     <div className="space-y-4">
       <div>
-        <label className="block mb-1 font-medium">Titulli i punës *</label>
+        <label className="block mb-1 font-medium">Titulli i punës</label>
         <input
           type="text"
           className={`premium-input ${
@@ -766,7 +766,7 @@ export default function JobRequestCreate() {
         )}
       </div>
 
-      <div>
+      <div className="border-t border-gray-200/80 pt-6 !mt-6">
         <CategoryPicker categories={categoryOptions} value={selectedCategory} disabled={saving || submitting || lookupsLoading} onChange={value => {
           setFormData(prev => ({ ...prev, profession: null, industry: /^\d+$/.test(value) ? Number(value) : null, category_mode: /^\d+$/.test(value) ? "" : value }));
         }} />
