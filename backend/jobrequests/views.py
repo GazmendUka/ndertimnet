@@ -136,7 +136,8 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
             key = UUID(str(request.data.get("client_draft_id", "")))
         except ValueError:
             raise ValidationError({"client_draft_id": "Drafti nuk është i vlefshëm."})
-        payload = {k: request.data.get(k) for k in ("title", "description", "city", "profession")}
+        payload = {k: request.data.get(k) for k in ("title", "description", "city", "profession", "industry", "category_mode")}
+        payload["category_mode"] = payload["category_mode"] or ""
         if not isinstance(payload["description"], str) or not 20 <= len(payload["description"]) <= 10000:
             raise ValidationError({"description": "Shkruani 20–10000 karaktere."})
         if not isinstance(payload["title"], str) or len(payload["title"].strip()) < 5:
@@ -144,7 +145,7 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         serializer = self.get_serializer(data=payload)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
-        if not data.get("city") or not data["city"].is_active or not data.get("profession") or not data["profession"].is_active:
+        if not data.get("city") or not data["city"].is_active or (data.get("profession") and not data["profession"].is_active) or not (data.get("profession") or data.get("industry") or data.get("category_mode")):
             raise ValidationError({"detail": "Zgjidhni qytetin dhe shërbimin aktiv."})
         draft, created = JobRequestDraft.objects.select_for_update().get_or_create(
             customer=request.user, client_draft_id=key, defaults={**data, "current_step": 1},
@@ -153,7 +154,9 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
         # acknowledge older content as saved, or overwrite a newer server draft.
         if not created and (
             draft.title != data["title"] or draft.description != data["description"]
-            or draft.city_id != data["city"].pk or draft.profession_id != data["profession"].pk
+            or draft.city_id != data["city"].pk or draft.profession_id != getattr(data.get("profession"), "pk", None)
+            or draft.industry_id != getattr(data.get("industry"), "pk", None)
+            or draft.category_mode != data.get("category_mode", "")
         ):
             return Response({
                 "code": "guest_draft_conflict",
@@ -242,6 +245,8 @@ class JobRequestDraftViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
                 budget=draft.budget,
                 city=draft.city,
                 profession=draft.profession,
+                industry=draft.industry,
+                category_mode=draft.category_mode,
                 address=resolved_address,
                 postal_code=draft.postal_code,
                 is_active=False,
@@ -421,10 +426,8 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
                         areas = list(company_profile.cities.values_list("pk", flat=True))
                         if company_profile.city_id:
                             areas.append(company_profile.city_id)
-                        queryset = queryset.filter(
-                            city_id__in=areas,
-                            profession__in=company_profile.professions.all(),
-                        )
+                        from .matching import company_category_query
+                        queryset = queryset.filter(city_id__in=areas).filter(company_category_query(company_profile))
                 return queryset
             return JobRequest.objects.none()
 

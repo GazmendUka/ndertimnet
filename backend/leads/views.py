@@ -1,3 +1,4 @@
+from jobrequests.matching import company_category_query
 # ndertimnet/backend/leads/views.py 
 
 from rest_framework import viewsets, serializers, status, filters
@@ -79,8 +80,7 @@ class JobRequestViewSet(viewsets.ModelViewSet):
                 return qs.filter(
                     is_active=True,
                     moderation_status=JobRequest.MODERATION_APPROVED,
-                    profession__in=company.professions.all()
-                ).distinct()
+                ).filter(company_category_query(company)).distinct()
             return qs.none()
 
         if getattr(user, "customer_profile", None):

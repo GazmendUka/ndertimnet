@@ -3,9 +3,9 @@ from .models import JobRequest, JobRequestAudit, JobRequestDraft, JobRequestMode
 from accounts.serializers import BasicCustomerSerializer, CompanySerializer
 
 from locations.serializers import CitySerializer
-from taxonomy.serializers import ProfessionSerializer
+from taxonomy.serializers import ProfessionSerializer, IndustryBriefSerializer
 from locations.models import City
-from taxonomy.models import Profession
+from taxonomy.models import Profession, Industry
 
 
 # ------------------------------------------------------------
@@ -96,6 +96,7 @@ class JobRequestListSerializer(serializers.ModelSerializer):
 
     city_detail = CitySerializer(source="city", read_only=True)
     profession_detail = ProfessionSerializer(source="profession", read_only=True)
+    industry_detail = IndustryBriefSerializer(source="industry", read_only=True)
 
     class Meta:
         model = JobRequest
@@ -111,6 +112,8 @@ class JobRequestListSerializer(serializers.ModelSerializer):
             "created_at",
             "city_detail",
             "profession_detail",
+            "industry_detail",
+            "category_mode",
             "customer",
             "has_offer",
             "moderation_status",
@@ -155,9 +158,11 @@ class JobRequestListSerializer(serializers.ModelSerializer):
 # ------------------------------------------------------------
 
 class JobRequestSerializer(serializers.ModelSerializer):
+    industry = serializers.PrimaryKeyRelatedField(queryset=Industry.objects.filter(is_active=True), required=False, allow_null=True)
     customer = serializers.SerializerMethodField()
     city_detail = CitySerializer(source="city", read_only=True)
     profession_detail = ProfessionSerializer(source="profession", read_only=True)
+    industry_detail = IndustryBriefSerializer(source="industry", read_only=True)
 
     audit_logs = serializers.SerializerMethodField()
     lead_unlocked = serializers.SerializerMethodField()
@@ -173,7 +178,7 @@ class JobRequestSerializer(serializers.ModelSerializer):
     moderation_note = serializers.SerializerMethodField()
 
     city = serializers.PrimaryKeyRelatedField(queryset=City.objects.all(), write_only=True)
-    profession = serializers.PrimaryKeyRelatedField(queryset=Profession.objects.all(), write_only=True)
+    profession = serializers.PrimaryKeyRelatedField(queryset=Profession.objects.filter(is_active=True), write_only=True, required=False, allow_null=True)
 
     class Meta:
         model = JobRequest
@@ -186,8 +191,11 @@ class JobRequestSerializer(serializers.ModelSerializer):
             "budget",
             "city",
             "profession",
+            "industry",
+            "category_mode",
             "city_detail",
             "profession_detail",
+            "industry_detail",
             "address",
             "postal_code",
             "created_at",
@@ -448,6 +456,7 @@ class JobRequestSerializer(serializers.ModelSerializer):
 # ------------------------------------------------------------
 
 class JobRequestDraftSerializer(serializers.ModelSerializer):
+    industry = serializers.PrimaryKeyRelatedField(queryset=Industry.objects.filter(is_active=True), required=False, allow_null=True)
 
     city = serializers.PrimaryKeyRelatedField(queryset=City.objects.all(), required=False, allow_null=True)
     profession = serializers.PrimaryKeyRelatedField(queryset=Profession.objects.all(), required=False, allow_null=True)
@@ -461,6 +470,8 @@ class JobRequestDraftSerializer(serializers.ModelSerializer):
             "budget",
             "city",
             "profession",
+            "industry",
+            "category_mode",
             "current_step",
             "is_submitted",
             "submitted_job",

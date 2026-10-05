@@ -1,3 +1,4 @@
+import jobCategory from "../../utils/jobCategory";
 // src/pages/jobrequests/JobRequestList.jsx
 
 import React, { useEffect, useMemo, useState } from "react";
@@ -292,9 +293,7 @@ export default function JobRequestList() {
 
                       <span className="flex items-center gap-1">
                         <Tag size={14} />
-                        {req.profession_detail?.industry_detail?.name
-                          ? `${req.profession_detail.industry_detail.name} / ${req.profession_detail.name}`
-                          : req.profession_detail?.name || "Pa profesion"}
+                        {jobCategory(req)}
                       </span>
                     </div>
 

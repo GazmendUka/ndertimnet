@@ -115,3 +115,13 @@ test("company accounts cannot import customer drafts", async () => {
   expect(await screen.findByRole("alert")).toHaveTextContent("llogari klienti");
   expect(api.post).not.toHaveBeenCalled();
 });
+test('uncertain category imports without requiring a specialty', async () => {
+  saveGuestProject({...project,profession:'',industry:'',category_mode:''});
+  useAuth.mockReturnValue({user:{role:'customer'}});
+  api.post.mockResolvedValue({data:{...serverDraft,profession:null,industry:null,category_mode:'unsure'}});
+  show(); await screen.findByText('Test city');
+  fireEvent.click(screen.getByRole('button',{name:/Nuk jam i sigurt/}));
+  fireEvent.click(screen.getByRole('button',{name:'Ruaj dhe vazhdo projektin'}));
+  await screen.findByText('Continue draft');
+  expect(api.post.mock.calls[0][1]).toMatchObject({profession:null,industry:null,category_mode:'unsure'});
+});

@@ -6,6 +6,8 @@ export function readGuestProject() {
       && typeof value.title === "string" && value.title.length <= 255
       && typeof value.description === "string" && value.description.length <= 10000
       && [value.city, value.profession].every(v => typeof v === "string" && /^\d{0,9}$/.test(v))
+      && (value.industry === undefined || (typeof value.industry === "string" && /^\d{0,9}$/.test(value.industry)))
+      && (value.category_mode === undefined || ["", "mixed", "unsure"].includes(value.category_mode))
       && Number.isFinite(value.savedAt) && value.savedAt <= Date.now() && Date.now() - value.savedAt <= 86400000;
     if (!valid) {
       sessionStorage.removeItem(KEY); return null;

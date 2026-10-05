@@ -1,3 +1,4 @@
+import jobCategory from "../../utils/jobCategory";
 // ===========================================
 // src/pages/jobrequests/CompanyJobDetails.jsx
 // FINAL CLEAN VERSION – OFFERS + PAYMENT UNLOCK
@@ -292,9 +293,7 @@ export default function CompanyJobDetails() {
             <div className="min-w-0">
               <dt className="flex items-center gap-2 text-gray-500"><Tag size={16} /> Kategoria</dt>
               <dd className="mt-1 font-medium [overflow-wrap:anywhere]">
-                {job.profession_detail?.industry_detail?.name
-                  ? `${job.profession_detail.industry_detail.name} / ${job.profession_detail.name}`
-                  : job.profession_detail?.name || "—"}
+                {jobCategory(job)}
               </dd>
             </div>
             <div className="min-w-0">

@@ -1,3 +1,4 @@
+import jobCategory from "../../utils/jobCategory";
 import OfferAgreementPanel from "../../components/offers/OfferAgreementPanel";
 import ChatPolicyNotice from "../../components/offers/ChatPolicyNotice";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -410,9 +411,7 @@ export default function OfferDetails() {
             <DetailRow label="Qyteti" value={job?.city_detail?.name} />
             <DetailRow
               label="Kategoria"
-              value={job?.profession_detail?.industry_detail?.name
-                ? `${job.profession_detail.industry_detail.name} / ${job.profession_detail.name}`
-                : job?.profession_detail?.name}
+              value={jobCategory(job)}
             />
             <DetailRow label="Krijuar" value={createdDate?.toLocaleDateString("sq-AL")} />
           </InfoSection>

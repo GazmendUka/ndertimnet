@@ -25,3 +25,9 @@ class IndustrySerializer(serializers.ModelSerializer):
     class Meta:
         model = Industry
         fields = ["id", "name", "slug", "description", "professions"]
+
+
+class IndustryBriefSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Industry
+        fields = ["id", "name", "slug", "description"]

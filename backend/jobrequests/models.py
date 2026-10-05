@@ -8,7 +8,7 @@ from django.utils import timezone
 
 from accounts.models import Company
 from locations.models import City
-from taxonomy.models import Profession
+from taxonomy.models import Profession, Industry
 
 
 class JobRequestAudit(models.Model):
@@ -110,6 +110,9 @@ class JobRequest(models.Model):
         blank=True,
         verbose_name="Profesioni",
     )
+
+    industry = models.ForeignKey(Industry, on_delete=models.PROTECT, null=True, blank=True)
+    category_mode = models.CharField(max_length=10, blank=True, default="", choices=[("", "Kategori"), ("mixed", "Punime të ndryshme"), ("unsure", "Nuk jam i sigurt")])
 
     address = models.CharField(max_length=255, blank=True)
     postal_code = models.CharField(max_length=20, blank=True)
@@ -306,6 +309,9 @@ class JobRequestDraft(models.Model):
         related_name="jobrequest_drafts",
         verbose_name="Profesioni",
     )
+
+    industry = models.ForeignKey(Industry, on_delete=models.PROTECT, null=True, blank=True)
+    category_mode = models.CharField(max_length=10, blank=True, default="", choices=[("", "Kategori"), ("mixed", "Punime të ndryshme"), ("unsure", "Nuk jam i sigurt")])
 
     address = models.CharField(max_length=255, blank=True)
     postal_code = models.CharField(max_length=20, blank=True)

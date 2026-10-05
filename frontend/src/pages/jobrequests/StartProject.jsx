@@ -4,7 +4,8 @@ import { Helmet } from "react-helmet";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
 import { clearGuestProject, readGuestProject, saveGuestProject } from "../../utils/guestProject";
-const empty = () => ({ id: crypto.randomUUID(), title: "", description: "", city: "", profession: "" });
+import CategoryPicker, { projectCategories } from "../../components/jobrequests/CategoryPicker";
+const empty = () => ({ id: crypto.randomUUID(), title: "", description: "", city: "", profession: "", industry: "", category_mode: "" });
 
 export default function StartProject() {
   const { user } = useAuth();
@@ -41,6 +42,7 @@ export default function StartProject() {
     if (saveCopy && !formRef.current?.reportValidity()) return;
     setError("");
     if (user?.role === "company") { setError("Ky hap kërkon një llogari klienti."); return; }
+    if (!project.profession && !project.industry && !project.category_mode) { setError("Zgjidhni një kategori ose “Nuk jam i sigurt”."); return; }
     const pending = saveCopy ? { ...project, id: crypto.randomUUID() } : project;
     if (!saveGuestProject(pending) && (!user || saveCopy)) { setError("Aktivizoni ruajtjen e shfletuesit për të mbajtur projektin gjatë regjistrimit."); return; }
     if (saveCopy) setProject(pending);
@@ -50,14 +52,17 @@ export default function StartProject() {
     try {
       const payload = {
         client_draft_id: pending.id, title: pending.title.trim(), description: pending.description.trim(),
-        city: Number(pending.city), profession: Number(pending.profession),
+        city: Number(pending.city), profession: pending.profession ? Number(pending.profession) : null,
+        ...(pending.industry || pending.category_mode ? { industry: pending.industry ? Number(pending.industry) : null, category_mode: pending.category_mode || "" } : {}),
       };
       const { data } = await api.post("jobrequests/drafts/import-guest/", payload, { timeout: 20000 });
       if (!Number.isInteger(data.id) || data.id < 1) throw new Error("Invalid draft response");
       // Do not erase the local draft on an incomplete/stale success response,
       // including a response from an older backend during deployment.
       if (data.title !== payload.title || data.description !== payload.description
-          || data.city !== payload.city || data.profession !== payload.profession) {
+          || data.city !== payload.city || data.profession !== payload.profession
+          || (payload.industry !== undefined && data.industry !== payload.industry)
+          || (payload.category_mode !== undefined && data.category_mode !== payload.category_mode)) {
         setConflict(data);
         setError("Drafti i ruajtur ka përmbajtje tjetër. Ndryshimet tuaja mbeten këtu.");
         return;
@@ -97,7 +102,10 @@ export default function StartProject() {
       <label className="block">Titulli<input required minLength={5} maxLength={255} name="title" value={project.title} onChange={change} className="block border rounded-lg p-3 w-full" /></label>
       <label className="block">Përshkrimi<textarea required minLength={20} maxLength={10000} rows={6} name="description" value={project.description} onChange={change} className="block border rounded-lg p-3 w-full" /></label>
       <label className="block">Qyteti<select required name="city" value={project.city} onChange={change} className="block border rounded-lg p-3 w-full"><option value="">Zgjidhni qytetin</option>{cities.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}</select></label>
-      <label className="block">Shërbimi<select required name="profession" value={project.profession} onChange={change} className="block border rounded-lg p-3 w-full"><option value="">Zgjidhni shërbimin</option>{professions.map(p => <option key={p.id} value={p.id}>{p.industry_detail?.name ? `${p.industry_detail.name} / ` : ""}{p.name}</option>)}</select></label>
+      <CategoryPicker categories={projectCategories(professions)} value={project.category_mode || project.industry || professions.find(p => String(p.id) === project.profession)?.industry_detail?.id || ""} onChange={value => {
+        const next = { ...project, profession: "", industry: /^\d+$/.test(value) ? value : "", category_mode: /^\d+$/.test(value) ? "" : value };
+        setProject(next); saveGuestProject(next);
+      }} disabled={lookupError} />
       <button disabled={busy} className="premium-btn btn-dark">{busy ? "Duke ruajtur…" : user ? "Ruaj dhe vazhdo projektin" : "Krijo llogari dhe vazhdo"}</button>
       {!user && <p>Keni llogari? <Link to="/login" className="underline">Hyni për të vazhduar</Link></p>}
       <button type="button" className="block text-sm underline" onClick={() => { clearGuestProject(); setProject(empty()); setConflict(null); setError(""); }}>Fshi draftin nga kjo skedë</button>

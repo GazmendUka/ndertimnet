@@ -1,3 +1,4 @@
+import jobCategory from "../../utils/jobCategory";
 // src/pages/customer/CustomerJobDetails.jsx
 
 import React, { useEffect, useState, useMemo } from "react";
@@ -420,9 +421,7 @@ export default function CustomerJobDetails() {
               <p className="flex items-center gap-2">
                 <Tag size={16} />
                 Kategoria:{" "}
-                {job.profession_detail?.industry_detail?.name
-                  ? `${job.profession_detail.industry_detail.name} / ${job.profession_detail.name}`
-                  : job.profession_detail?.name || "—"}
+                {jobCategory(job)}
               </p>
             </div>
           </div>
