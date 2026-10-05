@@ -134,7 +134,7 @@ class OfferViewSet(viewsets.ModelViewSet):
             )
 
         else:
-            return Response({"detail": "Not allowed"}, status=403)
+            return Response({"detail": "Nuk keni leje për këtë veprim."}, status=403)
 
         if request.user.role == "customer":
             from jobrequests.activity import record_customer_activity
@@ -420,13 +420,14 @@ class OfferViewSet(viewsets.ModelViewSet):
     def pdf(self, request, pk=None):
         offer = self.get_object()
 
-        if offer.status != OfferStatus.ACCEPTED:
+        preview = request.query_params.get("preview") == "1"
+        if preview and request.user.pk != offer.company.user_id:
+            return Response({"detail": "Vetëm kompania mund të shkarkojë projekt-ofertën."}, status=403)
+        if not preview and offer.status != OfferStatus.ACCEPTED:
             return Response({"detail": "Kontrata me kontaktet është e disponueshme pasi klienti të pranojë ofertën."}, status=403)
-        pdf_bytes = build_offer_contract_pdf(offer)
-        filename = (
-            f"oferta_{offer.id}_v"
-            f"{offer.accepted_version.version_number if offer.accepted_version else 1}.pdf"
-        )
+        pdf_bytes = build_offer_contract_pdf(offer, preview=preview)
+        document_version = offer.current_version if preview else offer.accepted_version
+        filename = f"oferta_{offer.id}_v{document_version.version_number if document_version else 1}.pdf"
 
         return FileResponse(
             BytesIO(pdf_bytes),
@@ -555,10 +556,10 @@ class OfferViewSet(viewsets.ModelViewSet):
 
         message_text = request.data.get("message")
         if not isinstance(message_text, str) or not message_text.strip():
-            return Response({"detail": "Message is required"}, status=400)
+            return Response({"detail": "Shkruani një mesazh."}, status=400)
         message_text = message_text.strip()
         if len(message_text) > 2000:
-            return Response({"detail": "Message cannot exceed 2000 characters"}, status=400)
+            return Response({"detail": "Mesazhi nuk mund të ketë më shumë se 2000 karaktere."}, status=400)
 
         raw_client_id = request.data.get("client_message_id")
         try:
@@ -609,7 +610,7 @@ class OfferViewSet(viewsets.ModelViewSet):
                 recipient_path = f"/company/offers/{locked_offer.id}"
 
             else:
-                return Response({"detail": "Invalid sender"}, status=403)
+                return Response({"detail": "Dërguesi nuk është i vlefshëm."}, status=403)
 
         schedule_push_notification(
             user=recipient,

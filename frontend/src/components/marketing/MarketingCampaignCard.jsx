@@ -11,7 +11,7 @@ const STATUS_STYLES = {
 };
 
 const STATUS_LABELS = {
-  draft: "Draft",
+  draft: "Projekt-ofertë",
   pending: "Pending approval",
   approved: "Approved",
   active: "Active",

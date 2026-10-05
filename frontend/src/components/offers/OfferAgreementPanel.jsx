@@ -36,7 +36,7 @@ export default function OfferAgreementPanel({ offer }) {
     {offer.pending_amendment && <p className="rounded-lg bg-amber-50 p-3 font-semibold">Ka ndryshime në pritje. Marrëveshja e mësipërme mbetet e pranuar derisa klienti të miratojë versionin e ri.</p>}
     <details><summary className="cursor-pointer font-semibold">Historiku i versioneve</summary>
       {error && <p role="alert">Historiku nuk u ngarkua. Hapni faqen përsëri.</p>}
-      {versions.map(v => <details key={v.id} className="border-t py-3"><summary>Versioni {v.version_number} · {v.customer_accepted_at ? "Pranuar" : v.customer_rejected_at ? "Refuzuar" : v.is_signed ? "Dërguar" : "Draft"}</summary><VersionText version={v} /></details>)}
+      {versions.map(v => <details key={v.id} className="border-t py-3"><summary>Versioni {v.version_number} · {v.customer_accepted_at ? "Pranuar" : v.customer_rejected_at ? "Refuzuar" : v.is_signed ? "Dërguar" : "Projekt-ofertë"}</summary><VersionText version={v} /></details>)}
     </details>
   </section>;
 }

@@ -312,15 +312,15 @@ class BillingViewSet(viewsets.ViewSet):
         order_id = (request.data.get("order") or {}).get("orderIdentification")
         transaction_id = (request.data.get("transaction") or {}).get("transactionId")
         if not isinstance(order_id, str) or not isinstance(transaction_id, str):
-            return Response({"detail": "Missing order or transaction"}, status=400)
+            return Response({"detail": "Mungon porosia ose transaksioni."}, status=400)
         attempt = PlatformCheckout.objects.filter(order_id=order_id).select_related("charge").first()
         if not attempt:
             # No fallback from untrusted merchant references. Gateway can retry after order storage.
-            return Response({"detail": "Unknown order"}, status=404)
+            return Response({"detail": "Porosia nuk u gjet."}, status=404)
         try:
             details = get_transaction_details(order_id, transaction_id)
         except RaiAcceptError:
-            return Response({"detail": "Verification unavailable"}, status=502)
+            return Response({"detail": "Verifikimi nuk është i disponueshëm."}, status=502)
         from .reconciliation import apply_verified_transaction, VerificationError
         try:
             result = apply_verified_transaction(attempt.pk, transaction_id, details)

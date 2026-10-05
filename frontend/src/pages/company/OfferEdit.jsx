@@ -106,9 +106,6 @@ export default function OfferEdit() {
     );
   }
 
-  function isStep4Valid(includesValue, excludesValue) {
-    return includesValue.trim().length > 5 && excludesValue.trim().length > 5;
-  }
 
   function canEnterStep(stepKey) {
 
@@ -121,8 +118,7 @@ export default function OfferEdit() {
       return (
         isStep1Valid &&
         isStep2Valid &&
-        isStep3Valid(priceType, priceAmount) &&
-        isStep4Valid(includesText, excludesText)
+        isStep3Valid(priceType, priceAmount)
       );
 
     return false;
@@ -141,9 +137,6 @@ export default function OfferEdit() {
       return "Zgjidhni llojin e çmimit dhe vendosni një shumë më të madhe se 0.";
     }
 
-    if (step === 4 && !isStep4Valid(includesText, excludesText)) {
-      return "Plotësoni çfarë përfshihet dhe çfarë nuk përfshihet në ofertë.";
-    }
 
     if (step === 5 && !confirm) {
       return "Konfirmoni që të dhënat janë të sakta para nënshkrimit.";
@@ -166,7 +159,7 @@ export default function OfferEdit() {
       return (
         <div className="inline-flex items-center gap-2 rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700">
           <CheckCircle2 size={14} />
-          Ruajtur {lastSavedAt ? `kl. ${formatTime(lastSavedAt)}` : ""}
+          Ruajtur {lastSavedAt ? `ora ${formatTime(lastSavedAt)}` : ""}
         </div>
       );
     }
@@ -183,7 +176,7 @@ export default function OfferEdit() {
     return (
       <div className="inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-semibold text-gray-600">
         <Save size={14} />
-        Draft
+        Projekt-ofertë
       </div>
     );
   }
@@ -265,7 +258,7 @@ export default function OfferEdit() {
 
       const res = await api.patch(`offers/${offer.id}/`, payload);
 
-      setOffer(res.data);
+      setOffer((current) => ({ ...current, ...res.data }));
       setLastSavedAt(new Date());
       setSaveStatus("saved");
 
@@ -365,10 +358,6 @@ export default function OfferEdit() {
   }
 
   async function handleNextStep4() {
-    if (!isStep4Valid(includesText, excludesText)) {
-      toast.error("Plotësoni të dy fushat.");
-      return;
-    }
 
     await savePatch(
       {
@@ -401,7 +390,7 @@ export default function OfferEdit() {
       });
 
       if (res?.data) {
-        setOffer(res.data);
+        setOffer((current) => ({ ...current, ...res.data }));
       }
 
       setSaveStatus("saved");
@@ -432,17 +421,18 @@ export default function OfferEdit() {
 
   async function downloadPdf() {
     try {
-      const res = await api.get(`offers/${offer.id}/pdf/`, {
+      const res = await api.get(`offers/${offer.id}/pdf/?preview=1`, {
         responseType: "blob",
       });
 
-      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const url = window.URL.createObjectURL(new Blob([res.data], { type: "application/pdf" }));
       const link = document.createElement("a");
       link.href = url;
       link.setAttribute("download", `oferta_${offer.id}.pdf`);
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
 
       toast.success("PDF u shkarkua ✅");
     } catch (err) {
@@ -845,6 +835,7 @@ export default function OfferEdit() {
                 <h2 className="text-lg font-semibold">
                   Hapi 4 – Çfarë përfshihet
                 </h2>
+                <p className="text-sm text-gray-600">Këto fusha janë opsionale. Ju rekomandojmë të shpjegoni çfarë përfshihet dhe çfarë nuk përfshihet në çmim, që klienti ta kuptojë më lehtë ofertën dhe t’ju përgjigjet. Mund të vazhdoni edhe pa i plotësuar.</p>
 
                 <div>
                   <label className="text-sm font-medium block mb-2">
@@ -886,7 +877,7 @@ export default function OfferEdit() {
                   <button
                     onClick={handleNextStep4}
                     className="premium-btn btn-dark inline-flex items-center gap-2"
-                    disabled={saving || !isStep4Valid(includesText, excludesText)}
+                    disabled={saving}
                   >
                     {saving && <Loader2 size={16} className="animate-spin" />}
                     {saving ? "Duke ruajtur..." : "Ruaj dhe vazhdo"}
@@ -902,6 +893,7 @@ export default function OfferEdit() {
                   Hapi 5 – Nënshkrimi
                 </h2>
                 <OfferBilling offerId={offer.id} />
+                <button type="button" onClick={downloadPdf} disabled={saving} className="premium-btn btn-light">Shkarko projekt-ofertën (PDF)</button>
 
                 {!canSign && (
                   <div className="border border-yellow-300 bg-yellow-50 p-4 rounded-lg text-sm text-yellow-800">

@@ -7,7 +7,7 @@ export default function StatusBadge({ active, status }) {
 
   if (status !== undefined) {
     const labels = {
-      draft: "Draft",
+      draft: "Projekt-ofertë",
       signed: "Në pritje të përgjigjes",
       accepted: "E pranuar",
       rejected: "E refuzuar",

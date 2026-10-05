@@ -158,7 +158,7 @@ export default function OfferDetails() {
     const tempMessage = {
       id: `temp-${Date.now()}`,
       message: trimmed,
-      sender_name: user?.first_name || user?.email || "You",
+      sender_name: user?.first_name || user?.email || "Ju",
       sender_type: "company",
       created_at: new Date().toISOString(),
       delivery_status: "sending",
@@ -293,7 +293,8 @@ export default function OfferDetails() {
 
   useEffect(() => {
     if (shouldAutoScrollRef.current) {
-      chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      const container = chatContainerRef.current;
+      if (container) container.scrollTop = container.scrollHeight;
     }
   }, [messages]);
 
@@ -317,7 +318,7 @@ export default function OfferDetails() {
   const statusExplain = useMemo(() => {
     const s = offer?.status;
 
-    if (s === "draft") return "Draft – e pa nënshkruar";
+    if (s === "draft") return "Projekt-ofertë – e pa nënshkruar";
     if (s === "signed") return "E nënshkruar – në pritje të përgjigjes së klientit";
     if (s === "accepted") return "E pranuar – klienti e ka konfirmuar";
     if (s === "rejected") return "E refuzuar – klienti e ka refuzuar";
@@ -419,7 +420,7 @@ export default function OfferDetails() {
           <InfoSection title="Çmimi dhe afati" icon={<Euro size={18} />}>
             {offer.accepted_version && offer.accepted_version.id !== v?.id && <p className="rounded-lg bg-amber-50 p-3 text-sm">Ky është {v?.is_signed ? "një propozim i dërguar" : "një draft"}, jo marrëveshja e pranuar. Versioni i pranuar shfaqet veçmas më sipër.</p>}
             <DetailRow label="Çmimi" value={v?.price_amount ? `${v.price_amount} ${v.currency || "EUR"}` : null} strong />
-            <DetailRow label="Lloji i çmimit" value={v?.price_type} />
+            <DetailRow label="Lloji i çmimit" value={v?.price_type === "hourly" ? "Për orë" : v?.price_type === "fixed" ? "Fiks" : "Nuk është specifikuar"} />
             {v?.price_type === "hourly" && <><DetailRow label="Orë të vlerësuara" value={v.estimated_hours} /><DetailRow label="Total i vlerësuar (€)" value={v.estimated_total} /></>}
 
             <DetailRow label="Mund të fillojë" value={v?.can_start_from} />

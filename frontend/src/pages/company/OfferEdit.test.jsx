@@ -53,3 +53,27 @@ test('default offer presentation is sent using the profile API multipart format'
   expect(data).toBeInstanceOf(FormData);
   expect(data.get('default_offer_presentation')).toBe('New reusable presentation');
 });
+test('step four allows empty optional scope fields and saves them', async () => {
+  api.get.mockResolvedValue({ data: { ...offer, current_version: { ...offer.current_version, includes_text: '', excludes_text: '' } } });
+  show(4);
+  const next = await screen.findByRole('button', { name: 'Ruaj dhe vazhdo' });
+  expect(next).toBeEnabled();
+  fireEvent.click(next);
+  await screen.findByRole('button', { name: 'Nënshkruaj dhe dërgo ofertën' });
+  expect(api.patch).toHaveBeenCalledWith('offers/1/', { includes_text: '', excludes_text: '' });
+});
+test('PDF after signing preserves offer identity and uses the preview endpoint', async () => {
+  api.post.mockResolvedValue({ data: { status: 'signed' } });
+  window.URL.createObjectURL = jest.fn(() => 'blob:test');
+  window.URL.revokeObjectURL = jest.fn();
+  jest.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {});
+  show();
+  fireEvent.click(await screen.findByRole('checkbox'));
+  fireEvent.change(screen.getByPlaceholderText('1234567890123'), { target: { value: '0000' } });
+  fireEvent.click(screen.getByRole('button', { name: 'Nënshkruaj dhe dërgo ofertën' }));
+  await screen.findByText('Oferta u nënshkrua me sukses');
+  fireEvent.click(screen.getByRole('button', { name: /PDF/ }));
+  await waitFor(() => expect(api.get).toHaveBeenCalledWith('offers/1/pdf/?preview=1', { responseType: 'blob' }));
+  expect(window.URL.revokeObjectURL).toHaveBeenCalledWith('blob:test');
+  HTMLAnchorElement.prototype.click.mockRestore();
+});

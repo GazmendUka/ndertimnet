@@ -147,7 +147,7 @@ class OfferCreateSerializer(serializers.Serializer):
         # 1️⃣ Endast företag
         if user.role != "company":
             raise serializers.ValidationError(
-                "Only companies can create offers."
+                "Vetëm kompanitë mund të krijojnë oferta."
             )
 
         company = user.company_profile
@@ -162,7 +162,7 @@ class OfferCreateSerializer(serializers.Serializer):
             )
         except JobRequest.DoesNotExist:
             raise serializers.ValidationError(
-                "Invalid job request."
+                "Kërkesa e punës nuk është e vlefshme."
             )
 
         # 3️⃣ Lead måste vara upplåst
@@ -171,13 +171,13 @@ class OfferCreateSerializer(serializers.Serializer):
             job_request=job_request
         ).exists():
             raise serializers.ValidationError(
-                "Lead must be unlocked before creating an offer."
+                "Hapni kërkesën e punës përpara krijimit të ofertës."
             )
 
         # 4️⃣ Företagsprofil måste vara komplett (Step 2)
         if not IsCompanyStep2().has_permission(request, None):
             raise serializers.ValidationError(
-                "Complete company profile before creating an offer."
+                "Plotësoni profilin e kompanisë përpara krijimit të ofertës."
             )
 
         # 5️⃣ Endast EN offert per jobb
@@ -186,7 +186,7 @@ class OfferCreateSerializer(serializers.Serializer):
             job_request=job_request
         ).exists():
             raise serializers.ValidationError(
-                "Offer already exists for this job request."
+                "Një ofertë ekziston tashmë për këtë kërkesë pune."
             )
 
         # 6️⃣ Skapa offer + version (din befintliga logik)
@@ -254,7 +254,7 @@ class OfferUpdateSerializer(serializers.Serializer):
         user = self.context["request"].user
 
         if instance.is_locked():
-            raise serializers.ValidationError("Offer is locked and cannot be edited.")
+            raise serializers.ValidationError("Oferta është e kyçur dhe nuk mund të ndryshohet.")
 
         last_version = instance.current_version
         new_version_number = last_version.version_number + 1
@@ -310,7 +310,7 @@ class OfferSignSerializer(serializers.Serializer):
         user = self.context["request"].user
 
         if version.is_signed:
-            raise serializers.ValidationError("This version is already signed.")
+            raise serializers.ValidationError("Ky version është nënshkruar tashmë.")
 
         pn = validated_data["personal_number"]
 
@@ -405,16 +405,16 @@ class OfferReviewSerializer(serializers.ModelSerializer):
         if not image:
             return image
         if image.size > 5 * 1024 * 1024:
-            raise serializers.ValidationError("Image must be 5 MB or smaller.")
+            raise serializers.ValidationError("Imazhi duhet të jetë jo më i madh se 5 MB.")
         allowed_types = {"image/jpeg", "image/png", "image/webp"}
         if getattr(image, "content_type", None) not in allowed_types:
-            raise serializers.ValidationError("Only JPEG, PNG and WebP images are allowed.")
+            raise serializers.ValidationError("Lejohen vetëm imazhe JPEG, PNG dhe WebP.")
         return image
 
     def validate_review_text(self, value):
         value = value.strip()
         if len(value) < 10:
-            raise serializers.ValidationError("Review must contain at least 10 characters.")
+            raise serializers.ValidationError("Vlerësimi duhet të përmbajë të paktën 10 karaktere.")
         return value
 
 

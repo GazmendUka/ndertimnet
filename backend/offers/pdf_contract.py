@@ -44,7 +44,7 @@ def _money(amount, currency="EUR"):
         return f"{amount} {currency}"
 
 
-def build_offer_contract_pdf(offer) -> bytes:
+def build_offer_contract_pdf(offer, *, preview=False) -> bytes:
     """
     Returns PDF bytes for a professional Albanian contract.
     """
@@ -107,7 +107,7 @@ def build_offer_contract_pdf(offer) -> bytes:
     )
 
     # Data extraction
-    version = offer.accepted_version or getattr(offer, "current_version", None)
+    version = (getattr(offer, "current_version", None) if preview else offer.accepted_version or getattr(offer, "current_version", None))
     company = getattr(offer, "company", None)
     job = getattr(offer, "job_request", None)
 
@@ -147,6 +147,10 @@ def build_offer_contract_pdf(offer) -> bytes:
     except Exception:
         pass
 
+    if preview:
+        customer_name = "Klienti"
+        customer_phone = customer_address = "Nuk shfaqet në projekt-ofertë"
+
     # Job request (best-effort)
     job_title = _safe(job, "title", f"Kërkesë pune #{_safe(job,'id','-')}")
     job_desc = _safe(job, "description", _safe(job, "details", "-"))
@@ -156,6 +160,10 @@ def build_offer_contract_pdf(offer) -> bytes:
         job_city = _safe(city_obj, "name", "-") if city_obj else _safe(job, "city_name", "-")
     except Exception:
         job_city = "-"
+
+    if preview:
+        from .contact_policy import safe_text
+        job_desc = safe_text(job_desc)
 
     # Offer version fields
     presentation = _safe(version, "presentation_text", "") if version else ""
@@ -188,7 +196,9 @@ def build_offer_contract_pdf(offer) -> bytes:
 
     # Header bar (simple, professional)
     story.append(Paragraph("NDERITMNET", ParagraphStyle("brand", parent=SMALL, fontSize=10, leading=12, textColor=colors.HexColor("#111827"))))
-    story.append(Paragraph("Kontratë – Ofertë për Shërbime Ndërtimore", H1))
+    story.append(Paragraph("Ofertë për Shërbime Ndërtimore" if preview else "Kontratë – Ofertë për Shërbime Ndërtimore", H1))
+    if preview:
+        story.append(Paragraph("Projekt-ofertë për shqyrtim. Ky dokument nuk përbën marrëveshje të pranuar nga klienti.", MUTED))
     story.append(Paragraph(f"Nr. Ofertës: <b>#{offer_id}</b> &nbsp;&nbsp;|&nbsp;&nbsp; Versioni: <b>v{version_no}</b> &nbsp;&nbsp;|&nbsp;&nbsp; Data: <b>{issued_date}</b>", MUTED))
     story.append(Spacer(1, 6))
     story.append(HRFlowable(width="100%", thickness=1, color=colors.HexColor("#E5E7EB")))
