@@ -10,7 +10,7 @@ export default function CategoryPicker({ categories, value, onChange, disabled =
     { value: "mixed", name: "Punime të ndryshme", description: "Projekti përfshin disa lloje punimesh." },
     { value: "unsure", name: "Nuk jam i sigurt", description: "Përshkruani nevojën tuaj; nuk duhet të dini specialitetin." }];
   return <fieldset disabled={disabled}><legend className="font-semibold mb-2">Çfarë pune dëshironi të kryeni?</legend>
-    <p className="text-sm text-gray-600 mb-3">Zgjidhni kategorinë që i përshtatet më shumë projektit. Nuk nevojitet të zgjidhni specialitet.</p>
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">{choices.map(c => <button key={c.value} type="button" aria-pressed={String(value) === c.value} onClick={() => onChange(c.value)} className={`rounded-xl border-2 p-4 text-left ${String(value) === c.value ? "border-emerald-700 bg-emerald-50" : "border-gray-200 bg-white hover:border-emerald-500"}`}><span className="block font-semibold">{c.name}</span><span className="block text-sm text-gray-600 mt-1">{c.description}</span></button>)}</div>
+    <p className="text-sm text-gray-500 mb-4">Zgjidhni një kategori.</p>
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{choices.map(c => <button key={c.value} type="button" aria-pressed={String(value) === c.value} onClick={() => onChange(c.value)} title={c.description} className={`min-h-[60px] rounded-2xl border px-3 py-3 text-center text-sm leading-snug transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 focus-visible:ring-offset-2 disabled:opacity-50 ${String(value) === c.value ? "border-emerald-700 bg-emerald-50 text-emerald-900 ring-1 ring-emerald-700" : "border-gray-200 bg-white text-gray-700 hover:border-emerald-500 hover:bg-emerald-50"}`}><span className="block font-semibold">{c.name}</span></button>)}</div>
   </fieldset>;
 }

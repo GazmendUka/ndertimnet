@@ -770,7 +770,6 @@ export default function JobRequestCreate() {
         <CategoryPicker categories={categoryOptions} value={selectedCategory} disabled={saving || submitting || lookupsLoading} onChange={value => {
           setFormData(prev => ({ ...prev, profession: null, industry: /^\d+$/.test(value) ? Number(value) : null, category_mode: /^\d+$/.test(value) ? "" : value }));
         }} />
-        {!selectedCategory && <p className="jr-help">Zgjidhni një kategori ose “Nuk jam i sigurt”.</p>}
       </div>
 
       <div className="flex justify-between mt-4">
