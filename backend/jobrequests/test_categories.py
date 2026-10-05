@@ -47,3 +47,10 @@ class CategoryRequestTests(BillingFixture, APITestCase):
         self.client.force_authenticate(self.customer)
         response=self.client.post('/api/jobrequests/drafts/',dict(industry=self.industry.pk),format='json')
         self.assertEqual(response.status_code,400)
+
+    def test_specialty_filter_also_finds_broad_category_requests(self):
+        from jobrequests.matching import profession_category_query
+        self.job.profession = None
+        self.job.industry = self.industry
+        self.job.save()
+        self.assertTrue(JobRequest.objects.filter(profession_category_query(self.profession.pk), pk=self.job.pk).exists())

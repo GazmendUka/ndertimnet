@@ -421,7 +421,11 @@ class JobRequestViewSet(ActiveAccountGuardMixin, viewsets.ModelViewSet):
                             if not value.isdigit() or len(value) > 9:
                                 from rest_framework.exceptions import ValidationError
                                 raise ValidationError({field: "Zgjidhni një vlerë të vlefshme."})
-                            queryset = queryset.filter(**{field + "_id": int(value)})
+                            if field == "profession":
+                                from .matching import profession_category_query
+                                queryset = queryset.filter(profession_category_query(int(value)))
+                            else:
+                                queryset = queryset.filter(city_id=int(value))
                     if params.get("recommended") == "1":
                         areas = list(company_profile.cities.values_list("pk", flat=True))
                         if company_profile.city_id:
