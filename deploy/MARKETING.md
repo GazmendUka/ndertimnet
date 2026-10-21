@@ -184,3 +184,24 @@ Staging backend/frontend/erasure cron remain live on `cc59023`; main remains
 was performed. Delivery status, instructions and play-publication-results.json in
 outputs/android-marketing-play-20261021 supersede the earlier access-blocked state.
 The remaining physical-phone test uses the Play update and fictitious staging logins.
+
+### Normal production app, internal distribution
+
+The user subsequently requested the normal production app and explicitly selected
+production environment with continued internal Play testing. Prepare versionCode 4 /
+versionName 1.2 from the normal native configuration: production API, original app
+label, Firebase integration and production deep links, with no staging banner or
+staging endpoint. Marketing backend/web must be released to production before the
+new internal app is offered to testers. No public Play launch is authorized.
+
+All 262 backend tests, 136 frontend tests/21 suites, Django system/migration checks,
+production frontend build/16 SEO pages and native bundleRelease/assembleRelease/
+lintRelease passed again. The signed AAB passed signature/certificate and bundletool
+validation. Production recovery was AVAILABLE from 17 October 07:02:53 UTC; this is
+recovery availability, not a new restore exercise. Production Cloudinary ping and
+backend/erasure-worker DB/storage configuration matching passed. Use a read-only
+database preflight and ordered backend-first rollout; preserve original deployment
+preferences and leave business schedules/provider settings unchanged.
+
+Production artifacts/results belong in outputs/android-marketing-production-20261021.
+The previous staging release remains distinct in the same internal track's history.
