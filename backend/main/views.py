@@ -50,19 +50,24 @@ class PlatformUpdateDetailView(views.APIView):
         return Response(serialized.data)
 
 
+def visible_hero_advertisements():
+    now = timezone.now()
+    return (HeroAdvertisement.objects.select_related("company")
+        .filter(is_active=True, review_status="approved")
+        .filter(Q(company__isnull=True) | Q(company__is_active=True, company__user__is_active=True))
+        .filter(Q(starts_at__isnull=True) | Q(starts_at__lte=now))
+        .filter(Q(ends_at__isnull=True) | Q(ends_at__gt=now)))
+
+
 class ActiveHeroAdvertisementView(views.APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request):
-        now = timezone.now()
-        advertisement = (
-            HeroAdvertisement.objects
-            .filter(is_active=True)
-            .filter(Q(starts_at__isnull=True) | Q(starts_at__lte=now))
-            .filter(Q(ends_at__isnull=True) | Q(ends_at__gte=now))
-            .order_by("display_order", "-created_at")
-            .first()
-        )
+        # Preserve admin priority; rotate equally ranked approved campaigns.
+        eligible = visible_hero_advertisements()
+        first = eligible.order_by("display_order", "pk").first()
+        advertisement = (eligible.filter(display_order=first.display_order).order_by("?").first()
+                         if first else None)
 
         if not advertisement:
             return Response(None)
@@ -79,18 +84,8 @@ class HeroAdvertisementDetailView(views.APIView):
     permission_classes = [permissions.AllowAny]
 
     def get(self, request, slug):
-        now = timezone.now()
         advertisement = get_object_or_404(
-            HeroAdvertisement.objects.prefetch_related("sections"),
-            slug=slug,
-            is_active=True,
-        )
-
-        if advertisement.starts_at and advertisement.starts_at > now:
-            return Response({"detail": "Reklama nuk është publikuar ende."}, status=404)
-
-        if advertisement.ends_at and advertisement.ends_at < now:
-            return Response({"detail": "Reklama nuk është më aktive."}, status=404)
+            visible_hero_advertisements().prefetch_related("sections"), slug=slug)
 
         serialized = HeroAdvertisementDetailSerializer(
             advertisement,

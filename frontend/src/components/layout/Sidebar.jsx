@@ -6,7 +6,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import api from "../../api/axios";
 
-import { Bell, Home, User, LogOut, Briefcase, FileText, ReceiptText } from "lucide-react";
+import { Bell, Home, User, LogOut, Briefcase, FileText, ReceiptText, Megaphone } from "lucide-react";
 
 const logoSrc = "/ndertimnet-logo-full-width/ndertimnet-logo-search-transparent.png";
 
@@ -134,6 +134,7 @@ export default function Sidebar() {
             <SidebarLink to="/company/leads/mine"   icon={<FileText size={18} />} text="Ofertat e mia" badge={unreadMessages} />
             <SidebarLink to="/company/payments"     icon={<ReceiptText size={18} />} text="Pagesat dhe konfirmimet" />
             <SidebarLink to="/company/notifications" icon={<Bell size={18} />} text="Njoftimet" />
+            <SidebarLink to="/company/marketing" icon={<Megaphone size={18} />} text="Marketingu" />
             <SidebarLink to="/company/profile"      icon={<User size={18} />} text="Profili" />
           </>
         )}

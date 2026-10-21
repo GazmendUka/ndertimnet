@@ -44,7 +44,8 @@ if media_enabled:
 elif any(media_values):
     raise ImproperlyConfigured("Staging media credentials require explicit opt-in.")
 ALLOWED_HOSTS = [os.environ.get("RENDER_EXTERNAL_HOSTNAME", "localhost")]
-CORS_ALLOWED_ORIGINS = [os.environ["FRONTEND_BASE_URL"]]
+CORS_ALLOWED_ORIGINS = [os.environ["FRONTEND_BASE_URL"],
+                        "https://localhost", "http://localhost", "capacitor://localhost"]
 CORS_ALLOW_ALL_ORIGINS = False
 CSRF_TRUSTED_ORIGINS = [os.environ["FRONTEND_BASE_URL"], os.environ["BACKEND_BASE_URL"]]
 MIDDLEWARE = ["core.staging.NoIndexMiddleware", *MIDDLEWARE]  # noqa: F405

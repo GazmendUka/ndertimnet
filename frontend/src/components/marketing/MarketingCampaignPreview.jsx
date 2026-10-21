@@ -6,14 +6,14 @@ export default function MarketingCampaignPreview({
   title,
   description,
   imagePreview,
-  companyName = "Partner",
-  ctaText = "Upptäck mer",
+  companyName = "Partneri",
+  ctaText = "Zbulo më shumë",
 }) {
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm md:p-5">
       <div className="mb-4 flex items-center gap-2 text-sm font-medium text-gray-600">
         <Megaphone size={16} />
-        Live preview
+        Pamje paraprake
       </div>
 
       <div className="overflow-hidden rounded-2xl border border-[#ddd6c9] bg-white lg:grid lg:grid-cols-[1.05fr_0.95fr]">
@@ -21,7 +21,7 @@ export default function MarketingCampaignPreview({
           {imagePreview ? (
             <img
               src={imagePreview}
-              alt={title || "Campaign preview"}
+              alt={title || "Pamje paraprake e fushatës"}
               className="absolute inset-0 h-full w-full object-cover"
             />
           ) : (
@@ -35,12 +35,12 @@ export default function MarketingCampaignPreview({
         <div className="flex flex-col justify-center p-5 sm:p-7">
           <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#7a6b60]">Përmbajtje e sponsorizuar</p>
           <h3 className="mt-3 text-2xl font-semibold leading-tight text-[#12251b]">
-            {title || "Moderna kök för ditt hem"}
+            {title || "Kuzhina moderne për shtëpinë tuaj"}
           </h3>
           <p className="mt-3 line-clamp-3 text-sm leading-6 text-[#5f6f66]">
-            {description || "Visa upp din produkt eller tjänst för användare med verklig renoverings- eller byggintention."}
+            {description || "Prezantoni produktin ose shërbimin tuaj te përdoruesit që planifikojnë rinovim ose ndërtim."}
           </p>
-          <span className="mt-4 text-xs font-medium text-[#7a6b60]">Partner: {companyName}</span>
+          <span className="mt-4 text-xs font-medium text-[#7a6b60]">Partneri: {companyName}</span>
           <button type="button" className="mt-5 inline-flex min-h-[44px] self-start items-center gap-2 rounded-lg bg-[#ef7d22] px-5 py-2.5 text-sm font-semibold text-white">
             {ctaText}<ExternalLink size={16} />
           </button>
@@ -48,8 +48,8 @@ export default function MarketingCampaignPreview({
       </div>
 
       <p className="mt-4 text-xs leading-5 text-gray-500">
-        Förhandsvisningen visar hur kampanjen ungefär kommer att upplevas i en
-        en tydligt annonsmärkt yta under startsidans huvudbudskap. Slutlig publicering sker först efter granskning.
+        Pamja paraprake tregon afërsisht si do të shfaqet fushata në një
+        hapësirë të shënuar qartë si reklamë, në pjesën Hero të ballinës. Publikimi bëhet vetëm pas shqyrtimit.
       </p>
     </div>
   );

@@ -60,6 +60,7 @@ class HeroAdvertisementSectionSerializer(serializers.ModelSerializer):
 class HeroAdvertisementSerializer(serializers.ModelSerializer):
     background_image_url = serializers.SerializerMethodField()
     target_url = serializers.SerializerMethodField()
+    company_name = serializers.CharField(source="company.company_name", read_only=True, default="")
 
     class Meta:
         model = HeroAdvertisement
@@ -72,6 +73,8 @@ class HeroAdvertisementSerializer(serializers.ModelSerializer):
             "link_type",
             "external_url",
             "target_url",
+            "cta_text",
+            "company_name",
         ]
 
     def get_background_image_url(self, obj):

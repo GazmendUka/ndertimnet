@@ -1,5 +1,9 @@
 from django.core.exceptions import ValidationError
 from django.db import models
+from django.conf import settings
+from django.core.validators import URLValidator
+from django.utils import timezone
+from datetime import timedelta
 from django.utils.text import slugify
 
 
@@ -64,6 +68,25 @@ class HeroAdvertisement(models.Model):
         INTERNAL = "internal", "Faqe e brendshme"
         EXTERNAL = "external", "Link i jashtëm"
 
+    class ReviewStatus(models.TextChoices):
+        PENDING = "pending", "Në pritje të miratimit"
+        APPROVED = "approved", "E miratuar"
+        REJECTED = "rejected", "E refuzuar"
+        PAUSED = "paused", "E pezulluar"
+        WITHDRAWN = "withdrawn", "E tërhequr"
+
+    company = models.ForeignKey("accounts.Company", null=True, blank=True,
+        on_delete=models.CASCADE, related_name="marketing_campaigns", verbose_name="Kompania")
+    review_status = models.CharField("Shqyrtimi", max_length=16,
+        choices=ReviewStatus.choices, default=ReviewStatus.APPROVED)
+    review_note = models.TextField("Arsyeja / komenti për kompaninë", blank=True, max_length=2000)
+    reviewed_at = models.DateTimeField(null=True, blank=True, editable=False)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, null=True, blank=True,
+        on_delete=models.SET_NULL, related_name="reviewed_campaigns", editable=False)
+    duration_days = models.PositiveSmallIntegerField("Ditët e kërkuara",
+        choices=[(3, "3 ditë"), (7, "7 ditë"), (14, "14 ditë")], default=7)
+    cta_text = models.CharField("Teksti i butonit", max_length=40, default="Mëso më shumë")
+
     title = models.CharField("Titulli", max_length=180)
     subtitle = models.CharField("Nëntitulli", max_length=260, blank=True)
     slug = models.SlugField("Slug", max_length=220, unique=True, blank=True)
@@ -103,6 +126,16 @@ class HeroAdvertisement(models.Model):
         if self.link_type == self.LinkType.EXTERNAL and not self.external_url:
             errors["external_url"] = "Plotësoni linkun e jashtëm."
 
+        if self.company_id:
+            if self.link_type != self.LinkType.EXTERNAL:
+                errors["link_type"] = "Fushatat e kompanive duhet të kenë link të jashtëm."
+            try:
+                URLValidator(schemes=["http", "https"])(self.external_url)
+            except ValidationError:
+                errors["external_url"] = "Përdorni një link të vlefshëm HTTP ose HTTPS."
+            if self.review_status == self.ReviewStatus.REJECTED and not self.review_note.strip():
+                errors["review_note"] = "Shkruani arsyen e refuzimit për kompaninë."
+
         if self.starts_at and self.ends_at and self.ends_at <= self.starts_at:
             errors["ends_at"] = "Data e përfundimit duhet të jetë pas datës së fillimit."
 
@@ -110,6 +143,14 @@ class HeroAdvertisement(models.Model):
             raise ValidationError(errors)
 
     def save(self, *args, **kwargs):
+        if self.company_id:
+            if self.review_status != self.ReviewStatus.APPROVED:
+                self.is_active = False
+            else:
+                if not self.starts_at:
+                    self.starts_at = timezone.now()
+                if not self.ends_at:
+                    self.ends_at = self.starts_at + timedelta(days=self.duration_days)
         if not self.slug:
             base_slug = slugify(self.title) or "reklame"
             slug = base_slug

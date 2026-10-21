@@ -1,5 +1,6 @@
 from django.urls import path
 from .contact import ContactView
+from .marketing import CampaignListCreateView, CampaignWithdrawView
 from .marketplace_metrics import MarketplaceMetricsView
 
 from .views import (
@@ -11,6 +12,8 @@ from .views import (
 
 
 urlpatterns = [
+    path("marketing/campaigns/", CampaignListCreateView.as_view(), name="marketing-campaigns"),
+    path("marketing/campaigns/<int:pk>/withdraw/", CampaignWithdrawView.as_view(), name="marketing-withdraw"),
     path("marketplace/metrics/", MarketplaceMetricsView.as_view(), name="marketplace-metrics"),
     path("contact/", ContactView.as_view(), name="contact"),
     path("reklama/hero/", ActiveHeroAdvertisementView.as_view(), name="hero-advertisement-albanian"),

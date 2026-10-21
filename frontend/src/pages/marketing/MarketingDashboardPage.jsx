@@ -1,165 +1,90 @@
-// src/pages/marketing/MarketingDashboardPage.jsx
-
-import React from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  Megaphone,
-  Plus,
-  Eye,
-  MousePointerClick,
-  LayoutTemplate,
-} from "lucide-react";
+import { Megaphone, Plus } from "lucide-react";
+import api from "../../api/axios";
 import MarketingCampaignCard from "../../components/marketing/MarketingCampaignCard";
 
-const mockCampaigns = [
-  {
-    id: 1,
-    title: "Moderna kök för ditt hem",
-    description:
-      "Inspirera användare som planerar renovering med en premium kökslösning.",
-    image:
-      "https://images.unsplash.com/photo-1484154218962-a197022b5858?auto=format&fit=crop&w=1200&q=80",
-    status: "active",
-    placement_label: "Hero / Inspiration",
-    start_date: "2026-04-18",
-    end_date: "2026-04-25",
-    impressions: 1245,
-    clicks: 37,
-  },
-  {
-    id: 2,
-    title: "Smart förvaring för hela hemmet",
-    description:
-      "Lyft fram praktiska lösningar som passar både renovering och nyinredning.",
-    image:
-      "https://images.unsplash.com/photo-1505693416388-ac5ce068fe85?auto=format&fit=crop&w=1200&q=80",
-    status: "pending",
-    placement_label: "Hero / Inspiration",
-    start_date: "2026-04-26",
-    end_date: "2026-05-03",
-    impressions: 0,
-    clicks: 0,
-  },
-  {
-    id: 3,
-    title: "Verktyg för proffs",
-    description:
-      "Nå företag som behöver kvalitet, hållbarhet och leveranssäkerhet.",
-    image:
-      "https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=1200&q=80",
-    status: "rejected",
-    placement_label: "Hero / Inspiration",
-    start_date: "2026-04-10",
-    end_date: "2026-04-17",
-    impressions: 0,
-    clicks: 0,
-    rejection_reason:
-      "Bilden uppfyller inte kvalitetskraven för hero-placement. Ladda gärna upp en bredare och mer premium-anpassad bild.",
-  },
-];
-
-function StatCard({ icon: Icon, label, value }) {
-  return (
-    <div className="rounded-[28px] border border-gray-200 bg-white p-5 shadow-sm">
-      <div className="flex items-center gap-3">
-        <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-gray-100 text-gray-700">
-          <Icon size={20} />
-        </div>
-        <div>
-          <p className="text-sm text-gray-500">{label}</p>
-          <p className="text-2xl font-semibold tracking-tight text-gray-900">
-            {value}
-          </p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function MarketingDashboardPage() {
-  const activeCount = mockCampaigns.filter((item) => item.status === "active").length;
-  const pendingCount = mockCampaigns.filter((item) => item.status === "pending").length;
-  const totalImpressions = mockCampaigns.reduce(
-    (sum, item) => sum + (item.impressions || 0),
-    0
-  );
-  const totalClicks = mockCampaigns.reduce((sum, item) => sum + (item.clicks || 0), 0);
+  const [page, setPage] = useState(1);
+  const [data, setData] = useState(null);
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [busyId, setBusyId] = useState(null);
+  const [confirmId, setConfirmId] = useState(null);
+  const load = useCallback(async (signal) => {
+    setLoading(true);
+    setError("");
+    try {
+      const response = await api.get("marketing/campaigns/", { params: { page }, signal });
+      if (!signal?.aborted) setData(response.data);
+    } catch {
+      if (!signal?.aborted) setError("Fushatat nuk mund të ngarkohen. Provoni përsëri.");
+    } finally {
+      if (!signal?.aborted) setLoading(false);
+    }
+  }, [page]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    load(controller.signal);
+    return () => controller.abort();
+  }, [load]);
+
+  const withdraw = async (id) => {
+    setBusyId(id);
+    setError("");
+    try {
+      await api.post(`marketing/campaigns/${id}/withdraw/`);
+      setConfirmId(null);
+      await load();
+    } catch {
+      setError("Fushata nuk mund të tërhiqet. Provoni përsëri.");
+    } finally {
+      setBusyId(null);
+    }
+  };
 
   return (
     <div className="premium-container py-8 md:py-10">
       <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
         <div className="max-w-3xl">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full border border-gray-200 bg-white px-3 py-1 text-xs font-medium text-gray-600">
-            <Megaphone size={14} />
-            Smart recommendations powered by partners
-          </div>
-
-          <h1 className="text-3xl font-semibold tracking-tight text-gray-900 md:text-4xl">
-            Marketing
-          </h1>
-
-          <p className="mt-3 text-base leading-7 text-gray-600">
-            Skapa partnerkampanjer som presenteras som inspiration i en premium-yta.
-            Kampanjer publiceras först efter granskning för att skydda kvaliteten och
-            användarupplevelsen.
+          <Megaphone aria-hidden="true" className="mb-3 text-[#ef7d22]" />
+          <h1 className="text-3xl font-semibold text-gray-900">Marketingu</h1>
+          <p className="mt-3 leading-7 text-gray-600">
+            Prezantoni biznesin tuaj në Hero, në ballinën e faqes dhe të aplikacionit.
+            Çdo fushatë shqyrtohet nga administratori para publikimit.
+            Periudha e shfaqjes fillon vetëm pas miratimit, sipas datave të caktuara nga administratori.
           </p>
         </div>
-
-        <div className="flex flex-col gap-3 sm:flex-row">
-          <Link
-            to="/company/marketing/create"
-            className="inline-flex items-center justify-center gap-2 rounded-full bg-gray-900 px-6 py-3 text-sm font-medium text-white transition hover:bg-black"
-          >
-            <Plus size={16} />
-            Skapa kampanj
-          </Link>
-        </div>
+        <Link to="/company/marketing/create" className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-full bg-gray-900 px-6 py-3 text-sm font-medium text-white">
+          <Plus size={16} />Krijo fushatë
+        </Link>
       </div>
-
-      <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <StatCard icon={LayoutTemplate} label="Aktiva kampanjer" value={activeCount} />
-        <StatCard icon={Megaphone} label="Pending approval" value={pendingCount} />
-        <StatCard icon={Eye} label="Totala visningar" value={totalImpressions} />
-        <StatCard icon={MousePointerClick} label="Totala klick" value={totalClicks} />
-      </div>
-
-      <div className="mt-8 rounded-[28px] border border-gray-200 bg-gradient-to-br from-gray-900 to-gray-800 p-6 text-white md:p-8">
-        <div className="max-w-2xl">
-          <h2 className="text-2xl font-semibold tracking-tight">
-            Din första kampanj är gratis i 3 dagar
-          </h2>
-          <p className="mt-3 text-sm leading-7 text-gray-300 md:text-base">
-            Testa partnerplacering i vår inspirationsyta utan kostnad. När du är redo
-            kan du fortsätta med fasta veckopriser och begränsade slots.
-          </p>
-
-          <div className="mt-6">
-            <Link
-              to="/company/marketing/create"
-              className="inline-flex items-center rounded-full bg-white px-5 py-2.5 text-sm font-medium text-gray-900 transition hover:bg-gray-100"
-            >
-              Skapa din första kampanj
-            </Link>
-          </div>
+      {error && <div role="alert" className="mt-6 rounded-2xl bg-red-50 p-4 text-red-800">
+        {error} <button type="button" onClick={() => load()} className="ml-2 min-h-[44px] underline">Provo përsëri</button>
+      </div>}
+      <h2 className="mb-4 mt-8 text-xl font-semibold">Fushatat tuaja{data ? ` (${data.count})` : ""}</h2>
+      {loading ? <p role="status">Duke ngarkuar fushatat…</p> : !error && data?.results?.length === 0 ? (
+        <p className="rounded-2xl border bg-white p-6 text-gray-600">Nuk keni ende fushata. Krijoni fushatën tuaj të parë për shqyrtim.</p>
+      ) : <div className="space-y-5">{data?.results?.map((campaign) => (
+        <div key={campaign.id}>
+          <MarketingCampaignCard campaign={campaign} />
+          {campaign.status !== "withdrawn" && campaign.status !== "expired" && (
+            <div className="mt-2 flex flex-wrap items-center gap-3">
+              {confirmId === campaign.id ? <>
+                <p>Të tërhiqet fushata? Ajo nuk do të shfaqet më.</p>
+                <button type="button" disabled={busyId !== null} onClick={() => withdraw(campaign.id)} className="min-h-[44px] text-red-700 underline">Po, tërhiqe</button>
+                <button type="button" disabled={busyId !== null} onClick={() => setConfirmId(null)} className="min-h-[44px] underline">Anulo</button>
+              </> : <button type="button" onClick={() => setConfirmId(campaign.id)} className="min-h-[44px] text-sm text-gray-600 underline">Tërhiq fushatën</button>}
+            </div>
+          )}
         </div>
-      </div>
-
-      <div className="mt-10">
-        <div className="mb-4">
-          <h2 className="text-xl font-semibold tracking-tight text-gray-900">
-            Dina kampanjer
-          </h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Översikt över status, period och resultat.
-          </p>
-        </div>
-
-        <div className="space-y-5">
-          {mockCampaigns.map((campaign) => (
-            <MarketingCampaignCard key={campaign.id} campaign={campaign} />
-          ))}
-        </div>
-      </div>
+      ))}</div>}
+      {data && (data.next || data.previous) && <nav aria-label="Faqet e fushatave" className="mt-6 flex items-center gap-5">
+        <button type="button" disabled={loading || !data.previous} onClick={() => setPage((p) => p - 1)} className="min-h-[44px] disabled:opacity-40">Para</button>
+        <span>Faqja {page}</span>
+        <button type="button" disabled={loading || !data.next} onClick={() => setPage((p) => p + 1)} className="min-h-[44px] disabled:opacity-40">Tjetra</button>
+      </nav>}
     </div>
   );
 }

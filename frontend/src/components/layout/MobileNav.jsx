@@ -142,7 +142,7 @@ export default function MobileNav({ alwaysVisible = false }) {
                 onClick={markJobsAsSeen}
               />
               <MobileItem icon={FileText} label="Ofertat" to="/company/leads/mine" active={isActive("/company/leads")} badge={unreadMessages} />
-              <MobileItem icon={Megaphone} label="Marketing" to="/company/marketing" active={isActive("/company/marketing")} />
+              <MobileItem icon={Megaphone} label="Marketingu" to="/company/marketing" active={isActive("/company/marketing")} />
               <MoreButton open={moreOpen} onClick={() => setMoreOpen(true)} />
             </>
           )}

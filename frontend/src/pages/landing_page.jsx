@@ -152,7 +152,7 @@ function HeroAdvertisementButton({ advertisement }) {
         rel="noopener noreferrer"
         className={className}
       >
-        Mëso më shumë
+        {advertisement.cta_text || "Mëso më shumë"}
         <ArrowRight size={17} />
       </a>
     );
@@ -160,7 +160,7 @@ function HeroAdvertisementButton({ advertisement }) {
 
   return (
     <Link to={advertisement.target_url} className={className}>
-      Mëso më shumë
+      {advertisement.cta_text || "Mëso më shumë"}
       <ArrowRight size={17} />
     </Link>
   );
@@ -187,16 +187,18 @@ function SponsoredHeroAdvertisement({ advertisement }) {
             <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#7a6b60]">
               Përmbajtje e sponsorizuar
             </p>
-            <h2 className="mt-3 text-2xl font-semibold leading-tight text-[#12251b] sm:text-3xl">
+            <h1 className="mt-3 text-2xl font-semibold leading-tight text-[#12251b] sm:text-3xl">
               {advertisement.title}
-            </h2>
+            </h1>
             {advertisement.subtitle && (
               <p className="mt-3 line-clamp-3 leading-7 text-[#5f6f66]">
                 {advertisement.subtitle}
               </p>
             )}
-            <div className="mt-5 self-start">
+            {advertisement.company_name && <p className="mt-3 text-sm text-[#5f6f66]">Partneri: {advertisement.company_name}</p>}
+            <div className="mt-5 flex flex-wrap items-center gap-4">
               <HeroAdvertisementButton advertisement={advertisement} />
+              <Link to="/nis-projektin" className="inline-flex min-h-[48px] items-center font-semibold text-[#17643f] underline">Fillo projektin</Link>
             </div>
           </div>
         </article>
@@ -235,7 +237,7 @@ export default function LandingPage() {
         }
       } catch (error) {
         if (process.env.NODE_ENV !== "production") {
-          console.warn("Hero advertisement could not be loaded.", error);
+          console.warn("Hero advertisement could not be loaded.");
         }
       }
     };
@@ -319,6 +321,7 @@ export default function LandingPage() {
       </Helmet>
 
       <div className="bg-white text-[#12251b]">
+        {heroAdvertisement ? <SponsoredHeroAdvertisement advertisement={heroAdvertisement} /> : (
         <section className="relative overflow-hidden bg-[#12251b]">
           <img
             src={defaultHero.imageUrl}
@@ -365,8 +368,6 @@ export default function LandingPage() {
           </div>
         </section>
 
-        {heroAdvertisement && (
-          <SponsoredHeroAdvertisement advertisement={heroAdvertisement} />
         )}
 
         <section className="border-b border-[#e5e0d5] bg-[#f7f4ee]">

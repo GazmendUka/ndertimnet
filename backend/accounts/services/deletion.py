@@ -77,6 +77,7 @@ def process_deletion(request_id):
                     if company:
                         names = [company.logo.name, company.registration_document.name]
                         names += list(company.portfolio_projects.values_list("image", flat=True))
+                        names += list(company.marketing_campaigns.values_list("background_image", flat=True))
                         AccountFileErasure.objects.bulk_create([AccountFileErasure(request=request, name=n) for n in names if n])
                         company.delete()
                     user.delete()
