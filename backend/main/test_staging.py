@@ -47,7 +47,7 @@ class StagingSafetyTests(SimpleTestCase):
                "DATABASE_URL": "postgresql://test:test@staging.invalid/ndertimnet_staging",
                "STAGING_DATABASE_HOST": "staging.invalid",
                "FRONTEND_BASE_URL": "https://frontend.invalid", "BACKEND_BASE_URL": "https://backend.invalid"}
-        code = "from ndertimnet import staging_settings as s; assert not s.DEBUG; assert not s.PUSH_NOTIFICATIONS_ENABLED; assert not s.CORS_ALLOW_ALL_ORIGINS; assert set(s.CORS_ALLOWED_ORIGINS) == {'https://frontend.invalid', 'https://localhost', 'http://localhost', 'capacitor://localhost'}"
+        code = "from ndertimnet import staging_settings as s; assert not s.DEBUG; assert not s.PUSH_NOTIFICATIONS_ENABLED; assert not s.CORS_ALLOW_ALL_ORIGINS; assert set(s.CORS_ALLOWED_ORIGINS) == {'https://frontend.invalid', 'https://localhost', 'http://localhost', 'capacitor://localhost', 'https://marketing-staging.localhost'}"
         good = subprocess.run([sys.executable, "-c", code], env=env, capture_output=True)
         self.assertEqual(good.returncode, 0, good.stderr.decode())
         media = {"STAGING_MEDIA_ENABLED": "true", "STAGING_CLOUDINARY_CLOUD_NAME": "synthetic-test-cloud",
