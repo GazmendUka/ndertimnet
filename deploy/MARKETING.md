@@ -163,3 +163,24 @@ connected publisher plugin was found. Verify Console access and that versionCode
 is unused before upload. Preserve unrelated existing Console drafts/publication
 changes. The user has authorized the internal release; further publishing approval
 is unnecessary. Browser access is the remaining prerequisite.
+
+### Internal Play publication completed, 21 October 2026
+
+Chrome Console access was enabled. The existing internal track was verified at
+versionCode 2, and the exact signed AAB above was accepted as versionCode 3.
+Albanian release notes identify it as a staging Marketing test with push disabled.
+Only the new internal release was saved/published; existing tester lists and
+unrelated publishing changes were not edited. Google reported one nonblocking
+missing-deobfuscation-file warning; this build has minifyEnabled=false.
+
+The internal track now shows **3 (1.2-marketing-test.20261021)** and
+**Tillgänglig för interna testare**, released **21 October 08:10** as displayed by
+Console. This status was verified again after reload. The existing tester list
+still has two users. The Console's copy-link control provides:
+https://play.google.com/apps/internaltest/4699659099498966954
+
+Staging backend/frontend/erasure cron remain live on `cc59023`; main remains
+`698fabf`. No public production release, production deployment or new invitation
+was performed. Delivery status, instructions and play-publication-results.json in
+outputs/android-marketing-play-20261021 supersede the earlier access-blocked state.
+The remaining physical-phone test uses the Play update and fictitious staging logins.
