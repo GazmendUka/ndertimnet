@@ -205,3 +205,28 @@ preferences and leave business schedules/provider settings unchanged.
 
 Production artifacts/results belong in outputs/android-marketing-production-20261021.
 The previous staging release remains distinct in the same internal track's history.
+
+Completed 21 October 2026: main and all six existing production services are live
+on `3bdcc689fd4180066f853aba190f6c88dbd29c38`. Backend migration main.0007
+completed before frontend/worker rollout. Read-only database preflight and
+postflight jobs succeeded. Original auto-deploy preferences were restored,
+including the erasure worker remaining manual. Schedules and service plans were
+preserved. All three staging services remain on `cc59023`.
+
+Google Play accepted and published `4 (1.2)` in the existing internal track;
+availability persisted after full Console reload, released 21 October 08:32.
+The existing tester list and unrelated pending publishing changes were preserved.
+The tester URL remains https://play.google.com/apps/internaltest/4699659099498966954 .
+No public Play launch occurred. Normal production credentials must be used.
+
+The signed companion APK installed and cold-started successfully in a disposable
+Android 16 emulator; the normal landing page was visually confirmed without the
+staging banner. Production web passed read-only browser checks at 320/390/1440 px
+without overflow or JavaScript exceptions. Marketing API returned 401 anonymously,
+public Hero and health returned 200, and the published bundle contains the real
+Marketing endpoint. No synthetic accounts/campaigns or customer-data writes were
+used in production. Authenticated phone testing remains for the user; full campaign
+write/moderation flows were verified previously in staging. Console's two
+nonblocking warnings concern missing deobfuscation and native debug-symbol files;
+minification is disabled. Reports and instructions are in the production output
+folder above.
