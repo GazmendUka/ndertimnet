@@ -114,3 +114,27 @@ Marketing/staging backend tests, Django system/migration checks passed.
 Artifacts and subsequent deployed-flow results belong in this chat's
 outputs/android-marketing-staging-20261021. Do not upload this separate test package
 to the production Play listing. Physical-phone validation is still required.
+
+### Completed staging verification
+
+Staging backend, frontend and account-erasure cron were verified live on `effbaf2`.
+Migration main.0007 was applied only in staging. Main and both production web/backend
+services remained at `698fabf`; no Play upload was performed. The cron deploy used
+the verified staging branch because Render's API does not accept a commit ID for cron.
+
+Nine real staging browser checks passed for submission, review, company/admin Hero,
+pause, future start, expiry and withdrawal. Real Cloudinary images loaded for both
+campaign types at 320/390/768/1440 px; CTA, sponsor, project link and overflow checks
+passed. No browser exceptions/server errors were observed. Both cloud images' bytes
+matched the synthetic originals. The exact signed APK was installed/cold-started in
+a disposable Android 16 emulator; its approved staging Hero was visually confirmed.
+The emulator was stopped. The logged-in native flow awaits physical-phone testing;
+logged-in workflows were verified in the staging web browser.
+
+Two fictitious accounts and two synthetic campaigns remain for the user's test:
+company campaign 1 withdrawn, admin campaign 2 approved with a seven-day window.
+Credentials are kept only in macOS Keychain, under Ndertimnet Marketing staging
+20261021, and are not included in this repository or the delivery instructions.
+The standalone storage lifecycle object was deleted; its CDN invalidation latency
+was not measured. Final report, screenshots, APK and Swedish instructions are in
+outputs/android-marketing-staging-20261021 for this chat.
