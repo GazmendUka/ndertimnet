@@ -138,3 +138,28 @@ Credentials are kept only in macOS Keychain, under Ndertimnet Marketing staging
 The standalone storage lifecycle object was deleted; its CDN invalidation latency
 was not measured. Final report, screenshots, APK and Swedish instructions are in
 outputs/android-marketing-staging-20261021 for this chat.
+
+### Internal Play build and staging update
+
+The user authorized publishing an internal Google Play test against staging.
+The original separate-package APK cannot update the existing Play listing.
+A second isolated build therefore uses `com.ndertimnet.app`, versionCode 3 and
+the same tested frontend assets, with the staging API only. Its local WebView
+origin is `https://marketing-staging.localhost`, preserving separation from the
+normal app's stored web sessions and drafts. Firebase and production deep links
+remain excluded. It replaces the installed Play app for internal testers.
+
+Staging backend, frontend and erasure cron were updated to `cc59023`, including
+the explicit CORS allowance for this origin. Eighteen relevant backend tests,
+system/migration checks, bundleRelease/assembleRelease/lintRelease, signatures,
+bundletool validation and emulator cold start passed. The packaged app displayed
+the approved staging Hero. Production/main remained `698fabf`.
+
+The signed AAB and companion APK are in outputs/android-marketing-play-20261021.
+At this record no Play upload or release had occurred: Chrome rejected Console
+automation with Apple Events JavaScript disabled (error 12), including after the
+user indicated the setting was enabled. No publisher API authorization or matching
+connected publisher plugin was found. Verify Console access and that versionCode 3
+is unused before upload. Preserve unrelated existing Console drafts/publication
+changes. The user has authorized the internal release; further publishing approval
+is unnecessary. Browser access is the remaining prerequisite.
