@@ -33,9 +33,7 @@ import api from "../api/axios";
 import { PublicSubscriptionPricing } from "../components/payments/PlatformBilling";
 
 const defaultHero = {
-  title: "Gjeni ndihmën e duhur për shtëpinë tuaj.",
-  subtitle:
-    "Publikoni projektin dhe merrni oferta nga kompani të interesuara.",
+  title: "Gjeni profesionistin e duhur.",
 };
 
 const exampleCampaign = {
@@ -390,25 +388,18 @@ export default function LandingPage() {
       <div className="bg-white text-[#12251b]">
         {isNativeApp ? <>
         <section aria-labelledby="welcome-title" className="bg-[#f7f4ee]">
-          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-9 lg:flex lg:items-center lg:justify-between lg:gap-10 lg:px-8 lg:py-10">
+          <div className="mx-auto max-w-7xl px-4 py-5 sm:px-6 sm:py-6 lg:flex lg:items-center lg:justify-between lg:gap-10 lg:px-8">
             <div className="max-w-2xl">
-              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-[#17643f] sm:text-sm">
-                <MapPin size={14} aria-hidden="true" />Kosovë dhe Shqipëri
-              </p>
-              <h1 id="welcome-title" className="text-[30px] font-semibold leading-[1.12] tracking-tight text-[#12251b] sm:text-[42px] lg:text-[46px]">
+              <h1 id="welcome-title" className="max-w-[22ch] text-[26px] font-semibold leading-[1.2] tracking-tight text-[#12251b] sm:text-[32px]">
                 {defaultHero.title}
               </h1>
-              <p className="mt-3 max-w-xl text-sm leading-6 text-[#5f6f66] sm:text-base">
-                {defaultHero.subtitle}
-              </p>
             </div>
-            <div className="mt-5 lg:mt-0 lg:shrink-0">
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-                <PrimaryButton to="/nis-projektin">Fillo projektin</PrimaryButton>
-                <Link to="/register/company" className="inline-flex min-h-[44px] items-center text-sm font-semibold text-[#17643f] underline underline-offset-4">Për kompanitë</Link>
+            <div className="mt-4 lg:mt-0 lg:shrink-0">
+              <div className="flex [&>a]:w-full sm:[&>a]:w-auto">
+                <PrimaryButton to="/nis-projektin">Fillo projektin këtu</PrimaryButton>
               </div>
               {!heroAdvertisement && <button ref={exampleTriggerRef} type="button" onClick={() => setExampleOpen(true)} aria-haspopup="dialog" aria-controls={exampleOpen ? "campaign-example" : undefined} className="mt-1 inline-flex min-h-[44px] items-center gap-1 text-xs text-[#5f6f66] underline underline-offset-4">
-                Dëshironi të shfaqeni këtu?<ArrowRight size={13} aria-hidden="true" />
+                A jeni kompani?<ArrowRight size={13} aria-hidden="true" />
               </button>}
             </div>
           </div>
