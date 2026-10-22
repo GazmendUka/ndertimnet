@@ -409,12 +409,12 @@ export default function LandingPage() {
 
         </> : <WebsiteLandingHero advertisement={heroAdvertisement} />}
 
-        <section className="border-b border-[#e5e0d5] bg-[#f7f4ee]">
-          <div className="mx-auto grid max-w-7xl gap-3 px-4 py-5 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">
-            <TrustItem icon={ShieldCheck} text="Proces i thjeshtë për klientë" />
-            <TrustItem icon={BadgeCheck} text="Leads reale për kompani" />
-            <TrustItem icon={Hammer} text="Shërbime në shumë kategori" />
-            <TrustItem icon={MapPin} text="Fokus në Kosovë dhe Shqipëri" />
+        <section aria-label={isNativeApp ? "Përparësitë e platformës" : undefined} className="border-b border-[#e5e0d5] bg-[#f7f4ee]">
+          <div className={isNativeApp ? "mx-auto grid max-w-7xl grid-cols-2 gap-2 px-4 py-3 sm:px-6 lg:grid-cols-4 lg:px-8" : "mx-auto grid max-w-7xl gap-3 px-4 py-5 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8"}>
+            <TrustItem compact={isNativeApp} icon={ShieldCheck} text={isNativeApp ? "Lehtë për klientë" : "Proces i thjeshtë për klientë"} />
+            <TrustItem compact={isNativeApp} icon={BadgeCheck} text={isNativeApp ? "Kërkesa reale" : "Leads reale për kompani"} />
+            <TrustItem compact={isNativeApp} icon={Hammer} text={isNativeApp ? "Shumë shërbime" : "Shërbime në shumë kategori"} />
+            <TrustItem compact={isNativeApp} icon={MapPin} text={isNativeApp ? "Kosovë & Shqipëri" : "Fokus në Kosovë dhe Shqipëri"} />
           </div>
         </section>
 
@@ -671,10 +671,10 @@ export default function LandingPage() {
   );
 }
 
-function TrustItem({ icon: Icon, text }) {
+function TrustItem({ icon: Icon, text, compact = false }) {
   return (
-    <div className="flex items-center gap-3 rounded-lg bg-white px-4 py-3 text-sm font-semibold text-[#12251b]">
-      <Icon size={19} className="shrink-0 text-[#17643f]" />
+    <div className={compact ? "flex min-h-[52px] min-w-0 items-center gap-2 rounded-xl bg-white px-3 py-2.5 text-xs font-medium leading-4 text-[#12251b]" : "flex items-center gap-3 rounded-lg bg-white px-4 py-3 text-sm font-semibold text-[#12251b]"}>
+      <Icon size={compact ? 16 : 19} aria-hidden={compact ? true : undefined} className="shrink-0 text-[#17643f]" />
       {text}
     </div>
   );
