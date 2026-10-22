@@ -13,12 +13,13 @@ import {
   Menu,
   MoreHorizontal,
   Newspaper,
-  Plus,
   X,
 } from "lucide-react";
 import MobileMoreSheet from "./MobileMoreSheet";
 import LegalLinks from "../LegalLinks";
 import SiteFooter from "./SiteFooter";
+import { useAuth } from "../../auth/AuthContext";
+import MobileNav from "./MobileNav";
 
 const logoSrc = "/ndertimnet-logo-full-width/ndertimnet-logo-search-transparent.png";
 const servicePaths = [
@@ -40,6 +41,8 @@ export default function PublicLayout() {
   const [moreOpen, setMoreOpen] = useState(false);
   const location = useLocation();
   const isNativeApp = Capacitor.isNativePlatform();
+  const { isCustomer, isCompany } = useAuth();
+  const hasAccountMenu = isCustomer || isCompany;
 
   const startX = useRef(null);
   const navTouchStartY = useRef(null);
@@ -98,13 +101,13 @@ export default function PublicLayout() {
 
       {/* ================= NAVBAR ================= */}
       <header className="w-full border-b bg-white sticky top-0 z-50">
-        <div className={`max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center ${isNativeApp ? "justify-center" : "justify-between"}`}>
+        <div className={`max-w-7xl mx-auto px-4 sm:px-6 flex items-center ${isNativeApp ? "min-h-[56px] py-2 justify-center" : "py-4 justify-between"}`}>
 
-          <Link to="/" className="inline-flex items-center">
+          <Link to="/" className={`inline-flex items-center${isNativeApp ? " min-h-[40px]" : ""}`} aria-label={isNativeApp ? "Ndertimnet – Ballina" : undefined}>
             <img
               src={logoSrc}
               alt="Ndertimnet"
-              className="h-11 w-auto sm:h-[53px]"
+              className={isNativeApp ? "h-8 w-auto" : "h-11 w-auto sm:h-[53px]"}
             />
           </Link>
 
@@ -203,7 +206,8 @@ export default function PublicLayout() {
 
       <SiteFooter isNativeApp={isNativeApp} />
 
-      {isNativeApp && (
+      {isNativeApp && hasAccountMenu && <MobileNav alwaysVisible />}
+      {isNativeApp && !hasAccountMenu && (
         <>
           <nav
             aria-label="Navigimi kryesor"
@@ -215,7 +219,7 @@ export default function PublicLayout() {
             <div className="grid grid-cols-5 items-end">
               <PublicNavItem to="/" icon={Home} label="Ballina" active={publicPathIsActive("/")} />
               <PublicNavItem to="/#sherbimet" icon={Hammer} label="Shërbime" active={servicesAreActive} />
-              <PublicNavItem to="/nis-projektin" icon={Plus} label="Publiko" emphasized />
+              <PublicNavItem to="/login" icon={LogIn} label="Kyçu" emphasized />
               <PublicNavItem to="/perditesime" icon={Newspaper} label="Të reja" active={publicPathIsActive("/perditesime")} />
               <button
                 type="button"

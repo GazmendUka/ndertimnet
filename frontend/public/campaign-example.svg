@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="800" viewBox="0 0 1600 800">
+<rect width="1600" height="800" fill="#d8d4c7"/><path d="M650 0h950v800H650z" fill="#e8e4d9"/>
+<path d="M650 595h950v205H650z" fill="#b9ac96"/><path d="M1125 50h420v490h-420z" fill="#fcf5e3"/>
+<path d="M1137 62h396v465h-396z" fill="#b5c7bd"/><path d="M1335 62v465M1137 285h396" stroke="#f7f2e8" stroke-width="20"/>
+<path d="m1380 527-190 273h410V625z" fill="#e5d7b9" opacity=".65"/>
+<rect x="805" y="453" width="80" height="165" rx="10" fill="#a56644"/>
+<path d="M845 470V288m0 65c-115-85-165-13-17 54m17-105c106-125 139-29 8 41m-8 59c132-43 134 35 8 47" fill="#56755b" stroke="#56755b" stroke-width="10"/>
+<rect x="1000" y="515" width="455" height="150" rx="32" fill="#827e5f"/><rect x="972" y="569" width="66" height="122" rx="22" fill="#727054"/><rect x="1422" y="569" width="66" height="122" rx="22" fill="#727054"/>
+<path d="M1050 684v40m370-40v40" stroke="#4a493a" stroke-width="12"/>
+<ellipse cx="1154" cy="729" rx="158" ry="27" fill="#dfd8c7"/><ellipse cx="1154" cy="698" rx="110" ry="23" fill="#73553f"/><path d="M1110 705v42m90-42v42" stroke="#73553f" stroke-width="9"/>
+<rect width="670" height="800" fill="#25463a"/>
+<g fill="#fffaf0" font-family="Arial,sans-serif"><text x="70" y="105" font-size="30" letter-spacing="6">BIZNESI JUAJ</text>
+<text x="70" y="300" font-size="76" font-weight="700">Hapësirë për</text><text x="70" y="392" font-size="76" font-weight="700">ide të mëdha.</text>
+<text x="70" y="495" font-size="32">Interier që ju përshtatet.</text>
+<path d="M70 560h90" stroke="#d6a96b" stroke-width="7"/>
+<text x="70" y="705" font-size="20" letter-spacing="2" fill="#c8d3cb">SHEMBULL ILUSTRUES</text></g></svg>

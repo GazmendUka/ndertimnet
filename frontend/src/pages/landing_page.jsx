@@ -3,9 +3,11 @@
 // Ndertimnet landing page
 // ===========================================
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet";
+import { Capacitor } from "@capacitor/core";
+import WebsiteLandingHero from "../components/landing/WebsiteLandingHero";
 import {
   ArrowRight,
   BadgeCheck,
@@ -24,18 +26,24 @@ import {
   Star,
   Users,
   Wrench,
+  X,
   Zap,
 } from "lucide-react";
 import api from "../api/axios";
 import { PublicSubscriptionPricing } from "../components/payments/PlatformBilling";
 
 const defaultHero = {
-  title: "Gjeni kompaninë për projektin tuaj.",
+  title: "Gjeni ndihmën e duhur për shtëpinë tuaj.",
   subtitle:
-    "Publiko projektin me ofertën hyrëse 0 € dhe merr oferta nga kompani të interesuara. Krahaso mundësitë dhe zgjidh ekipin që të përshtatet.",
-  imageUrl:
-    "https://images.unsplash.com/photo-1503387762-592deb58ef4e?auto=format&fit=crop&w=2200&q=82",
-  imageAlt: "Kantier ndërtimi dhe renovimi",
+    "Publikoni projektin dhe merrni oferta nga kompani të interesuara.",
+};
+
+const exampleCampaign = {
+  title: "Biznesi juaj, në qendër të vëmendjes",
+  subtitle: "Prezantoni shërbimet tuaja me një imazh, një përshkrim dhe një lidhje.",
+  background_image_url: "/campaign-example.svg",
+  cta_text: "Mëso më shumë",
+  company_name: "Biznesi juaj",
 };
 
 const services = [
@@ -56,13 +64,6 @@ const cities = [
   { name: "Durrës", to: "/ndertim/durres" },
   { name: "Mitrovicë", to: "/ndertim/mitrovice" },
   { name: "Vlorë", to: "/ndertim/vlore" },
-];
-
-const proofItems = [
-  "Kompani të verifikuara",
-  "Projekte reale",
-  "Falas për klientët",
-  "Kosovë dhe Shqipëri",
 ];
 
 const steps = [
@@ -140,9 +141,13 @@ function SecondaryButton({ to, children }) {
   );
 }
 
-function HeroAdvertisementButton({ advertisement }) {
+function HeroAdvertisementButton({ advertisement, example = false }) {
   const className =
     "inline-flex min-h-[48px] items-center justify-center gap-2 rounded-lg bg-[#ef7d22] px-5 py-3 text-sm font-semibold text-white transition hover:bg-[#d96814] sm:px-6";
+
+  if (example) {
+    return <span className={className}>{advertisement.cta_text}<ArrowRight size={17} /></span>;
+  }
 
   if (advertisement.link_type === "external") {
     return (
@@ -166,44 +171,103 @@ function HeroAdvertisementButton({ advertisement }) {
   );
 }
 
+function HeroAdvertisementCard({ advertisement, example = false }) {
+  const Heading = example ? "h3" : "h2";
+  return (
+    <article className="overflow-hidden rounded-2xl border border-[#ddd6c9] bg-white">
+      <div className="flex min-h-[36px] items-center justify-between gap-3 px-4 py-2 text-xs text-[#5f6f66]">
+        <span className="shrink-0 font-semibold text-[#17643f]">{example ? "Shembull" : "Reklamë"}</span>
+        {advertisement.company_name && <span className="min-w-0 truncate">Partneri: {advertisement.company_name}</span>}
+      </div>
+      <div className="aspect-[2/1] bg-[#eeeae2]">
+        <img
+          src={advertisement.background_image_url}
+          alt={advertisement.title}
+          className="h-full w-full object-contain"
+        />
+      </div>
+
+      <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div className="min-w-0 max-w-3xl break-words">
+          <Heading className="text-xl font-semibold leading-tight text-[#12251b] sm:text-2xl">
+            {advertisement.title}
+          </Heading>
+          {advertisement.subtitle && (
+            <p className="mt-2 line-clamp-3 text-sm leading-6 text-[#5f6f66]">
+              {advertisement.subtitle}
+            </p>
+          )}
+        </div>
+        <div className="shrink-0"><HeroAdvertisementButton advertisement={advertisement} example={example} /></div>
+      </div>
+    </article>
+  );
+}
+
 function SponsoredHeroAdvertisement({ advertisement }) {
   return (
-    <section aria-label="Përmbajtje e sponsorizuar" className="border-b border-[#e5e0d5] bg-[#f7f4ee] py-5 sm:py-8">
+    <section aria-label="Përmbajtje e sponsorizuar" className="bg-[#f7f4ee] pb-5 sm:pb-8">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <article className="overflow-hidden rounded-2xl border border-[#ddd6c9] bg-white shadow-sm lg:grid lg:grid-cols-[1.05fr_0.95fr]">
-          <div className="relative aspect-[16/9] min-h-[210px] overflow-hidden lg:aspect-auto lg:min-h-[320px]">
-            <img
-              src={advertisement.background_image_url}
-              alt={advertisement.title}
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/45 via-transparent to-transparent" />
-            <span className="absolute left-3 top-3 rounded-md bg-white/95 px-2.5 py-1.5 text-xs font-semibold text-[#12251b] shadow-sm backdrop-blur">
-              Reklamë
-            </span>
-          </div>
-
-          <div className="flex flex-col justify-center p-5 sm:p-7 lg:p-9">
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[#7a6b60]">
-              Përmbajtje e sponsorizuar
-            </p>
-            <h1 className="mt-3 text-2xl font-semibold leading-tight text-[#12251b] sm:text-3xl">
-              {advertisement.title}
-            </h1>
-            {advertisement.subtitle && (
-              <p className="mt-3 line-clamp-3 leading-7 text-[#5f6f66]">
-                {advertisement.subtitle}
-              </p>
-            )}
-            {advertisement.company_name && <p className="mt-3 text-sm text-[#5f6f66]">Partneri: {advertisement.company_name}</p>}
-            <div className="mt-5 flex flex-wrap items-center gap-4">
-              <HeroAdvertisementButton advertisement={advertisement} />
-              <Link to="/nis-projektin" className="inline-flex min-h-[48px] items-center font-semibold text-[#17643f] underline">Fillo projektin</Link>
-            </div>
-          </div>
-        </article>
+        <HeroAdvertisementCard advertisement={advertisement} />
       </div>
     </section>
+  );
+}
+
+function CampaignExampleDialog({ onClose, returnFocusRef }) {
+  const dialogRef = useRef(null);
+
+  useEffect(() => {
+    const dialog = dialogRef.current;
+    const previousFocus = returnFocusRef.current || document.activeElement;
+    const previousOverflow = document.body.style.overflow;
+    dialog.showModal();
+    document.body.style.overflow = "hidden";
+    return () => {
+      dialog.close();
+      document.body.style.overflow = previousOverflow;
+      previousFocus?.focus();
+    };
+  }, [returnFocusRef]);
+
+  return (
+    <dialog
+      ref={dialogRef}
+      id="campaign-example"
+      aria-labelledby="campaign-example-title"
+      aria-describedby="campaign-example-description"
+      className="m-auto max-h-[90dvh] w-[calc(100%-2rem)] max-w-2xl overflow-y-auto rounded-2xl bg-white p-4 text-[#12251b] shadow-2xl backdrop:bg-black/50 sm:p-6"
+      onCancel={(event) => { event.preventDefault(); onClose(); }}
+      onKeyDown={(event) => {
+        if (event.key !== "Tab") return;
+        const controls = event.currentTarget.querySelectorAll("a[href], button:not([disabled])");
+        const first = controls[0];
+        const last = controls[controls.length - 1];
+        if ((event.shiftKey && document.activeElement === first) || (!event.shiftKey && document.activeElement === last)) {
+          event.preventDefault();
+          (event.shiftKey ? last : first)?.focus();
+        }
+      }}
+      onClick={(event) => {
+        if (event.target !== event.currentTarget) return;
+        const bounds = event.currentTarget.getBoundingClientRect();
+        if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) onClose();
+      }}
+    >
+      <div className="mb-2 flex items-start justify-between gap-3">
+        <h2 id="campaign-example-title" className="pt-2 text-xl font-semibold leading-tight sm:text-2xl">Kështu mund të duket fushata juaj</h2>
+        <button type="button" onClick={onClose} autoFocus aria-label="Mbyll shembullin" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-[#f7f4ee]">
+          <X size={20} />
+        </button>
+      </div>
+      <p id="campaign-example-description" className="mb-4 text-sm leading-6 text-[#5f6f66]">Ky është vetëm një shembull ilustrues, jo një reklamë e publikuar.</p>
+      <HeroAdvertisementCard advertisement={exampleCampaign} example />
+      <p className="my-4 text-sm leading-6 text-[#5f6f66]">Fushata juaj shfaqet në këtë hapësirë në Ballina, në faqe dhe në aplikacion, pas miratimit. Butoni lidhet me faqen që zgjidhni ju.</p>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+        <PrimaryButton to="/register/company">Regjistro kompaninë</PrimaryButton>
+        <Link to="/login" className="inline-flex min-h-[44px] items-center text-sm font-semibold text-[#17643f] underline underline-offset-4">Kam llogari – Kyçu</Link>
+      </div>
+    </dialog>
   );
 }
 
@@ -223,7 +287,10 @@ function SectionIntro({ eyebrow, title, text }) {
 }
 
 export default function LandingPage() {
+  const isNativeApp = Capacitor.isNativePlatform();
   const [heroAdvertisement, setHeroAdvertisement] = useState(null);
+  const [exampleOpen, setExampleOpen] = useState(false);
+  const exampleTriggerRef = useRef(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -321,54 +388,35 @@ export default function LandingPage() {
       </Helmet>
 
       <div className="bg-white text-[#12251b]">
-        {heroAdvertisement ? <SponsoredHeroAdvertisement advertisement={heroAdvertisement} /> : (
-        <section className="relative overflow-hidden bg-[#12251b]">
-          <img
-            src={defaultHero.imageUrl}
-            alt={defaultHero.imageAlt}
-            className="absolute inset-0 h-full w-full object-cover"
-          />
-          <div className="absolute inset-0 bg-[#12251b]/70" />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/20 via-transparent to-[#12251b]/85" />
-
-          <div className="relative mx-auto flex max-w-7xl flex-col justify-center px-4 py-10 sm:px-6 sm:py-14 lg:px-8 lg:py-20">
-            <div className="max-w-4xl sm:py-2">
-              <div className="mb-5 inline-flex items-center gap-2 rounded-md bg-white/10 px-3 py-2 text-sm font-semibold text-white backdrop-blur">
-                <MapPin size={16} />
-                Kosovë dhe Shqipëri
-              </div>
-
-              <h1 className="max-w-4xl text-[36px] font-semibold leading-[1.06] text-white sm:text-[56px] lg:text-[68px]">
+        {isNativeApp ? <>
+        <section aria-labelledby="welcome-title" className="bg-[#f7f4ee]">
+          <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 sm:py-9 lg:flex lg:items-center lg:justify-between lg:gap-10 lg:px-8 lg:py-10">
+            <div className="max-w-2xl">
+              <p className="mb-2 flex items-center gap-1.5 text-xs font-semibold text-[#17643f] sm:text-sm">
+                <MapPin size={14} aria-hidden="true" />Kosovë dhe Shqipëri
+              </p>
+              <h1 id="welcome-title" className="text-[30px] font-semibold leading-[1.12] tracking-tight text-[#12251b] sm:text-[42px] lg:text-[46px]">
                 {defaultHero.title}
               </h1>
-
-              <p className="mt-4 text-xl font-medium text-white sm:text-2xl">Nga ideja te Shtëpia juaj</p>
-
-              <p className="mt-5 max-w-2xl text-base leading-7 text-white/85 sm:mt-6 sm:text-lg sm:leading-8">
+              <p className="mt-3 max-w-xl text-sm leading-6 text-[#5f6f66] sm:text-base">
                 {defaultHero.subtitle}
               </p>
-
-              <div className="mt-7 flex flex-col gap-3 sm:mt-8 sm:flex-row sm:flex-wrap">
-                <PrimaryButton to="/nis-projektin">Fillo projektin</PrimaryButton>
-                <SecondaryButton to="/register/company">Për kompanitë</SecondaryButton>
-              </div>
-
-              <div className="mt-8 hidden flex-wrap gap-2 sm:flex">
-                {proofItems.map((item) => (
-                  <span
-                    key={item}
-                    className="rounded-md border border-white/20 bg-white/10 px-3 py-2 text-sm font-medium text-white backdrop-blur"
-                  >
-                    {item}
-                  </span>
-                ))}
-              </div>
             </div>
-
+            <div className="mt-5 lg:mt-0 lg:shrink-0">
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
+                <PrimaryButton to="/nis-projektin">Fillo projektin</PrimaryButton>
+                <Link to="/register/company" className="inline-flex min-h-[44px] items-center text-sm font-semibold text-[#17643f] underline underline-offset-4">Për kompanitë</Link>
+              </div>
+              {!heroAdvertisement && <button ref={exampleTriggerRef} type="button" onClick={() => setExampleOpen(true)} aria-haspopup="dialog" aria-controls={exampleOpen ? "campaign-example" : undefined} className="mt-1 inline-flex min-h-[44px] items-center gap-1 text-xs text-[#5f6f66] underline underline-offset-4">
+                Dëshironi të shfaqeni këtu?<ArrowRight size={13} aria-hidden="true" />
+              </button>}
+            </div>
           </div>
         </section>
+        {heroAdvertisement && <SponsoredHeroAdvertisement advertisement={heroAdvertisement} />}
+        {exampleOpen && <CampaignExampleDialog onClose={() => setExampleOpen(false)} returnFocusRef={exampleTriggerRef} />}
 
-        )}
+        </> : <WebsiteLandingHero advertisement={heroAdvertisement} />}
 
         <section className="border-b border-[#e5e0d5] bg-[#f7f4ee]">
           <div className="mx-auto grid max-w-7xl gap-3 px-4 py-5 sm:grid-cols-2 sm:px-6 lg:grid-cols-4 lg:px-8">
