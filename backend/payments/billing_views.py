@@ -14,6 +14,7 @@ from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 
 from accounts.models import Company
+from main.models import CompanyIntroductionSettings
 from jobrequests.models import JobRequest
 from .offer_slots import require_offer_slot
 from offers.models import Offer
@@ -69,7 +70,7 @@ class BillingViewSet(viewsets.ViewSet):
                                     "offers": p.offers_per_month} for p in SUBSCRIPTION_PLANS],
                          "introductory_until": "2026-12-31", "regular_from": "2027-01-01",
                          "pricing_timezone": "Europe/Stockholm",
-                         "introductory_offers": 0, "notice_months": 0, "collection": "monthly_hosted_checkout",
+                         "introductory_offers": CompanyIntroductionSettings.current_allowance(), "notice_months": 0, "collection": "monthly_hosted_checkout",
                          "bank_payments_available": bank_payments_available()})
 
     @action(detail=False, methods=["get"])

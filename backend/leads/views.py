@@ -475,11 +475,22 @@ class LeadMessageViewSet(viewsets.ModelViewSet):
             raise serializers.ValidationError({"detail": f"Lead me ID {lead_id} nuk ekziston."})
 
 
+        if not ((user.role == "company" and lead.company.user_id == user.pk)
+                or (user.role == "customer" and lead.job_request.customer_id == user.pk)):
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Nuk keni autorizim për këtë bisedë.")
         from offers.models import Offer
         from offers.contact_policy import enforce_contact_policy
+        from accounts.chat_safety import lock_chat_users, ensure_chat_not_blocked
+        lock_chat_users(lead.company.user_id, lead.job_request.customer_id)
+        ensure_chat_not_blocked(lead.company.user_id, lead.job_request.customer_id)
         offer = Offer.objects.select_for_update().filter(company=lead.company, job_request=lead.job_request).first()
         if not offer or not offer.can_chat():
             raise serializers.ValidationError({"detail": "Dërgoni ofertën përpara bisedës."})
+        from offers.models import OfferReview
+        if OfferReview.objects.filter(offer=offer).exists():
+            from rest_framework.exceptions import PermissionDenied
+            raise PermissionDenied("Biseda është mbyllur pas vlerësimit.")
         enforce_contact_policy(offer, serializer.validated_data.get("message", ""))
 
         company = get_company_for_user(user)

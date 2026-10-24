@@ -295,6 +295,11 @@ class Company(models.Model):
         help_text="One-time introductory allowance; consumed only when an offer is sent."
     )
 
+    introductory_offers_granted = models.PositiveSmallIntegerField(
+        default=0, editable=False,
+        help_text="The one-time allowance at registration; independent of later policy changes.",
+    )
+
     free_leads_remaining = models.PositiveIntegerField(
         default=25,
         help_text="Number of free lead unlocks remaining for the company"
@@ -595,3 +600,21 @@ class EmailVerificationToken(models.Model):
 
     def __str__(self):
         return f"{self.user_id} • {self.token} • used={self.is_used}"
+
+
+class UserBlock(models.Model):
+    blocker = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="chat_blocks_created")
+    blocked_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="chat_blocks_received")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Bllokim bisede"
+        verbose_name_plural = "Bllokime bisedash"
+        constraints = [
+            models.UniqueConstraint(fields=["blocker", "blocked_user"], name="unique_chat_user_block"),
+            models.CheckConstraint(condition=~models.Q(blocker=models.F("blocked_user")), name="chat_block_not_self"),
+        ]
+        indexes = [models.Index(fields=["blocked_user", "blocker"])]
+
+    def __str__(self):
+        return f"Chat block #{self.pk}"

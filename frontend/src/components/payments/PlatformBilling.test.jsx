@@ -31,7 +31,7 @@ test("bank unavailable disables enrollment", async () => {
 });
 test("quota exhaustion never offers an individual purchase", async () => {
  billingService.offerQuote.mockResolvedValue({ data: { subscription_required: true } });
- render(<OfferBilling offerId={1} />); await screen.findByText(/Zgjidhni një abonim ose prisni/); expect(screen.queryByRole("button", { name: /Paguaj/ })).not.toBeInTheDocument();
+ render(<OfferBilling offerId={1} />); await screen.findByText(/Kuota është shteruar/); expect(screen.queryByRole("button", { name: /Paguaj/ })).not.toBeInTheDocument();
 });
 test("native flow exposes no external purchase", async () => {
  isNativeBilling.mockReturnValue(true); render(<SubscriptionBilling />); await screen.findByText("Standard");

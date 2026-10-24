@@ -250,6 +250,7 @@ def subscription_overview(company, subscription=None):
     return {
         'state': state, 'collection': 'monthly_hosted_checkout',
         'free_offers_remaining': company.free_offers_remaining,
+        'introductory_offers_granted': company.introductory_offers_granted,
         'credits_remaining': OfferCredit.objects.filter(company=company, redeemed_offer__isnull=True).count(),
         'monthly_offers_remaining': max(0, usable.monthly_offers - usable.offers_used) if usable else 0,
         'monthly_offers_total': period.monthly_offers if active and period else 0,

@@ -5,6 +5,7 @@
 import React, { useState } from "react";
 import { LegalLink } from "../components/LegalLinks";
 import api from "../api/axios";
+import CompanyIntroduction from "../components/payments/CompanyIntroduction";
 import { Link, useNavigate } from "react-router-dom";
 import { AlertCircle, ArrowLeft, Building2, Eye, EyeOff, Loader2, Mail, Phone } from "lucide-react";
 
@@ -73,6 +74,7 @@ export default function RegisterCompany() {
         <h1 className="mt-2 text-3xl font-semibold tracking-tight text-[#12251b]">Krijo llogarinë e kompanisë</h1>
         <p className="mt-3 text-sm leading-6 text-[#5f6f66]">Krijoni profilin bazë tani. Të dhënat e tjera mund t'i plotësoni më vonë.</p>
 
+        <CompanyIntroduction />
         {error && (
           <div className="mt-5 flex gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800" role="alert">
             <AlertCircle className="mt-0.5 shrink-0" size={19} /><p>{error}</p>

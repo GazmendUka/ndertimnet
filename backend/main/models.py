@@ -1,7 +1,7 @@
 from django.core.exceptions import ValidationError
 from django.db import models
 from django.conf import settings
-from django.core.validators import URLValidator
+from django.core.validators import URLValidator, MaxValueValidator
 from django.utils import timezone
 from datetime import timedelta
 from django.utils.text import slugify
@@ -12,6 +12,34 @@ class ContactSubmissionGuard(models.Model):
 
     id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
     attempts = models.JSONField(default=list)
+
+
+class CompanyIntroductionSettings(models.Model):
+    """A live policy for future registrations; never rewrites existing allowances."""
+
+    id = models.PositiveSmallIntegerField(primary_key=True, default=1, editable=False)
+    free_offers = models.PositiveSmallIntegerField(
+        "Oferta falas për kompani të re", default=20, validators=[MaxValueValidator(1000)],
+        help_text="Zbatohet vetëm për regjistrimet e reja. 0 çaktivizon ofertën hyrëse. Kuotat ekzistuese ruhen.",
+    )
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Ofertë hyrëse për kompanitë"
+        verbose_name_plural = "Ofertë hyrëse për kompanitë"
+        constraints = [models.CheckConstraint(condition=models.Q(id=1), name="single_company_intro_policy")]
+
+    def __str__(self):
+        return "Oferta falas për kompanitë e reja"
+
+    def save(self, *args, **kwargs):
+        self.pk = 1
+        super().save(*args, **kwargs)
+
+    @classmethod
+    def current_allowance(cls):
+        value = cls.objects.filter(pk=1).values_list("free_offers", flat=True).first()
+        return 20 if value is None else value
 
 
 class PlatformUpdate(models.Model):

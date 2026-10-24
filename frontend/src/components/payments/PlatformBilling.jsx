@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { billingService, isNativeBilling } from "../../services/billingService";
 import { openPaymentUrl } from "../../platform/mobile";
+import { OfferAllowanceSummary } from "./CompanyOfferAllowance";
 
 const errorText = (e) => e.response?.data?.detail || "Nuk mund të ngarkohen të dhënat e pagesës. Provoni përsëri.";
 const statusLabel = (s) => ({ paid: "Paguar", pending: "Në pritje", failed: "Dështoi", canceled: "Anuluar", refunded: "Rimbursuar" }[s] || s);
@@ -58,7 +59,7 @@ export function OfferBilling({ offerId }) {
   return <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm" aria-label="Kuota e ofertës">
     <h3 className="font-semibold">Dërgimi i ofertës</h3>
     <p>Nuk ka pagesë për ofertë, lead ose bisedë. Rishikimet e një oferte të dërguar nuk konsumojnë kuotë tjetër.</p>
-    {quote && <p className="my-2 font-semibold">{quote.pending ? "Pagesa e mëparshme po verifikohet. Kontaktoni mbështetjen nëse vonesa vazhdon." : quote.paid || quote.legacy ? "Kjo ofertë është e përfshirë. Mund të nënshkruani dhe dërgoni." : quote.credit_available ? `Përdoret një kredit (${quote.credits_remaining} të mbetura).` : quote.introductory ? `Ju kanë mbetur ${quote.free_offers_remaining} oferta falas të dhëna më parë.` : quote.included ? `Përfshihet në abonim: ${quote.remaining} oferta të mbetura këtë periudhë.` : "Zgjidhni një abonim ose prisni rinovimin e kuotës."}</p>}
+    {quote && <p className="my-2 font-semibold">{quote.pending ? "Pagesa e mëparshme po verifikohet. Kontaktoni mbështetjen nëse vonesa vazhdon." : quote.paid || quote.legacy ? "Kjo ofertë është e përfshirë. Mund të nënshkruani dhe dërgoni." : quote.credit_available ? `Përdoret një kredit (${quote.credits_remaining} të mbetura).` : quote.introductory ? `Ju kanë mbetur ${quote.free_offers_remaining} oferta hyrëse falas.` : quote.included ? `Përfshihet në abonim: ${quote.remaining} oferta të mbetura këtë periudhë.` : "Kuota është shteruar. Nuk dërgohet ofertë tjetër pa kuotë të re. Nuk aktivizohet abonim automatik."}</p>}
     {error && <p role="alert" className="text-red-700">{error}</p>}
     <p className="mt-2">Kontaktet dhe biseda hapen pasi nënshkruani dhe dërgoni ofertën.</p>
     <button type="button" onClick={refresh} className="underline mt-2 mr-4">Përditëso statusin</button>
@@ -103,11 +104,11 @@ export function SubscriptionBilling() {
   const changing = active && sub.started_at && !sub.canceled_at;
   return <section className="premium-section mt-4 space-y-4">
     <h2 className="text-xl font-semibold">Ofertat dhe abonimi</h2>
-    {catalog?.bank_payments_available === false && <p role="status">Pagesat bankare nuk janë aktivizuar ende. Kreditet dhe ofertat falas të dhëna më parë ruhen.</p>}
+    {catalog?.bank_payments_available === false && <p role="status">Pagesat bankare nuk janë aktivizuar ende. Mund të përdorni ofertat falas dhe kreditet tuaja.</p>}
     {error && <p role="alert" className="text-red-700">{error}</p>}
     {overview && <div aria-label="Përmbledhja e pagesave" className="space-y-2">
       <p>Kuota e disponueshme: <strong>{overview.monthly_offers_remaining} / {overview.monthly_offers_total}</strong>{overview.period_ends_at && ` · Deri më ${date(overview.period_ends_at)}`}</p>
-      {overview.free_offers_remaining > 0 && <p>Oferta falas të dhëna më parë: {overview.free_offers_remaining}. Pa rinovim mujor.</p>}
+      <OfferAllowanceSummary overview={overview} />
       <p>Kredite kompensimi: {overview.credits_remaining}. Përdoren përpara ofertave falas dhe kuotës.</p>
       {overview.next_payment_amount && <p>Pagesa e radhës: <strong>{overview.next_payment_amount} €</strong> · {date(overview.next_payment_due_at)}. Pagesë manuale në bankë.</p>}
       {Number(overview.outstanding_amount) > 0 && <p role="status">Pagesa të papaguara: {overview.outstanding_amount} €. Kuota kërkon shlyerjen e periudhave të kaluara.</p>}

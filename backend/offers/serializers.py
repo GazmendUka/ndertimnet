@@ -422,6 +422,8 @@ class OfferMessageSerializer(serializers.ModelSerializer):
     def to_representation(self, instance):
         from .contact_policy import safe_text
         data = super().to_representation(instance)
+        if instance.is_hidden:
+            data["message"] = "Ky mesazh është fshehur nga moderatori."
         if not instance.offer.can_view_lead_details():
             data["message"] = safe_text(data["message"])
             data["sender_name"] = safe_text(data["sender_name"])
@@ -439,6 +441,7 @@ class OfferMessageSerializer(serializers.ModelSerializer):
             "message",
             "created_at",
             "read_at",
+            "is_hidden",
         ]
         read_only_fields = fields
 

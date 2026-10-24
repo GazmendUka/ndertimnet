@@ -1,8 +1,10 @@
 import React, { useCallback, useEffect, useState, useRef } from "react";
 import api from "../../api/axios";
 import { Send } from "lucide-react";
+import ChatSafetyControls from "../offers/ChatSafetyControls";
 
-export default function LeadChat({ lead }) {
+export default function LeadChat({ lead, offerId }) {
+  const [chatSafety, setChatSafety] = useState(null);
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(true);
@@ -40,11 +42,12 @@ export default function LeadChat({ lead }) {
   // ------------------------------------------------------------
   async function sendMessage(e) {
     e.preventDefault();
-    if (!input.trim()) return;
+    if (!input.trim() || !chatSafety?.can_send) return;
 
     try {
       await api.post("leads/leadmessages/", {
         lead: lead.id,
+        sender_type: "company",
         message: input, // FIX: backend expects "message"
       });
 
@@ -61,6 +64,7 @@ export default function LeadChat({ lead }) {
   return (
     <div className="premium-card p-4 mt-6">
       <h3 className="font-semibold text-lg mb-3">💬 Chat me klientin</h3>
+      {offerId && <ChatSafetyControls offerId={offerId} onStateChange={setChatSafety} onReportClose={() => {}} />}
 
       <div
         style={{
@@ -113,22 +117,25 @@ export default function LeadChat({ lead }) {
         <div ref={bottomRef} />
       </div>
 
-      <form onSubmit={sendMessage} className="flex gap-2 mt-4">
+      {chatSafety?.blocked ? <p className="mt-4 text-sm">Mesazhet janë ndaluar mes këtyre llogarive. Historiku dhe marrëveshjet ruhen.</p> : <form onSubmit={sendMessage} className="flex gap-2 mt-4">
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Skriv ett meddelande..."
-          className="flex-1 p-2 rounded border border-gray-300"
+          placeholder="Shkruani mesazhin…"
+          maxLength={2000}
+          disabled={!chatSafety?.can_send}
+          className="min-w-0 flex-1 p-2 rounded border border-gray-300"
         />
 
         <button
           type="submit"
+          disabled={!chatSafety?.can_send || !input.trim()}
           className="premium-btn btn-dark flex items-center gap-2"
         >
           <Send size={16} />
           Dërgo
         </button>
-      </form>
+      </form>}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import ChatSafetyControls from "../../components/offers/ChatSafetyControls";
 import OfferAgreementPanel from "../../components/offers/OfferAgreementPanel";
 import ChatPolicyNotice from "../../components/offers/ChatPolicyNotice";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -213,6 +214,8 @@ export default function CustomerOfferDetailsPage() {
   const [error, setError] = useState("");
   const [messages, setMessages] = useState([]);
   const [chatError, setChatError] = useState("");
+  const [chatSafety, setChatSafety] = useState(null);
+  const [reportMessage, setReportMessage] = useState(null);
   const [messageInput, setMessageInput] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
   const [chatLoading, setChatLoading] = useState(true);
@@ -359,7 +362,7 @@ export default function CustomerOfferDetailsPage() {
   const handleSendMessage = async (content = messageInput, retryMessage = null) => {
     setChatError("");
     const trimmed = content.trim();
-    if (!trimmed || sendingMessage || offer?.chat_locked) return;
+    if (!trimmed || sendingMessage || offer?.chat_locked || chatSafety?.blocked) return;
 
     const clientMessageId = retryMessage?.client_message_id || createClientMessageId();
     const tempMessage = {
@@ -464,7 +467,7 @@ export default function CustomerOfferDetailsPage() {
   const companyName = company?.company_name || "Kompani";
   const companyInitial = companyName.trim().charAt(0).toUpperCase() || "K";
   const review = offer?.review || null;
-  const chatLocked = Boolean(offer?.chat_locked || review);
+  const chatLocked = Boolean(offer?.chat_locked || review || chatSafety?.blocked);
 
   if (!user) {
     return (
@@ -751,6 +754,8 @@ export default function CustomerOfferDetailsPage() {
               </div>
             </div>
 
+        <ChatSafetyControls offerId={offer.id} onStateChange={setChatSafety} messageToReport={reportMessage} onReportClose={() => setReportMessage(null)} />
+
             <div
               ref={chatContainerRef}
               onScroll={(event) => {
@@ -796,6 +801,7 @@ export default function CustomerOfferDetailsPage() {
                             {isCustomer ? "Ju" : msg.sender_name}
                           </div>
                           <p className="whitespace-pre-wrap break-words leading-6">{msg.message}</p>
+                    {!isCustomer && !msg.is_hidden && !msg.delivery_status && <button type="button" aria-label="Raporto këtë mesazh" onClick={() => setReportMessage(msg)} className="mt-1 min-h-[44px] text-xs text-gray-500 underline">Raporto mesazhin</button>}
                           <div className={`mt-1.5 flex items-center gap-2 text-[10px] ${isCustomer ? "justify-end text-gray-400" : "text-gray-400"}`}>
                             <span>{formatMessageTime(msg.created_at)}</span>
                             {isCustomer && msg.delivery_status === "sending" && <span>Duke dërguar…</span>}
@@ -827,8 +833,8 @@ export default function CustomerOfferDetailsPage() {
               <div className="flex items-start gap-3 border-t border-gray-100 bg-gray-50 p-4 text-sm text-gray-600 sm:p-5">
                 <Lock className="mt-0.5 shrink-0 text-gray-500" size={18} />
                 <div>
-                  <p className="font-semibold text-gray-800">Biseda është mbyllur</p>
-                  <p className="mt-1 text-xs leading-5">Vlerësimi është dorëzuar dhe nuk mund të dërgohen më mesazhe.</p>
+                  <p className="font-semibold text-gray-800">{chatSafety?.blocked ? "Mesazhet janë ndaluar" : "Biseda është mbyllur"}</p>
+                  <p className="mt-1 text-xs leading-5">{chatSafety?.blocked ? "Mesazhet janë ndaluar mes këtyre llogarive. Historiku dhe marrëveshjet ruhen." : "Vlerësimi është dorëzuar dhe nuk mund të dërgohen më mesazhe."}</p>
                 </div>
               </div>
             ) : (

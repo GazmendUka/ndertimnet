@@ -331,6 +331,7 @@ class OfferMessage(models.Model):
     )
 
     message = models.TextField()
+    is_hidden = models.BooleanField(default=False, help_text="Hidden by a moderator; original retained for restricted review.")
     client_message_id = models.UUIDField(null=True, blank=True, unique=True)
     created_at = models.DateTimeField(auto_now_add=True, db_index=True)
     read_at = models.DateTimeField(null=True, blank=True, db_index=True)
@@ -430,3 +431,40 @@ class ChatReviewAccess(models.Model):
     offer = models.ForeignKey(Offer, on_delete=models.SET_NULL, null=True, blank=True)
     action = models.CharField(max_length=20, default="view")
     accessed_at = models.DateTimeField(auto_now_add=True)
+
+
+class ChatReport(models.Model):
+    class Reason(models.TextChoices):
+        HARASSMENT = "harassment", "Ngacmim ose kërcënime"
+        SCAM = "scam", "Spam ose mashtrim"
+        INAPPROPRIATE = "inappropriate", "Përmbajtje e papërshtatshme"
+        OTHER = "other", "Tjetër"
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Në pritje"
+        REVIEWED = "reviewed", "Shqyrtuar"
+        DISMISSED = "dismissed", "Mbyllur pa veprim"
+
+    offer = models.ForeignKey(Offer, on_delete=models.CASCADE, related_name="chat_reports")
+    reporter = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="chat_reports_created")
+    reported_user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="chat_reports_received")
+    message = models.ForeignKey(OfferMessage, on_delete=models.SET_NULL, null=True, blank=True, related_name="chat_reports")
+    reason = models.CharField(max_length=20, choices=Reason.choices)
+    details = models.TextField(blank=True, max_length=1000)
+    status = models.CharField(max_length=12, choices=Status.choices, default=Status.PENDING)
+    admin_note = models.TextField(blank=True, max_length=2000)
+    created_at = models.DateTimeField(auto_now_add=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name="chat_reports_reviewed")
+
+    class Meta:
+        verbose_name = "Raportim bisede"
+        verbose_name_plural = "Raportime bisedash"
+        ordering = ["-created_at"]
+        constraints = [
+            models.UniqueConstraint(fields=["reporter", "message"], condition=models.Q(status="pending", message__isnull=False), name="unique_pending_message_report"),
+            models.UniqueConstraint(fields=["reporter", "offer"], condition=models.Q(status="pending", message__isnull=True), name="unique_pending_conversation_report"),
+        ]
+
+    def __str__(self):
+        return f"Raportim #{self.pk}"

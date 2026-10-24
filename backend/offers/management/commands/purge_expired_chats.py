@@ -2,7 +2,7 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 from django.db.models import Max, Q
 from django.utils import timezone
-from offers.models import Offer, OfferMessage, ChatReviewAccess
+from offers.models import Offer, OfferMessage, ChatReviewAccess, ChatReport
 from leads.models import LeadMessage
 from payments.billing import add_months
 
@@ -25,6 +25,8 @@ class Command(BaseCommand):
                 offer = Offer.objects.select_for_update().get(pk=pk)
                 job = offer.job_request
                 if offer.chat_retention_hold or not (offer.status == "rejected" or job.completed_at or (not job.winner_offer_id and not job.is_active)):
+                    continue
+                if ChatReport.objects.filter(offer=offer, status=ChatReport.Status.PENDING).exists():
                     continue
                 modern = OfferMessage.objects.filter(offer=offer)
                 legacy = LeadMessage.objects.filter(lead__company=offer.company, lead__job_request=offer.job_request)

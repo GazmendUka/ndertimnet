@@ -12,6 +12,7 @@ import { Clock4, CheckCircle2, XCircle } from "lucide-react";
 import StatusBadge from "../../components/ui/StatusBadge";
 import CompanyRatingSummary from "../../components/reviews/CompanyRatingSummary";
 import CompanyReviews from "../../components/reviews/CompanyReviews";
+import CompanyOfferAllowance from "../../components/payments/CompanyOfferAllowance";
 
 export default function CompanyDashboard() {
   const { user, isCompany, access } = useAuth();
@@ -215,6 +216,7 @@ function Header({ user, stats, newLeads }) {
         )}
       </div>
 
+      <div className="mt-4"><CompanyOfferAllowance /></div>
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
         <Stat label="Aktive" value={stats.active} icon={<Clock4 size={18} />} />
         <Stat label="Të fituara" value={stats.won} icon={<CheckCircle2 size={18} />} />

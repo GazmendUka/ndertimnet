@@ -23,6 +23,8 @@ from pushnotifications.services import schedule_push_notification
 
 from .models import Offer, OfferMessage, OfferReview, OfferVersion, OfferStatus
 from .contact_policy import enforce_contact_policy
+from .chat_safety import OfferChatSafetyMixin
+from accounts.chat_safety import lock_chat_users, ensure_chat_not_blocked
 from .pdf_contract import build_offer_contract_pdf
 from .serializers import (
     OfferSerializer,
@@ -35,8 +37,8 @@ from .serializers import (
 )
 
 
-class OfferViewSet(viewsets.ModelViewSet):
-    queryset = Offer.objects.select_related("current_version", "job_request").all()
+class OfferViewSet(OfferChatSafetyMixin, viewsets.ModelViewSet):
+    queryset = Offer.objects.select_related("current_version", "job_request", "company__user").all()
     serializer_class = OfferSerializer
     permission_classes = [IsAuthenticated]
     http_method_names = ["get", "post", "patch", "head", "options"]
@@ -569,6 +571,8 @@ class OfferViewSet(viewsets.ModelViewSet):
 
         # Lock the offer row so review submission and new messages cannot cross.
         with transaction.atomic():
+            lock_chat_users(offer.company.user_id, offer.job_request.customer_id)
+            ensure_chat_not_blocked(offer.company.user_id, offer.job_request.customer_id)
             locked_offer = Offer.objects.select_for_update(of=("self",)).get(pk=offer.pk)
             if OfferReview.objects.filter(offer=locked_offer).exists():
                 return Response(

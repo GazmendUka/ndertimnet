@@ -2,6 +2,7 @@
 
 from rest_framework import serializers
 from copy import copy
+from django.db import transaction
 from django.db.models import Avg, Count, Q
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -385,18 +386,14 @@ class RegisterCompanySerializer(serializers.ModelSerializer):
                 "email": "Ky email është i çaktivizuar. Kontrollo email-in për riaktivizim."
             })
 
-        # 🆕 Otherwise create new
-        user = User.objects.create_user(
-            email=email,
-            password=password,
-            role="company",
-        )
-
-        Company.objects.create(
-            user=user,
-            company_name=company_name,
-            phone=phone,
-        )
+        from main.models import CompanyIntroductionSettings
+        allowance = CompanyIntroductionSettings.current_allowance()
+        with transaction.atomic():
+            user = User.objects.create_user(email=email, password=password, role="company")
+            Company.objects.create(
+                user=user, company_name=company_name, phone=phone,
+                free_offers_remaining=allowance, introductory_offers_granted=allowance,
+            )
 
         return user
 

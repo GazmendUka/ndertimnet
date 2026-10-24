@@ -2,7 +2,20 @@ from django.contrib import admin
 from django.utils import timezone
 from django.utils.html import format_html
 
-from .models import HeroAdvertisement, HeroAdvertisementSection, PlatformUpdate
+from .models import HeroAdvertisement, HeroAdvertisementSection, PlatformUpdate, CompanyIntroductionSettings
+
+
+@admin.register(CompanyIntroductionSettings)
+class CompanyIntroductionSettingsAdmin(admin.ModelAdmin):
+    fields = ("free_offers", "updated_at")
+    readonly_fields = ("updated_at",)
+    list_display = ("__str__", "free_offers", "updated_at")
+
+    def has_add_permission(self, request):
+        return super().has_add_permission(request) and not CompanyIntroductionSettings.objects.exists()
+
+    def has_delete_permission(self, request, obj=None):
+        return False
 
 
 @admin.register(PlatformUpdate)

@@ -256,7 +256,7 @@ export default function LeadDetailsPage() {
 
       {/* CHAT */}
       {lead.can_chat ? (
-        <LeadChat lead={lead} />
+        <LeadChat lead={lead} offerId={offerCheck?.offer_id} />
       ) : (
         <p className="text-gray-500 italic mt-6">
           Chat-i do të hapet pasi të blini shërbimin.
