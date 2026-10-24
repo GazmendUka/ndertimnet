@@ -6,10 +6,10 @@ Apply `main.0006_contactsubmissionguard` before enabling the endpoint. It adds o
 new table, without changing existing customer data. Missing/unavailable quota storage
 fails closed (503, no mail). PostgreSQL is required for cross-worker row locking.
 
-- `CONTACT_RECIPIENT_EMAIL` defaults to `info@group-globale.com` on the server.
+- `CONTACT_RECIPIENT_EMAIL` defaults to `info@ndertimnet.com` on the server.
   Do not expose the recipient in contact page text, links, metadata or API responses.
-  The privacy and account-deletion pages retain their existing contact details;
-  this change does not remove the address from the entire website.
+  Privacy, account-deletion and content-rules pages use the same Ndertimnet
+  information address. Automated mail retains its verified Ndertimnet sender.
 - `CONTACT_EMAIL_BACKEND` defaults to `core.email_backend.SendGridBackend`, separately
   from billing email configuration. Configure `SENDGRID_API_KEY` securely and use a
   verified `DEFAULT_FROM_EMAIL`. Never put a visitor's address in From.

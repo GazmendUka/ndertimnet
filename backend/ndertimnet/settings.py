@@ -437,4 +437,4 @@ EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.smtp.
 
 # Contact delivery is explicit: missing SendGrid configuration must fail, not fake success.
 CONTACT_EMAIL_BACKEND = os.environ.get("CONTACT_EMAIL_BACKEND", "core.email_backend.SendGridBackend")
-CONTACT_RECIPIENT_EMAIL = os.environ.get("CONTACT_RECIPIENT_EMAIL", "info@group-globale.com")
+CONTACT_RECIPIENT_EMAIL = os.environ.get("CONTACT_RECIPIENT_EMAIL", "info@ndertimnet.com")
