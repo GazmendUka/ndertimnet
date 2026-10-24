@@ -1,6 +1,7 @@
 import axios from "axios";
 import { API_BASE_URL } from "../config/api";
 import { getSession, isCurrentSession, saveRenewedSession, clearSession } from "../auth/session";
+import { CONTENT_RULES_EVENT, hasAcceptedContentRules, isContentWrite } from "../auth/contentRules";
 
 const refreshApi = axios.create({ baseURL: API_BASE_URL, timeout: 20000, headers: { Accept: "application/json" } });
 const api = axios.create({ baseURL: API_BASE_URL, headers: { Accept: "application/json" } });
@@ -53,6 +54,16 @@ api.interceptors.request.use((config) => {
   const session = getSession();
   if (config._authSession && !isCurrentSession(config._authSession)) throw sessionChanged();
   config._authSession = session;
+  if (session && isContentWrite(config)) {
+    let user;
+    try { user = JSON.parse(session.storage.getItem("user")); } catch { user = null; }
+    if (!hasAcceptedContentRules(user?.id)) {
+      window.dispatchEvent(new Event(CONTENT_RULES_EVENT));
+      const error = new axios.CanceledError("Pranoni rregullat e përmbajtjes përpara se të vazhdoni.");
+      error.code = "content_policy_required";
+      throw error;
+    }
+  }
   config.headers = config.headers || {};
   if (session?.access) config.headers.Authorization = `Bearer ${session.access}`;
   return config;

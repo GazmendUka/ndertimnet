@@ -17,6 +17,7 @@ import Layout from "./components/layout/Layout";
 import PublicCompanyProfile from "./pages/company/PublicCompanyProfile";
 import MobileRuntime from "./platform/MobileRuntime";
 import NotificationRuntime from "./platform/NotificationRuntime";
+import ContentRulesPrompt from "./components/ContentRules";
 
 function ScrollToTop() {
   const { pathname, search, hash } = useLocation();
@@ -42,6 +43,7 @@ function App() {
     <AuthProvider>
       <ErrorBoundary>
         <Router>
+          <ContentRulesPrompt />
           <MobileRuntime />
           <NotificationRuntime />
           <ScrollToTop />

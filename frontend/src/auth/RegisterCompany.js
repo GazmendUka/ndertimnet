@@ -1,3 +1,4 @@
+import { ContentRulesConsent } from "../components/ContentRules";
 // frontend/src/auth/RegisterCompany.js
 // ✅ Production-ready – Account-only registration
 // Fields: company_name, phone, email, password
@@ -22,6 +23,7 @@ export default function RegisterCompany() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [rulesAccepted, setRulesAccepted] = useState(false);
 
   // 🔹 Text inputs
   const handleChange = (e) => {
@@ -32,6 +34,7 @@ export default function RegisterCompany() {
   // 🔹 Submit
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!rulesAccepted) { setError("Pranoni rregullat e përdorimit përpara regjistrimit."); return; }
     setLoading(true);
     setError("");
 
@@ -143,9 +146,10 @@ export default function RegisterCompany() {
           <p className="text-sm leading-6 text-[#5f6f66]">
             Lexoni si i përpunojmë të dhënat tuaja te <LegalLink />.
           </p>
+          <ContentRulesConsent checked={rulesAccepted} onChange={setRulesAccepted} />
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !rulesAccepted}
             className={`inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white transition ${
               loading
                 ? "bg-gray-400 cursor-not-allowed"

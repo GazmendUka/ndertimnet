@@ -139,3 +139,16 @@ test.each([true, false])('legacy sessions without IDs are renewed, remember=%s',
   rotationServer(); await api.get('protected/');
   expect(storage.getItem('refresh')).toBe('refresh-1'); expect(sessions.getSession().id).toBeTruthy();
 });
+
+test('content is not sent until the current account accepts the rules; reporting remains available', async () => {
+  const session = login(); session.storage.setItem('user', JSON.stringify({ id: 42 }));
+  const listener = jest.fn(); window.addEventListener('ndertimnet:content-rules-required', listener);
+  handler = jest.fn(async config => ok(config));
+  await expect(api.post('offers/7/messages/', { message: 'Synthetic draft' })).rejects.toThrow(/Pranoni rregullat/);
+  expect(handler).not.toHaveBeenCalled(); expect(listener).toHaveBeenCalledTimes(1);
+  await expect(api.post('offers/7/chat-reports/', { reason: 'scam' })).resolves.toMatchObject({ status: 200 });
+  localStorage.setItem('ndertimnet:content-rules:42', '2026-10-24-v1');
+  await expect(api.post('offers/7/messages/', { message: 'Synthetic draft' })).resolves.toMatchObject({ status: 200 });
+  expect(handler).toHaveBeenCalledTimes(2);
+  window.removeEventListener('ndertimnet:content-rules-required', listener);
+});

@@ -1,3 +1,4 @@
+import { ContentRulesConsent } from "../components/ContentRules";
 // src/pages/auth/RegisterCustomer.jsx
 
 import React, { useState } from "react";
@@ -18,6 +19,7 @@ export default function RegisterCustomer() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [rulesAccepted, setRulesAccepted] = useState(false);
 
   // 🔄 Uppdatera formulärfält
   const handleChange = (e) => {
@@ -28,6 +30,7 @@ export default function RegisterCustomer() {
   // 📤 Skicka in formuläret
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (!rulesAccepted) { setError("Pranoni rregullat e përdorimit përpara regjistrimit."); return; }
     setLoading(true);
     setError("");
 
@@ -178,9 +181,10 @@ export default function RegisterCustomer() {
           <p className="text-sm leading-6 text-[#5f6f66]">
             Lexoni si i përpunojmë të dhënat tuaja te <LegalLink />.
           </p>
+          <ContentRulesConsent checked={rulesAccepted} onChange={setRulesAccepted} />
           <button
             type="submit"
-            disabled={loading}
+            disabled={loading || !rulesAccepted}
             className={`inline-flex min-h-[48px] w-full items-center justify-center gap-2 rounded-xl px-5 py-3 text-sm font-semibold text-white transition ${
               loading
                 ? "bg-gray-400 cursor-not-allowed"
