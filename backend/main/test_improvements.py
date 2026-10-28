@@ -325,8 +325,9 @@ class DirectNotificationCompatibilityTests(Fixtures, APITestCase):
         self.assertNotIn("notificationdelivery", apps.all_models["pushnotifications"])
         self.assertNotIn("process_notifications", get_commands())
         loader = MigrationLoader(connection)
-        self.assertEqual(loader.graph.leaf_nodes("pushnotifications"),
-            [("pushnotifications", "0001_initial")])
+        state = loader.project_state(loader.graph.leaf_nodes("pushnotifications"))
+        notification_models = {name for app, name in state.models if app == "pushnotifications"}
+        self.assertEqual(notification_models, {"notificationdevice", "notificationpreference"})
 
     @override_settings(PUSH_NOTIFICATIONS_ENABLED=True, FIREBASE_PROJECT_ID="local-test")
     @patch("firebase_admin.messaging.send_each")

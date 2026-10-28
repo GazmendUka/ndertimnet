@@ -253,6 +253,10 @@ BACKEND_BASE_URL = env_url("BACKEND_BASE_URL", "")
 # Push delivery stays disabled until Firebase credentials are configured.
 PUSH_NOTIFICATIONS_ENABLED = env_bool("PUSH_NOTIFICATIONS_ENABLED", False)
 FIREBASE_PROJECT_ID = os.environ.get("FIREBASE_PROJECT_ID", "")
+# Credentials for the new project. Original Application Default Credentials remain
+# available only for legacy devices while the installed apps are being updated.
+FIREBASE_CREDENTIALS_JSON = os.environ.get("FIREBASE_CREDENTIALS_JSON", "")
+FIREBASE_LEGACY_PROJECT_ID = os.environ.get("FIREBASE_LEGACY_PROJECT_ID", "")
 
 
 # ======================================================

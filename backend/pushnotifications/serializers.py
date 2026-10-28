@@ -1,3 +1,4 @@
+from django.conf import settings
 from rest_framework import serializers
 
 from .models import NotificationDevice, NotificationPreference
@@ -7,6 +8,13 @@ class DeviceRegistrationSerializer(serializers.Serializer):
     token = serializers.CharField(min_length=20, max_length=512, trim_whitespace=True)
     device_id = serializers.CharField(max_length=64, required=False, allow_blank=True)
     platform = serializers.ChoiceField(choices=NotificationDevice.Platform.choices)
+    firebase_project_id = serializers.CharField(max_length=63, required=False, allow_blank=True, default="")
+
+    def validate_firebase_project_id(self, value):
+        allowed = {settings.FIREBASE_PROJECT_ID, settings.FIREBASE_LEGACY_PROJECT_ID} - {""}
+        if value and value not in allowed:
+            raise serializers.ValidationError("Projekt njoftimesh i panjohur.")
+        return value
 
 
 class DeviceUnregisterSerializer(serializers.Serializer):

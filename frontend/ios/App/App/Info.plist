@@ -35,12 +35,20 @@
 	<string>$(MARKETING_VERSION)</string>
 	<key>CFBundleVersion</key>
 	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>FIREBASE_ANALYTICS_COLLECTION_ENABLED</key>
+	<false/>
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>Ndërtimnet använder kameran när du väljer att fotografera underlag till jobb, profiler eller recensioner.</string>
+	<string>Ndërtimnet përdor kamerën kur zgjidhni të fotografoni materiale për projekte, profile ose vlerësime.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Ndërtimnet använder valda bilder när du laddar upp underlag till jobb, profiler eller recensioner.</string>
+	<string>Ndërtimnet përdor fotot që zgjidhni për projekte, profile ose vlerësime.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

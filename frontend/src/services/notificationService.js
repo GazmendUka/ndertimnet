@@ -7,6 +7,9 @@ import api from "../api/axios";
 
 const DEVICE_ID_KEY = "ndertimnet_notification_device_id";
 const PUSH_OPT_IN_KEY = "ndertimnet_push_opt_in";
+const PUSH_PROJECT_KEY = "ndertimnet_push_firebase_project";
+// The build must match the downloaded native Firebase configuration.
+const FIREBASE_PROJECT_ID = process.env.REACT_APP_FIREBASE_PROJECT_ID || "ndertimnet-production";
 
 function createDeviceId() {
   if (window.crypto?.randomUUID) return window.crypto.randomUUID();
@@ -40,6 +43,13 @@ export async function registerCurrentPushDevice({ requestPermission = false } = 
     return { supported: true, permission: permission.receive, registered: false };
   }
 
+  // A cached token can belong to the previous native Firebase configuration.
+  // Rotate once per project after consent; record completion only after registration.
+  const previousProject = await Preferences.get({ key: PUSH_PROJECT_KEY });
+  if (previousProject.value !== FIREBASE_PROJECT_ID) {
+    await FirebaseMessaging.deleteToken();
+  }
+
   const [{ token }, deviceId] = await Promise.all([
     FirebaseMessaging.getToken(),
     getNotificationDeviceId(),
@@ -48,7 +58,9 @@ export async function registerCurrentPushDevice({ requestPermission = false } = 
     token,
     device_id: deviceId,
     platform: Capacitor.getPlatform(),
+    firebase_project_id: FIREBASE_PROJECT_ID,
   });
+  await Preferences.set({ key: PUSH_PROJECT_KEY, value: FIREBASE_PROJECT_ID });
   await Preferences.set({ key: PUSH_OPT_IN_KEY, value: "true" });
   return { supported: true, permission: "granted", registered: true };
 }
@@ -61,6 +73,7 @@ export async function refreshPushToken(token) {
     token,
     device_id: deviceId,
     platform: Capacitor.getPlatform(),
+    firebase_project_id: FIREBASE_PROJECT_ID,
   });
 }
 

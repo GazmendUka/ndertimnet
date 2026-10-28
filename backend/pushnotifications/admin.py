@@ -5,10 +5,10 @@ from .models import NotificationDevice, NotificationPreference
 
 @admin.register(NotificationDevice)
 class NotificationDeviceAdmin(admin.ModelAdmin):
-    list_display = ("id", "user", "platform", "active", "last_seen_at")
-    list_filter = ("platform", "active")
+    list_display = ("id", "user", "platform", "firebase_project_id", "active", "last_seen_at")
+    list_filter = ("platform", "firebase_project_id", "active")
     search_fields = ("user__email", "device_id")
-    readonly_fields = ("token", "created_at", "last_seen_at")
+    readonly_fields = ("token", "firebase_project_id", "created_at", "last_seen_at")
 
 
 @admin.register(NotificationPreference)

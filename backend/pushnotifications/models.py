@@ -15,6 +15,8 @@ class NotificationDevice(models.Model):
     token = models.CharField(max_length=512, unique=True)
     device_id = models.CharField(max_length=64, blank=True, db_index=True)
     platform = models.CharField(max_length=10, choices=Platform.choices)
+    # Empty belongs to the original project, including installations predating this field.
+    firebase_project_id = models.CharField(max_length=63, blank=True, default="")
     active = models.BooleanField(default=True, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     last_seen_at = models.DateTimeField(auto_now=True)

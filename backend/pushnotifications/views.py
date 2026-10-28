@@ -26,6 +26,7 @@ class DeviceRegisterView(APIView):
                 "user": request.user,
                 "device_id": data.get("device_id", ""),
                 "platform": data["platform"],
+                "firebase_project_id": data["firebase_project_id"],
                 "active": True,
             },
         )
