@@ -25,7 +25,7 @@ for variable in ("SENDGRID_API_KEY", "CLOUDINARY_URL", "CLOUDINARY_CLOUD_NAME",
 EMAIL_BACKEND = "django.core.mail.backends.dummy.EmailBackend"
 CONTACT_EMAIL_BACKEND = "core.staging.BlockedEmailBackend"
 PUSH_NOTIFICATIONS_ENABLED = False
-FIREBASE_PROJECT_ID = ""
+# Keep delivery disabled while validating the explicitly configured project IDs.
 BILLING_JOBS_ENABLED = False
 RAIACCEPT_MODE = "sandbox"
 STORAGES = {**STORAGES, "default": {"BACKEND": "core.staging.BlockedMediaStorage"}}  # noqa: F405
