@@ -50,7 +50,7 @@ class PaymentAdmin(admin.ModelAdmin):
     list_per_page = 25
 
 
-from .models import BillingSubscription, BillingPeriod, PlatformCharge, PlatformCheckout
+from .models import BillingSubscription, BillingPeriod, PlatformCharge, PlatformCheckout, OfferPackPurchase
 
 class ReadOnlyBillingAdmin(admin.ModelAdmin):
     def get_list_display(self, request):
@@ -59,6 +59,7 @@ class ReadOnlyBillingAdmin(admin.ModelAdmin):
             BillingPeriod: ("id", "subscription", "number", "starts_at", "ends_at", "offers_used"),
             PlatformCharge: ("id", "payer", "kind", "amount", "status", "paid_at"),
             PlatformCheckout: ("id", "charge", "amount", "order_id", "status", "created_at"),
+            OfferPackPurchase: ("id", "charge", "offers", "offers_used", "signed_at"),
         }[self.model]
 
     def has_add_permission(self, request):
@@ -70,7 +71,7 @@ class ReadOnlyBillingAdmin(admin.ModelAdmin):
     def has_change_permission(self, request, obj=None):
         return False
 
-for billing_model in (BillingSubscription, BillingPeriod, PlatformCharge):
+for billing_model in (BillingSubscription, BillingPeriod, PlatformCharge, OfferPackPurchase):
     admin.site.register(billing_model, ReadOnlyBillingAdmin)
 
 

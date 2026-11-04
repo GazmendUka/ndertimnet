@@ -252,6 +252,7 @@ class PlatformCharge(models.Model):
         OFFER = "offer_fee", "Dërgimi i ofertës"
         OFFER_ADJUSTMENT = "offer_adjustment", "Diferenca e tarifës së ofertës"
         SUBSCRIPTION = "subscription", "Abonimi mujor"
+        OFFER_PACK = "offer_pack", "Paketa e ofertave"
 
     payer = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name="platform_charges")
     company = models.ForeignKey(Company, null=True, blank=True, on_delete=models.PROTECT)
@@ -259,6 +260,7 @@ class PlatformCharge(models.Model):
     job_request = models.OneToOneField("jobrequests.JobRequest", null=True, blank=True, on_delete=models.PROTECT, related_name="publication_charge")
     period = models.OneToOneField(BillingPeriod, null=True, blank=True, on_delete=models.PROTECT, related_name="charge")
     included_in_period = models.ForeignKey(BillingPeriod, null=True, blank=True, on_delete=models.PROTECT, related_name="included_charges")
+    included_in_pack = models.ForeignKey("OfferPackPurchase", null=True, blank=True, on_delete=models.PROTECT, related_name="included_charges")
     kind = models.CharField(max_length=20, choices=Kind.choices)
     regular_amount = models.DecimalField(max_digits=10, decimal_places=2)
     discount_amount = models.DecimalField(max_digits=10, decimal_places=2, default=0)
@@ -339,3 +341,18 @@ class SubscriptionPlanChange(models.Model):
     version = models.CharField(max_length=80)
     sha256 = models.CharField(max_length=64)
     signed_at = models.DateTimeField(auto_now_add=True)
+
+
+class OfferPackPurchase(models.Model):
+    """Immutable purchase terms, with non-expiring quota usable only after bank settlement."""
+    charge = models.OneToOneField(PlatformCharge, on_delete=models.PROTECT, related_name="offer_pack")
+    purchase_key = models.UUIDField(unique=True)
+    offers = models.PositiveSmallIntegerField(default=3)
+    offers_used = models.PositiveSmallIntegerField(default=0)
+    signer_name = models.CharField(max_length=200)
+    terms_version = models.CharField(max_length=40)
+    terms_text = models.TextField()
+    signed_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [models.CheckConstraint(condition=models.Q(offers_used__lte=models.F("offers")), name="offer_pack_usage_within_quota")]

@@ -1,4 +1,7 @@
 from decimal import Decimal
+from uuid import UUID, uuid4
+from .offer_packs import PACK_PRICE, PACK_OFFERS, PACK_TERMS, PACK_TERMS_VERSION
+from .models import OfferPackPurchase
 import hashlib
 from .agreements import VERSION as AGREEMENT_VERSION, agreement_text
 from .models import SubscriptionAgreement
@@ -48,7 +51,8 @@ def charge_data(charge):
             "subscription_id": charge.period.subscription_id if charge.period_id else None,
             "period_starts_at": charge.period.starts_at if charge.period_id else None,
             "period_ends_at": charge.period.ends_at if charge.period_id else None,
-            "payable": charge.kind == PlatformCharge.Kind.SUBSCRIPTION and charge.status in (PaymentStatus.PENDING, PaymentStatus.FAILED, PaymentStatus.CANCELED) and not (charge.period.subscription.ends_at and not charge.period.subscription.started_at),
+            "plan_code": charge.period.plan_code if charge.period_id else None,
+            "payable": charge.kind in (PlatformCharge.Kind.SUBSCRIPTION, PlatformCharge.Kind.OFFER_PACK) and charge.status in (PaymentStatus.PENDING, PaymentStatus.FAILED, PaymentStatus.CANCELED) and not (charge.period_id and charge.period.subscription.ends_at and not charge.period.subscription.started_at),
             "receipt_number": f"NDT-P-{charge.pk:08d}" if charge.status == PaymentStatus.PAID else None}
 
 
@@ -65,6 +69,7 @@ class BillingViewSet(viewsets.ViewSet):
     def catalog(self, request):
         price = {k: str(v) if isinstance(v, Decimal) else v for k, v in publication_price().items()}
         return Response({"listing": price, "offer": {"per_offer_payment": False},
+                         "offer_pack": {"code": "offers_3", "name": "Paketa 3 oferta", "price": str(PACK_PRICE), "offers": PACK_OFFERS, "expires": False},
                          "plans": [{"code": p.code, "name": p.name, "monthly_price": str(p.price_at()),
                                     "introductory_price": str(p.monthly_price), "regular_price": str(p.regular_price),
                                     "offers": p.offers_per_month} for p in SUBSCRIPTION_PLANS],
@@ -72,6 +77,40 @@ class BillingViewSet(viewsets.ViewSet):
                          "pricing_timezone": "Europe/Stockholm",
                          "introductory_offers": CompanyIntroductionSettings.current_allowance(), "notice_months": 0, "collection": "monthly_hosted_checkout",
                          "bank_payments_available": bank_payments_available()})
+
+    @action(detail=False, methods=["get"], url_path="offer-pack-terms")
+    def offer_pack_terms(self, request):
+        self.company(request)
+        return Response({"version": PACK_TERMS_VERSION, "text": PACK_TERMS, "purchase_key": str(uuid4())})
+
+    @action(detail=False, methods=["post"], url_path="buy-offer-pack")
+    def buy_offer_pack(self, request):
+        company = self.company(request)
+        self.require_web(request)
+        if not bank_payments_available():
+            return bank_unavailable()
+        signer = str(request.data.get("signer_name") or "").strip()
+        if request.data.get("accept_notice") is not True or request.data.get("terms_version") != PACK_TERMS_VERSION or not 2 <= len(signer) <= 200:
+            raise ValidationError({"detail": "Lexoni dhe pranoni kushtet e paketës."})
+        try:
+            key = UUID(str(request.data.get("purchase_key", "")))
+        except ValueError:
+            raise ValidationError({"detail": "Rihapni kushtet e paketës."})
+        with transaction.atomic():
+            Company.objects.select_for_update().get(pk=company.pk)
+            purchase = OfferPackPurchase.objects.filter(purchase_key=key).first()
+            if purchase and purchase.charge.company_id != company.pk:
+                raise ValidationError({"detail": "Kërkesë e pavlefshme."})
+            if not purchase:
+                # Resume an unpaid pack rather than accidentally opening a second order.
+                purchase = OfferPackPurchase.objects.filter(charge__company=company, charge__status=PaymentStatus.PENDING).first()
+            if not purchase:
+                charge = PlatformCharge.objects.create(payer=request.user, company=company,
+                    kind=PlatformCharge.Kind.OFFER_PACK, regular_amount=PACK_PRICE, amount=PACK_PRICE)
+                purchase = OfferPackPurchase.objects.create(charge=charge, purchase_key=key,
+                    offers=PACK_OFFERS, signer_name=signer, terms_version=PACK_TERMS_VERSION, terms_text=PACK_TERMS)
+            charge = purchase.charge
+        return self.checkout(request, charge)
 
     @action(detail=False, methods=["get"])
     def credits(self, request):
@@ -135,6 +174,9 @@ class BillingViewSet(viewsets.ViewSet):
             agreements = [{"subscription_id": a.subscription_id, "text": a.text, "version": a.version,
                            "signer_name": a.signer_name, "signed_at": a.signed_at, "sha256": a.sha256}
                           for a in SubscriptionAgreement.objects.filter(subscription__company=company).order_by("-signed_at")]
+            agreements += [{"text": p.terms_text, "version": p.terms_version, "signer_name": p.signer_name,
+                            "signed_at": p.signed_at, "sha256": hashlib.sha256(p.terms_text.encode()).hexdigest()}
+                           for p in OfferPackPurchase.objects.filter(charge__company=company).order_by("-signed_at")]
             if not sub:
                 return Response({"overview": subscription_overview(company), "subscription": None, "agreements": agreements, "plan_changes": plan_changes, "free_offers_remaining": company.free_offers_remaining})
             ensure_periods(sub)

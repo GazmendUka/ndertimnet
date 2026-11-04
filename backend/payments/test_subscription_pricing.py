@@ -78,7 +78,8 @@ class SubscriptionPricingTests(BillingFixture, APITestCase):
         self.assertEqual(first.amount, Decimal('29.00'))
         self.assertEqual(first.status, 'paid')
 
-    def test_cancel_stops_at_current_boundary(self):
+    @patch("payments.billing.timezone.now", return_value=datetime(2026, 10, 15, tzinfo=utc.utc))
+    def test_cancel_stops_at_current_boundary(self, clock):
         sub = self.sub(start=datetime(2026, 10, 1, tzinfo=utc.utc))
         response = self.client.post('/api/billing/cancel-subscription/')
         self.assertEqual(response.status_code, 200)
@@ -87,7 +88,8 @@ class SubscriptionPricingTests(BillingFixture, APITestCase):
         ensure_periods(sub, datetime(2027, 2, 1, tzinfo=utc.utc))
         self.assertEqual(sub.periods.count(), 1)
 
-    def test_plan_change_deferred_with_consent_and_period_snapshots(self):
+    @patch("payments.billing.timezone.now", return_value=datetime(2026, 10, 15, tzinfo=utc.utc))
+    def test_plan_change_deferred_with_consent_and_period_snapshots(self, clock):
         sub = self.sub(start=datetime(2026, 10, 1, tzinfo=utc.utc))
         body = {'plan': 'pro', 'signer_name': 'Test Person', 'terms_version': VERSION, 'accept_notice': True}
         self.assertEqual(self.client.post('/api/billing/change-plan/', {**body, 'accept_notice': False}).status_code, 400)

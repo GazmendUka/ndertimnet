@@ -145,8 +145,10 @@ def offer_billing_state(offer):
     credit_available = credit and not settled and not historical and not pending
     introductory = not credit_available and free_remaining > 0 and not settled and not historical and not pending
     period = available_period(offer.company) if not settled and not historical and not introductory and not credit_available and not pending else None
-    ready = settled or historical or introductory or credit_available or bool(period)
-    return {"credit_available": credit_available, "credits_remaining": credits.count(),
+    from .offer_packs import pack_remaining
+    purchased_remaining = pack_remaining(offer.company)
+    ready = settled or historical or introductory or credit_available or bool(period) or purchased_remaining > 0
+    return {"purchased_offers_remaining": purchased_remaining, "credit_available": credit_available, "credits_remaining": credits.count(),
             "billing_total": str(total), "fee": "0.00", "total_fee": "0.00",
             "already_paid": str(sum((c.amount for c in charges.filter(status=PaymentStatus.PAID)), Decimal("0.00"))),
             "adjustment": False, "currency": "EUR", "paid": settled,
@@ -176,14 +178,16 @@ def authorize_offer_send(offer, payer):
     credit = OfferCredit.objects.select_for_update().filter(company=company, redeemed_offer__isnull=True).exclude(source_offer__job_request_id=offer.job_request_id).order_by("created_at", "pk").first()
     introductory = not credit and company.free_offers_remaining > 0
     period = None if introductory or credit else available_period(company)
-    if not credit and not introductory and not period:
-        raise ValidationError({"detail": "Zgjidhni një abonim ose prisni rinovimin e kuotës përpara dërgimit.",
+    from .offer_packs import available_packs
+    pack = available_packs(company).select_for_update().first() if not credit and not introductory and not period else None
+    if not credit and not introductory and not period and not pack:
+        raise ValidationError({"detail": "Zgjidhni një paketë, një abonim ose prisni rinovimin e kuotës përpara dërgimit.",
                                "code": "subscription_quota_required"})
     PlatformCharge.objects.update_or_create(offer=offer, kind=PlatformCharge.Kind.OFFER, defaults={
         "payer": payer, "company": offer.company,
         "regular_amount": Decimal("0.00"), "discount_amount": Decimal("0.00"),
         "amount": Decimal("0.00"), "quoted_price": total, "status": PaymentStatus.PAID,
-        "included_in_period": period, "paid_at": timezone.now(), "fulfilled_at": timezone.now(),
+        "included_in_period": period, "included_in_pack": pack, "paid_at": timezone.now(), "fulfilled_at": timezone.now(),
     })
     if credit:
         credit.redeemed_offer = offer
@@ -192,6 +196,9 @@ def authorize_offer_send(offer, payer):
     elif introductory:
         company.free_offers_remaining -= 1
         company.save(update_fields=["free_offers_remaining"])
+    elif pack:
+        pack.offers_used += 1
+        pack.save(update_fields=["offers_used"])
     else:
         period.offers_used += 1
         period.save(update_fields=["offers_used"])
@@ -247,7 +254,9 @@ def subscription_overview(company, subscription=None):
         state = 'ending'
     else:
         state = 'active'
+    from .offer_packs import pack_remaining
     return {
+        'purchased_offers_remaining': pack_remaining(company),
         'state': state, 'collection': 'monthly_hosted_checkout',
         'free_offers_remaining': company.free_offers_remaining,
         'introductory_offers_granted': company.introductory_offers_granted,

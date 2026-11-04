@@ -22,13 +22,14 @@ export function ListingPrice() {
 }
 
 export function PricingPlans({ catalog, onSelect, disabled = false }) {
-  return <div className="grid gap-4 sm:grid-cols-2">{catalog?.plans.map(plan => <article key={plan.code} className="rounded-xl border p-5">
+  const options = [...(catalog?.offer_pack ? [{ ...catalog.offer_pack, one_time: true, monthly_price: catalog.offer_pack.price, regular_price: catalog.offer_pack.price }] : []), ...(catalog?.plans || [])];
+  return <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{options.map(plan => <article key={plan.code} className="rounded-xl border p-5">
     <h3 className="text-xl font-semibold">{plan.name}</h3>
-    <p className="my-3 text-3xl font-semibold">{plan.monthly_price} €<span className="text-sm font-normal"> / muaj</span></p>
+    <p className="my-3 text-3xl font-semibold">{plan.monthly_price} €<span className="text-sm font-normal">{plan.one_time ? " / një herë" : " / muaj"}</span></p>
     {Number(plan.monthly_price) < Number(plan.regular_price) && <p>Çmim hyrës deri më 31 dhjetor 2026. Çmimi i rregullt: {plan.regular_price} €/muaj nga rinovimi i parë më ose pas 1 janarit 2027, edhe për abonentët ekzistues.</p>}
-    <p className="mt-3 font-semibold">{plan.offers} oferta në muaj</p>
-    <p>Pa afat detyrues. Pa pagesë për lead ose ofertë.</p>
-    <p className="text-sm mt-2">Ofertat e papërdorura nuk barten. Kontaktet dhe biseda hapen pasi dërgoni ofertën.</p>
+    <p className="mt-3 font-semibold">{plan.offers} oferta{plan.one_time ? " pa afat skadimi" : " në muaj"}</p>
+    <p>{plan.one_time ? "Blerje e vetme. Pa abonim dhe pa rinovim automatik." : "Pa afat detyrues. Pa pagesë për lead ose ofertë."}</p>
+    <p className="text-sm mt-2">{plan.one_time ? "Ofertat e blera mbeten derisa t’i përdorni." : "Ofertat e papërdorura nuk barten."} Kontaktet dhe biseda hapen pasi dërgoni ofertën.</p>
     {onSelect === null ? null : onSelect ? <button type="button" disabled={disabled} onClick={() => onSelect(plan)} className="premium-btn btn-dark mt-4 disabled:opacity-50">Zgjidh {plan.name}</button> : <Link className="premium-btn btn-dark mt-4" to="/register/company">Regjistro kompaninë</Link>}
   </article>)}</div>;
 }
@@ -59,7 +60,7 @@ export function OfferBilling({ offerId }) {
   return <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm" aria-label="Kuota e ofertës">
     <h3 className="font-semibold">Dërgimi i ofertës</h3>
     <p>Nuk ka pagesë për ofertë, lead ose bisedë. Rishikimet e një oferte të dërguar nuk konsumojnë kuotë tjetër.</p>
-    {quote && <p className="my-2 font-semibold">{quote.pending ? "Pagesa e mëparshme po verifikohet. Kontaktoni mbështetjen nëse vonesa vazhdon." : quote.paid || quote.legacy ? "Kjo ofertë është e përfshirë. Mund të nënshkruani dhe dërgoni." : quote.credit_available ? `Përdoret një kredit (${quote.credits_remaining} të mbetura).` : quote.introductory ? `Ju kanë mbetur ${quote.free_offers_remaining} oferta hyrëse falas.` : quote.included ? `Përfshihet në abonim: ${quote.remaining} oferta të mbetura këtë periudhë.` : "Kuota është shteruar. Nuk dërgohet ofertë tjetër pa kuotë të re. Nuk aktivizohet abonim automatik."}</p>}
+    {quote && <p className="my-2 font-semibold">{quote.pending ? "Pagesa e mëparshme po verifikohet. Kontaktoni mbështetjen nëse vonesa vazhdon." : quote.paid || quote.legacy ? "Kjo ofertë është e përfshirë. Mund të nënshkruani dhe dërgoni." : quote.credit_available ? `Përdoret një kredit (${quote.credits_remaining} të mbetura).` : quote.introductory ? `Ju kanë mbetur ${quote.free_offers_remaining} oferta hyrëse falas.` : quote.included ? `Përfshihet në abonim: ${quote.remaining} oferta të mbetura këtë periudhë.` : quote.purchased_offers_remaining > 0 ? `Paketa e blerë: ${quote.purchased_offers_remaining} oferta të mbetura, pa afat skadimi.` : "Kuota është shteruar. Nuk dërgohet ofertë tjetër pa kuotë të re. Nuk aktivizohet abonim automatik."}</p>}
     {error && <p role="alert" className="text-red-700">{error}</p>}
     <p className="mt-2">Kontaktet dhe biseda hapen pasi nënshkruani dhe dërgoni ofertën.</p>
     <button type="button" onClick={refresh} className="underline mt-2 mr-4">Përditëso statusin</button>
@@ -112,13 +113,14 @@ export function SubscriptionBilling() {
   };
   const select = async plan => {
     setBusy(true); setError(""); setSelected(plan); setTerms(null); setAccepted(false);
-    try { setTerms((await billingService.terms(plan.code)).data); }
+    try { setTerms((await (plan.one_time ? billingService.packTerms() : billingService.terms(plan.code))).data); }
     catch (e) { setError(errorText(e)); } finally { setBusy(false); }
   };
   const sub = data?.subscription;
   const overview = data?.overview;
   const active = sub && (!sub.ends_at || new Date(sub.ends_at) > new Date());
   const changing = active && sub.started_at && !sub.canceled_at;
+  const changingSubscription = changing && !selected?.one_time;
   return <section className="premium-section mt-4 space-y-4">
     <h2 className="text-xl font-semibold">Ofertat dhe abonimi</h2>
     {catalog?.bank_payments_available === false && <p role="status">Pagesat bankare nuk janë aktivizuar ende. Mund të përdorni ofertat falas dhe kreditet tuaja.</p>}
@@ -130,6 +132,7 @@ export function SubscriptionBilling() {
     {overview && <div aria-label="Përmbledhja e pagesave" className="space-y-2">
       <p>Kuota e disponueshme: <strong>{overview.monthly_offers_remaining} / {overview.monthly_offers_total}</strong>{overview.period_ends_at && ` · Deri më ${date(overview.period_ends_at)}`}</p>
       <OfferAllowanceSummary overview={overview} />
+      <p>Oferta të blera pa afat skadimi: <strong>{overview.purchased_offers_remaining || 0}</strong></p>
       <p>Kredite kompensimi: {overview.credits_remaining}. Përdoren përpara ofertave falas dhe kuotës.</p>
       {overview.next_payment_amount && <p>Pagesa e radhës: <strong>{overview.next_payment_amount} €</strong> · {date(overview.next_payment_due_at)}. Pagesë manuale në bankë.</p>}
       {Number(overview.outstanding_amount) > 0 && <p role="status">Pagesa të papaguara: {overview.outstanding_amount} €. Kuota kërkon shlyerjen e periudhave të kaluara.</p>}
@@ -146,20 +149,22 @@ export function SubscriptionBilling() {
     <p>Pa afat detyrues. Pa pagesë për lead ose ofertë. Ofertat rinovohen çdo muaj dhe nuk barten.</p>
     {changing && <p>Ndryshimi i planit zbatohet në periudhën tjetër. Kuota dhe çmimi i periudhës aktuale ruhen.</p>}
     {(!active || changing) && <PricingPlans catalog={catalog} onSelect={isNativeBilling() ? null : select} disabled={busy || (!changing && catalog?.bank_payments_available === false)} />}
+    {active && !changing && catalog?.offer_pack && <PricingPlans catalog={{ ...catalog, plans: [] }} onSelect={isNativeBilling() ? null : select} disabled={busy || catalog.bank_payments_available === false} />}
     {isNativeBilling() && <p>Blerjet në aplikacion nuk janë aktivizuar ende.</p>}
     {selected && !terms && busy && <p role="status">Po ngarkohet marrëveshja…</p>}
     {selected && terms && <div ref={agreementRef} tabIndex={-1} aria-label="Konfirmimi i abonimit" className="rounded-xl border p-4 space-y-3 scroll-mt-24">
       <h3 className="font-semibold">Lexoni dhe nënshkruani marrëveshjen për {selected.name}</h3>
+      <p className="font-semibold">{selected.name}: {selected.monthly_price} €{selected.one_time ? " · pagesë e vetme, pa afat skadimi" : " / muaj"}</p>
       <p>Hapi 2: Lexoni marrëveshjen, shkruani emrin dhe jepni pëlqimin. Pastaj vazhdoni te banka për pagesë.</p>
       <pre className="whitespace-pre-wrap font-sans text-sm">{terms.text}</pre>
       <label className="block">Emri i plotë i përfaqësuesit<input value={signer} maxLength={200} onChange={e => setSigner(e.target.value)} className="block border rounded p-2 w-full" /></label>
-      <label className="flex gap-2"><input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} />Jam i autorizuar dhe pranoj marrëveshjen e abonimit.</label>
-      <button disabled={busy || !accepted || signer.trim().length < 2} className="premium-btn btn-dark" onClick={() => run(() => changing ? billingService.changePlan(selected.code, signer.trim(), terms.version) : billingService.subscribe(selected.code, signer.trim(), terms.version))}>{changing ? "Konfirmo ndryshimin për periudhën tjetër" : "Nënshkruaj dhe vazhdo te pagesa"}</button>
+      <label className="flex gap-2"><input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} />Jam i autorizuar dhe pranoj {selected.one_time ? "kushtet e paketës." : "marrëveshjen e abonimit."}</label>
+      <button disabled={busy || !accepted || signer.trim().length < 2} className="premium-btn btn-dark" onClick={() => run(() => selected.one_time ? billingService.buyPack(signer.trim(), terms.version, terms.purchase_key) : changingSubscription ? billingService.changePlan(selected.code, signer.trim(), terms.version) : billingService.subscribe(selected.code, signer.trim(), terms.version))}>{changingSubscription ? "Konfirmo ndryshimin për periudhën tjetër" : "Nënshkruaj dhe vazhdo te pagesa"}</button>
     </div>}
     <button onClick={refresh} disabled={busy} className="underline">Përditëso pagesat</button>
-    <h3 className="font-semibold">Pagesa mujore të papaguara</h3>
+    <h3 className="font-semibold">Pagesa të papaguara</h3>
     <p>Pagesa mujore kryhet manualisht. Nuk bëhet tërheqje automatike nga karta.</p>
-    {charges.filter(c => c.kind === "subscription" && c.payable).map(c => <div key={c.id} className="border rounded p-3"><p>{date(c.period_starts_at)} – {date(c.period_ends_at)} · {c.amount} €</p>{!isNativeBilling() && <button disabled={busy || catalog?.bank_payments_available === false} className="premium-btn btn-dark" onClick={() => run(() => billingService.checkout(c.id))}>Paguaj {c.amount} €</button>}</div>)}
+    {charges.filter(c => ["subscription", "offer_pack"].includes(c.kind) && c.payable).map(c => <div key={c.id} className="border rounded p-3"><p>{c.kind === "offer_pack" ? "Paketa 3 oferta · pagesë e vetme" : `${c.plan_code === "standard" ? "Standard" : c.plan_code === "pro" ? "Pro" : "Abonimi"} · ${date(c.period_starts_at)} – ${date(c.period_ends_at)}`} · {c.amount} €</p>{!isNativeBilling() && <button disabled={busy || catalog?.bank_payments_available === false} className="premium-btn btn-dark" onClick={() => run(() => billingService.checkout(c.id))}>Paguaj {c.amount} €</button>}</div>)}
     <h3 className="font-semibold">Marrëveshjet e mia</h3>
     {[...(data?.agreements || []), ...(data?.plan_changes || [])].map((a, i) => <details key={i}><summary>Marrëveshja · {date(a.signed_at)}</summary><p>Nënshkruar nga {a.signer_name}</p><pre className="whitespace-pre-wrap font-sans text-sm">{a.text}</pre><a className="underline" download={`marreveshja-${i}.txt`} href={`data:text/plain;charset=utf-8,${encodeURIComponent(`${a.text}\nNënshkruar: ${a.signer_name}\nData: ${a.signed_at}\nSHA-256: ${a.sha256}`)}`}>Shkarko kopjen</a></details>)}
     <h3 className="font-semibold">Pagesat e platformës</h3>

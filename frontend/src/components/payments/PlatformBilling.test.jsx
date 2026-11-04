@@ -3,7 +3,7 @@ import { ListingPrice, OfferBilling, SubscriptionBilling, PublicationBilling, Pu
 import { billingService, isNativeBilling } from "../../services/billingService";
 jest.mock("react-router-dom", () => ({ Link: ({ children, to }) => <a href={to}>{children}</a> }));
 jest.mock("../../platform/mobile", () => ({ openPaymentUrl: jest.fn() }));
-jest.mock("../../services/billingService", () => ({ isNativeBilling: jest.fn(), billingService: { catalog: jest.fn(), history: jest.fn(), subscription: jest.fn(), offerQuote: jest.fn(), subscribe: jest.fn(), terms: jest.fn(), cancel: jest.fn(), changePlan: jest.fn(), checkout: jest.fn() } }));
+jest.mock("../../services/billingService", () => ({ isNativeBilling: jest.fn(), billingService: { catalog: jest.fn(), history: jest.fn(), subscription: jest.fn(), offerQuote: jest.fn(), subscribe: jest.fn(), terms: jest.fn(), packTerms: jest.fn(), buyPack: jest.fn(), cancel: jest.fn(), changePlan: jest.fn(), checkout: jest.fn() } }));
 const plans = [{ code: "standard", name: "Standard", monthly_price: "29.00", regular_price: "49.00", offers: 10 }, { code: "pro", name: "Pro", monthly_price: "59.00", regular_price: "79.00", offers: 30 }];
 beforeEach(() => {
  jest.clearAllMocks(); isNativeBilling.mockReturnValue(false);
@@ -84,4 +84,27 @@ test("checkout failure refreshes persisted subscription and keeps visible error"
  expect(await screen.findByRole("alert")).toHaveTextContent("Bank checkout unavailable");
  expect(screen.getByText(/Abonimi nuk është aktivizuar ende/)).toBeInTheDocument();
  expect(screen.queryByRole("button", { name: "Zgjidh Pro" })).not.toBeInTheDocument();
+});
+
+
+test("one time pack shows 19.95 and purchases separately from subscriptions", async () => {
+ billingService.catalog.mockResolvedValue({ data: { bank_payments_available: true, plans, offer_pack: { code: "offers_3", name: "Paketa 3 oferta", price: "19.95", offers: 3 } } });
+ billingService.packTerms.mockResolvedValue({ data: { text: "Pa afat skadimi", version: "pack-v1", purchase_key: "synthetic-key" } });
+ billingService.buyPack.mockResolvedValue({ data: {} });
+ render(<SubscriptionBilling />);
+ fireEvent.click(await screen.findByRole("button", { name: "Zgjidh Paketa 3 oferta" }));
+ expect(await screen.findByText(/Paketa 3 oferta: 19.95/)).toBeInTheDocument();
+ fireEvent.change(screen.getByLabelText("Emri i plotë i përfaqësuesit"), { target: { value: "Test Person" } });
+ fireEvent.click(screen.getByRole("checkbox"));
+ fireEvent.click(screen.getByRole("button", { name: "Nënshkruaj dhe vazhdo te pagesa" }));
+ await waitFor(() => expect(billingService.buyPack).toHaveBeenCalledWith("Test Person", "pack-v1", "synthetic-key"));
+ expect(billingService.subscribe).not.toHaveBeenCalled();
+ expect(billingService.changePlan).not.toHaveBeenCalled();
+});
+
+test("standard consent displays its own 29 euro price", async () => {
+ render(<SubscriptionBilling />);
+ fireEvent.click(await screen.findByRole("button", { name: "Zgjidh Standard" }));
+ expect(await screen.findByText("Standard: 29.00 € / muaj")).toBeInTheDocument();
+ expect(screen.queryByText("Pro: 59.00 € / muaj")).not.toBeInTheDocument();
 });
