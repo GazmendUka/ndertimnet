@@ -19,7 +19,7 @@ test("public tiers use catalog price, quotas, deadline and no per-offer fee", as
  expect(screen.getByText(/30 oferta në muaj/)).toBeInTheDocument();
  expect(screen.getByText(/49.00.*1 janarit 2027/)).toBeInTheDocument();
  expect(screen.getByText(/79.00.*1 janarit 2027/)).toBeInTheDocument();
- expect(screen.getAllByText(/Pa afat detyrues. Pa pagesë/)).toHaveLength(2);
+ expect(screen.getAllByText(/Pagesë mujore. Pa afat detyrues./)).toHaveLength(2);
 });
 test("regular prices hide expired promotion", async () => {
  billingService.catalog.mockResolvedValue({ data: { plans: plans.map(p => ({ ...p, monthly_price: p.regular_price })) } });
@@ -92,8 +92,8 @@ test("one time pack shows 19.95 and purchases separately from subscriptions", as
  billingService.packTerms.mockResolvedValue({ data: { text: "Pa afat skadimi", version: "pack-v1", purchase_key: "synthetic-key" } });
  billingService.buyPack.mockResolvedValue({ data: {} });
  render(<SubscriptionBilling />);
- fireEvent.click(await screen.findByRole("button", { name: "Zgjidh Paketa 3 oferta" }));
- expect(await screen.findByText(/Paketa 3 oferta: 19.95/)).toBeInTheDocument();
+ fireEvent.click(await screen.findByRole("button", { name: "Zgjidh Bazë" }));
+ expect(await screen.findByText(/Bazë: 19.95/)).toBeInTheDocument();
  fireEvent.change(screen.getByLabelText("Emri i plotë i përfaqësuesit"), { target: { value: "Test Person" } });
  fireEvent.click(screen.getByRole("checkbox"));
  fireEvent.click(screen.getByRole("button", { name: "Nënshkruaj dhe vazhdo te pagesa" }));
@@ -107,4 +107,22 @@ test("standard consent displays its own 29 euro price", async () => {
  fireEvent.click(await screen.findByRole("button", { name: "Zgjidh Standard" }));
  expect(await screen.findByText("Standard: 29.00 € / muaj")).toBeInTheDocument();
  expect(screen.queryByText("Pro: 59.00 € / muaj")).not.toBeInTheDocument();
+});
+
+
+test("canceled test price is folded into history and is not a payable purchase", async () => {
+ billingService.history.mockResolvedValue({ data: [{ id: 5, kind: "subscription", type_display: "Abonimi mujor", amount: "59.00", status: "canceled", payable: false, created_at: "2026-11-04" }] });
+ render(<SubscriptionBilling />);
+ await screen.findByText("Historiku i pagesave (1)");
+ expect(screen.getByRole("group", { name: "Historiku i pagesave" })).not.toHaveAttribute("open");
+ expect(screen.queryByRole("button", { name: "Paguaj 59.00 €" })).not.toBeInTheDocument();
+ expect(screen.queryByText("Pagesa në pritje të përfundimit")).not.toBeInTheDocument();
+ expect(screen.getByRole("button", { name: "Përditëso statusin" })).toBeInTheDocument();
+});
+
+test("unfinished purchase remains available outside folded history", async () => {
+ billingService.history.mockResolvedValue({ data: [{ id: 6, kind: "offer_pack", type_display: "Paketa", amount: "19.95", status: "pending", payable: true }] });
+ render(<SubscriptionBilling />);
+ expect(await screen.findByRole("button", { name: "Paguaj 19.95 €" })).toBeVisible();
+ expect(screen.getByText("Pagesa në pritje të përfundimit")).toBeVisible();
 });

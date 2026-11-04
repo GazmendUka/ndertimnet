@@ -22,15 +22,17 @@ export function ListingPrice() {
 }
 
 export function PricingPlans({ catalog, onSelect, disabled = false }) {
-  const options = [...(catalog?.offer_pack ? [{ ...catalog.offer_pack, one_time: true, monthly_price: catalog.offer_pack.price, regular_price: catalog.offer_pack.price }] : []), ...(catalog?.plans || [])];
-  return <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{options.map(plan => <article key={plan.code} className="rounded-xl border p-5">
+  const options = [...(catalog?.offer_pack ? [{ ...catalog.offer_pack, name: "Bazë", one_time: true, monthly_price: catalog.offer_pack.price, regular_price: catalog.offer_pack.price }] : []), ...(catalog?.plans || [])];
+  return <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{options.map(plan => <article key={plan.code} className="rounded-xl border p-5 flex flex-col">
     <h3 className="text-xl font-semibold">{plan.name}</h3>
     <p className="my-3 text-3xl font-semibold">{plan.monthly_price} €<span className="text-sm font-normal">{plan.one_time ? " / një herë" : " / muaj"}</span></p>
-    {Number(plan.monthly_price) < Number(plan.regular_price) && <p>Çmim hyrës deri më 31 dhjetor 2026. Çmimi i rregullt: {plan.regular_price} €/muaj nga rinovimi i parë më ose pas 1 janarit 2027, edhe për abonentët ekzistues.</p>}
     <p className="mt-3 font-semibold">{plan.offers} oferta{plan.one_time ? " pa afat skadimi" : " në muaj"}</p>
-    <p>{plan.one_time ? "Blerje e vetme. Pa abonim dhe pa rinovim automatik." : "Pa afat detyrues. Pa pagesë për lead ose ofertë."}</p>
+    <div className="flex-1 space-y-2 mt-2 mb-4">
+    <p>{plan.one_time ? "Pagesë e vetme. Pa abonim automatik." : "Pagesë mujore. Pa afat detyrues."}</p>
+    {Number(plan.monthly_price) < Number(plan.regular_price) && <details className="text-sm"><summary className="cursor-pointer underline">Çmimi hyrës dhe rinovimi</summary><p>Çmim hyrës deri më 31 dhjetor 2026. Çmimi i rregullt: {plan.regular_price} €/muaj nga rinovimi i parë më ose pas 1 janarit 2027, edhe për abonentët ekzistues.</p></details>}
     <p className="text-sm mt-2">{plan.one_time ? "Ofertat e blera mbeten derisa t’i përdorni." : "Ofertat e papërdorura nuk barten."} Kontaktet dhe biseda hapen pasi dërgoni ofertën.</p>
-    {onSelect === null ? null : onSelect ? <button type="button" disabled={disabled} onClick={() => onSelect(plan)} className="premium-btn btn-dark mt-4 disabled:opacity-50">Zgjidh {plan.name}</button> : <Link className="premium-btn btn-dark mt-4" to="/register/company">Regjistro kompaninë</Link>}
+    </div>
+    {onSelect === null ? null : onSelect ? <button type="button" disabled={disabled} onClick={() => onSelect(plan)} className="premium-btn btn-dark mt-auto self-start disabled:opacity-50">Zgjidh {plan.name}</button> : <Link className="premium-btn btn-dark mt-4" to="/register/company">Regjistro kompaninë</Link>}
   </article>)}</div>;
 }
 
@@ -122,7 +124,7 @@ export function SubscriptionBilling() {
   const changing = active && sub.started_at && !sub.canceled_at;
   const changingSubscription = changing && !selected?.one_time;
   return <section className="premium-section mt-4 space-y-4">
-    <h2 className="text-xl font-semibold">Ofertat dhe abonimi</h2>
+    <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-semibold">Ofertat dhe abonimi</h2><button type="button" onClick={refresh} disabled={busy} className="text-sm underline">Përditëso statusin</button></div>
     {catalog?.bank_payments_available === false && <p role="status">Pagesat bankare nuk janë aktivizuar ende. Mund të përdorni ofertat falas dhe kreditet tuaja.</p>}
     <div ref={feedbackRef} aria-live="polite" aria-atomic="true">
       {busy && <p role="status">Ju lutemi prisni. Po përgatitet hapi tjetër…</p>}
@@ -146,7 +148,7 @@ export function SubscriptionBilling() {
       </>}
       {sub.periods.map(p => <p key={p.id}>{date(p.starts_at)} – {date(p.ends_at)} · {p.offers_used}/{p.monthly_offers} oferta · {statusLabel(p.charge.status)} · {p.charge.amount} €</p>)}
     </div>}
-    <p>Pa afat detyrues. Pa pagesë për lead ose ofertë. Ofertat rinovohen çdo muaj dhe nuk barten.</p>
+    <p>Zgjidhni një paketë me pagesë të vetme ose një abonim mujor.</p>
     {changing && <p>Ndryshimi i planit zbatohet në periudhën tjetër. Kuota dhe çmimi i periudhës aktuale ruhen.</p>}
     {(!active || changing) && <PricingPlans catalog={catalog} onSelect={isNativeBilling() ? null : select} disabled={busy || (!changing && catalog?.bank_payments_available === false)} />}
     {active && !changing && catalog?.offer_pack && <PricingPlans catalog={{ ...catalog, plans: [] }} onSelect={isNativeBilling() ? null : select} disabled={busy || catalog.bank_payments_available === false} />}
@@ -161,14 +163,16 @@ export function SubscriptionBilling() {
       <label className="flex gap-2"><input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} />Jam i autorizuar dhe pranoj {selected.one_time ? "kushtet e paketës." : "marrëveshjen e abonimit."}</label>
       <button disabled={busy || !accepted || signer.trim().length < 2} className="premium-btn btn-dark" onClick={() => run(() => selected.one_time ? billingService.buyPack(signer.trim(), terms.version, terms.purchase_key) : changingSubscription ? billingService.changePlan(selected.code, signer.trim(), terms.version) : billingService.subscribe(selected.code, signer.trim(), terms.version))}>{changingSubscription ? "Konfirmo ndryshimin për periudhën tjetër" : "Nënshkruaj dhe vazhdo te pagesa"}</button>
     </div>}
-    <button onClick={refresh} disabled={busy} className="underline">Përditëso pagesat</button>
-    <h3 className="font-semibold">Pagesa të papaguara</h3>
-    <p>Pagesa mujore kryhet manualisht. Nuk bëhet tërheqje automatike nga karta.</p>
-    {charges.filter(c => ["subscription", "offer_pack"].includes(c.kind) && c.payable).map(c => <div key={c.id} className="border rounded p-3"><p>{c.kind === "offer_pack" ? "Paketa 3 oferta · pagesë e vetme" : `${c.plan_code === "standard" ? "Standard" : c.plan_code === "pro" ? "Pro" : "Abonimi"} · ${date(c.period_starts_at)} – ${date(c.period_ends_at)}`} · {c.amount} €</p>{!isNativeBilling() && <button disabled={busy || catalog?.bank_payments_available === false} className="premium-btn btn-dark" onClick={() => run(() => billingService.checkout(c.id))}>Paguaj {c.amount} €</button>}</div>)}
-    <h3 className="font-semibold">Marrëveshjet e mia</h3>
+    {charges.some(c => ["subscription", "offer_pack"].includes(c.kind) && c.payable) && <div className="space-y-3"><h3 className="font-semibold">Pagesa në pritje të përfundimit</h3><p>Vazhdoni pagesën në faqen e bankës. Nuk bëhet tërheqje automatike nga karta.</p>}
+    {charges.filter(c => ["subscription", "offer_pack"].includes(c.kind) && c.payable).map(c => <div key={c.id} className="border rounded p-3"><p>{c.kind === "offer_pack" ? "Bazë · 3 oferta · pagesë e vetme" : `${c.plan_code === "standard" ? "Standard" : c.plan_code === "pro" ? "Pro" : "Abonimi"} · ${date(c.period_starts_at)} – ${date(c.period_ends_at)}`} · {c.amount} €</p>{!isNativeBilling() && <button disabled={busy || catalog?.bank_payments_available === false} className="premium-btn btn-dark" onClick={() => run(() => billingService.checkout(c.id))}>Paguaj {c.amount} €</button>}</div>)}
+    </div>}
+    {Boolean(data?.agreements?.length || data?.plan_changes?.length) && <h3 className="font-semibold">Marrëveshjet e mia</h3>}
     {[...(data?.agreements || []), ...(data?.plan_changes || [])].map((a, i) => <details key={i}><summary>Marrëveshja · {date(a.signed_at)}</summary><p>Nënshkruar nga {a.signer_name}</p><pre className="whitespace-pre-wrap font-sans text-sm">{a.text}</pre><a className="underline" download={`marreveshja-${i}.txt`} href={`data:text/plain;charset=utf-8,${encodeURIComponent(`${a.text}\nNënshkruar: ${a.signer_name}\nData: ${a.signed_at}\nSHA-256: ${a.sha256}`)}`}>Shkarko kopjen</a></details>)}
-    <h3 className="font-semibold">Pagesat e platformës</h3>
-    {charges.map(c => <p key={c.id}>{c.type_display} · {c.amount} € · {statusLabel(c.status)} {c.receipt_number && `· ${c.receipt_number}`}</p>)}
+    {charges.length > 0 && <details aria-label="Historiku i pagesave" className="border-t pt-4">
+      <summary className="cursor-pointer font-semibold">Historiku i pagesave ({charges.length})</summary>
+      <p className="text-sm mt-2">Këtu shfaqen pagesat dhe përpjekjet e mëparshme, përfshirë ato të anuluara. Nuk janë çmime për një blerje të re.</p>
+      {charges.map(c => <p key={c.id} className="mt-2">{date(c.created_at)} · {c.type_display} · {c.amount} € · {statusLabel(c.status)} {c.status === "canceled" && "· Blerja është anuluar."} {c.receipt_number && `· ${c.receipt_number}`}</p>)}
+    </details>}
   </section>;
 }
 
