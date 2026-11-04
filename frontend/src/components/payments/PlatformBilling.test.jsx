@@ -3,9 +3,10 @@ import { ListingPrice, OfferBilling, SubscriptionBilling, PublicationBilling, Pu
 import { billingService, isNativeBilling } from "../../services/billingService";
 jest.mock("react-router-dom", () => ({ Link: ({ children, to }) => <a href={to}>{children}</a> }));
 jest.mock("../../platform/mobile", () => ({ openPaymentUrl: jest.fn() }));
-jest.mock("../../services/billingService", () => ({ isNativeBilling: jest.fn(), billingService: { catalog: jest.fn(), history: jest.fn(), subscription: jest.fn(), offerQuote: jest.fn(), subscribe: jest.fn(), terms: jest.fn(), packTerms: jest.fn(), buyPack: jest.fn(), cancel: jest.fn(), changePlan: jest.fn(), checkout: jest.fn() } }));
+jest.mock("../../services/billingService", () => ({ isNativeBilling: jest.fn(), billingService: { catalog: jest.fn(), refreshStatus: jest.fn(), history: jest.fn(), subscription: jest.fn(), offerQuote: jest.fn(), subscribe: jest.fn(), terms: jest.fn(), packTerms: jest.fn(), buyPack: jest.fn(), cancel: jest.fn(), changePlan: jest.fn(), checkout: jest.fn() } }));
 const plans = [{ code: "standard", name: "Standard", monthly_price: "29.00", regular_price: "49.00", offers: 10 }, { code: "pro", name: "Pro", monthly_price: "59.00", regular_price: "79.00", offers: 30 }];
 beforeEach(() => {
+ billingService.refreshStatus.mockResolvedValue({ data: {} });
  jest.clearAllMocks(); isNativeBilling.mockReturnValue(false);
  billingService.catalog.mockResolvedValue({ data: { bank_payments_available: true, plans, listing: { regular_price: "3.95", discount: "3.95", payable: "0.00", introductory_free: true } } });
  billingService.subscription.mockResolvedValue({ data: { subscription: null } });
@@ -125,4 +126,12 @@ test("unfinished purchase remains available outside folded history", async () =>
  render(<SubscriptionBilling />);
  expect(await screen.findByRole("button", { name: "Paguaj 19.95 €" })).toBeVisible();
  expect(screen.getByText("Pagesa në pritje të përfundimit")).toBeVisible();
+});
+
+test("payment refresh verifies bank before loading balances", async () => {
+ render(<SubscriptionBilling />); await screen.findByText("Standard");
+ expect(billingService.refreshStatus).toHaveBeenCalledTimes(1);
+ expect(billingService.refreshStatus.mock.invocationCallOrder[0]).toBeLessThan(billingService.history.mock.invocationCallOrder[0]);
+ fireEvent.click(screen.getByRole("button", { name: "Përditëso statusin" }));
+ await waitFor(() => expect(billingService.refreshStatus).toHaveBeenCalledTimes(2));
 });

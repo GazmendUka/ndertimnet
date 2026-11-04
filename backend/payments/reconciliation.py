@@ -40,6 +40,8 @@ def apply_verified_transaction(attempt_id, transaction_id, details, *, terminal_
             raise VerificationError("Order verification unavailable") from exc
         if not isinstance(order, dict) or order.get("orderIdentification") != candidate.order_id or str(order.get("status", "")).upper() not in FAILED_STATUSES | CANCELED_STATUSES:
             return "Pending"
+        if str(order.get("status", "")).upper() in CANCELED_STATUSES:
+            return apply_verified_cancellation(candidate, order)
     try:
         with transaction.atomic():
             if candidate.charge.company_id:
@@ -78,6 +80,30 @@ def apply_verified_transaction(attempt_id, transaction_id, details, *, terminal_
     return "Verified"
 
 
+def apply_verified_cancellation(attempt, order):
+    """A terminal bank order can close a checkout even without a card transaction."""
+    merchant = order.get("merchant") or {}
+    if (order.get("orderIdentification") != attempt.order_id
+            or order.get("isProduction") is not (settings.RAIACCEPT_MODE == "production")
+            or not settings.RAIACCEPT_MERCHANT_ACCOUNT_ID
+            or merchant.get("merchantAccountId") != settings.RAIACCEPT_MERCHANT_ACCOUNT_ID):
+        raise VerificationError("Order verification failed")
+    if str(order.get("status", "")).upper() not in CANCELED_STATUSES:
+        return "Awaiting terminal bank order; reservation retained"
+    with transaction.atomic():
+        if attempt.charge.company_id:
+            Company.objects.select_for_update().get(pk=attempt.charge.company_id)
+        charge = PlatformCharge.objects.select_for_update().get(pk=attempt.charge_id)
+        current = PlatformCheckout.objects.select_for_update().get(pk=attempt.pk)
+        if current.status != PaymentStatus.PENDING or charge.status == PaymentStatus.PAID:
+            return "Already resolved"
+        current.status = PaymentStatus.CANCELED
+        current.save(update_fields=["status"])
+        charge.status = PaymentStatus.CANCELED
+        charge.save(update_fields=["status"])
+    return "Verified cancellation"
+
+
 def reconcile_checkout(attempt_id):
     attempt = PlatformCheckout.objects.get(pk=attempt_id)
     if attempt.status != PaymentStatus.PENDING:
@@ -90,7 +116,8 @@ def reconcile_checkout(attempt_id):
         rows = get_order_transactions(attempt.order_id)
         purchases = [r for r in rows if r.get("transactionType") == "PURCHASE"]
         if not purchases:
-            note = "Manual review: no purchase transaction; reservation retained"
+            order = get_order_details(attempt.order_id)
+            note = apply_verified_cancellation(attempt, order)
             return note
         verified = []
         for row in purchases:
@@ -114,7 +141,10 @@ def reconcile_checkout(attempt_id):
             matches = order.get("orderIdentification") == attempt.order_id
             if terminal and matches:
                 tid, details, _ = verified[-1]
-                note = apply_verified_transaction(attempt.pk, tid, details, terminal_order=order)
+                if str(order.get("status", "")).upper() in CANCELED_STATUSES:
+                    note = apply_verified_cancellation(attempt, order)
+                else:
+                    note = apply_verified_transaction(attempt.pk, tid, details, terminal_order=order)
             else:
                 note = "Awaiting terminal bank order; reservation retained"
     except (RaiAcceptError, VerificationError, TypeError, AttributeError):

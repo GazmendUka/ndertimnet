@@ -94,6 +94,7 @@ export function SubscriptionBilling() {
   }, [error, busy]);
   const refresh = useCallback(async () => {
     try {
+      await billingService.refreshStatus();
       const [a, b, c] = await Promise.all([billingService.catalog(), billingService.subscription(), billingService.history()]);
       setCatalog(a.data); setData(b.data); setCharges(c.data); setError("");
     } catch (e) { setError(errorText(e)); }

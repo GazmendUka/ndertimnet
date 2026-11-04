@@ -5,6 +5,7 @@ export const isNativeBilling = () => Capacitor.isNativePlatform();
 const platform = () => isNativeBilling() ? Capacitor.getPlatform() : "web";
 export const billingService = {
   catalog: () => api.get("billing/catalog/"),
+  refreshStatus: () => api.post("billing/refresh-status/"),
   history: () => api.get("billing/history/"),
   offerQuote: (offer) => api.get("billing/offer-quote/", { params: { offer } }),
   offerCheckout: (offer) => api.post("billing/offer-checkout/", { offer, platform: platform() }),

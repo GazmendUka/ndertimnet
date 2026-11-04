@@ -193,11 +193,13 @@ class HardeningTests(BillingFixture, APITestCase):
         reconcile_checkout(attempt.pk);attempt.refresh_from_db()
         self.assertEqual(attempt.status,'pending');self.assertIn('multiple successful',attempt.reconciliation_note)
 
+    @patch('payments.reconciliation.get_order_details')
     @patch('payments.reconciliation.get_order_transactions')
-    def test_empty_bank_response_does_not_release_reserved_place(self,transactions):
+    def test_empty_bank_response_does_not_release_reserved_place(self,transactions,order):
         attempt=self.pending();transactions.return_value=[]
+        order.return_value=self.bank_order(status='CHECKOUT')
         reconcile_checkout(attempt.pk);attempt.refresh_from_db()
-        self.assertEqual(attempt.status,'pending');self.assertIn('no purchase',attempt.reconciliation_note)
+        self.assertEqual(attempt.status,'pending');self.assertIn('reservation retained',attempt.reconciliation_note)
 
     @patch('payments.reconciliation.get_order_details')
     @patch('payments.billing_views.get_transaction_details')
@@ -207,3 +209,49 @@ class HardeningTests(BillingFixture, APITestCase):
         response=self.client.post('/api/billing/notify/',{'order':{'orderIdentification':'order1'},'transaction':{'transactionId':'tx1'}},format='json')
         self.assertEqual(response.status_code,200);self.assertEqual(response.data['detail'],'Pending')
         attempt.refresh_from_db();self.assertEqual(attempt.status,'pending')
+
+    def bank_order(self, **changes):
+        return {'orderIdentification':'order1', 'status':'CANCELED', 'isProduction':False,
+                'merchant':{'merchantAccountId':'merchant'}, **changes}
+
+    @patch('payments.reconciliation.get_order_details')
+    @patch('payments.reconciliation.get_order_transactions')
+    def test_cancel_without_card_transaction_and_refresh_is_idempotent(self, rows, order):
+        attempt=self.pending(); rows.return_value=[]; order.return_value=self.bank_order()
+        response=self.client.post('/api/billing/refresh-status/')
+        self.assertEqual(response.status_code,200)
+        attempt.refresh_from_db(); self.charge.refresh_from_db()
+        self.assertEqual(attempt.status,'canceled'); self.assertEqual(self.charge.status,'canceled')
+        self.assertEqual(reconcile_checkout(attempt.pk),'Already resolved')
+        self.assertEqual(rows.call_count,1)
+
+    @patch('payments.reconciliation.get_order_details')
+    @patch('payments.reconciliation.get_order_transactions')
+    def test_cancellation_rejects_wrong_merchant_environment_or_order(self, rows, order):
+        attempt=self.pending(); rows.return_value=[]
+        for changes in ({'merchant':{'merchantAccountId':'other'}}, {'isProduction':True}, {'orderIdentification':'other'}):
+            order.return_value=self.bank_order(**changes)
+            reconcile_checkout(attempt.pk); attempt.refresh_from_db()
+            self.assertEqual(attempt.status,'pending')
+
+    @patch('payments.reconciliation.get_order_details')
+    @patch('payments.reconciliation.get_transaction_details')
+    @patch('payments.reconciliation.get_order_transactions')
+    def test_declined_card_then_canceled_order_is_canceled(self, rows, details, order):
+        attempt=self.pending(); rows.return_value=[{'transactionType':'PURCHASE','transactionId':'tx1'}]
+        details.return_value=self.details(status='FAILED',statusCode='1000')
+        order.return_value=self.bank_order()
+        self.assertEqual(reconcile_checkout(attempt.pk),'Verified cancellation')
+        attempt.refresh_from_db(); self.assertEqual(attempt.status,'canceled')
+
+    @patch('payments.reconciliation.get_order_details')
+    @patch('payments.reconciliation.get_order_transactions')
+    def test_refresh_is_owner_scoped_and_recent_checks_are_throttled(self, rows, order):
+        self.pending(); rows.return_value=[]; order.return_value=self.bank_order(status='CHECKOUT')
+        self.client.force_authenticate(self.customer)
+        self.assertEqual(self.client.post('/api/billing/refresh-status/').status_code,403)
+        rows.assert_not_called()
+        self.client.force_authenticate(self.charge.payer)
+        self.assertEqual(self.client.post('/api/billing/refresh-status/').status_code,200)
+        self.assertEqual(self.client.post('/api/billing/refresh-status/').status_code,200)
+        self.assertEqual(rows.call_count,1)

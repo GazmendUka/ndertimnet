@@ -120,6 +120,21 @@ class BillingViewSet(viewsets.ViewSet):
                           "created_at": c.created_at, "redeemed_offer_id": c.redeemed_offer_id}
                          for c in OfferCredit.objects.filter(company=company).order_by("-created_at")])
 
+    @action(detail=False, methods=["post"], url_path="refresh-status")
+    def refresh_status(self, request):
+        from datetime import timedelta
+        from django.db.models import Q
+        from .reconciliation import reconcile_checkout
+        company = self.company(request)
+        cutoff = timezone.now() - timedelta(seconds=30)
+        attempts = PlatformCheckout.objects.filter(
+            charge__company=company, charge__payer=request.user,
+            status=PaymentStatus.PENDING,
+        ).filter(Q(last_checked_at__isnull=True) | Q(last_checked_at__lt=cutoff)).order_by("created_at")[:5]
+        for attempt in attempts:
+            reconcile_checkout(attempt.pk)
+        return Response({"detail": "Status checked"})
+
     @action(detail=False, methods=["get"])
     def history(self, request):
         return Response([charge_data(c) for c in PlatformCharge.objects.filter(payer=request.user).select_related("period__subscription").order_by("-created_at")])
