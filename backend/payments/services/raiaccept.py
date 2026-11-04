@@ -159,10 +159,13 @@ def as_raiaccept_amount(amount: Decimal) -> float:
 
 
 def country_to_iso3(country_code):
-    return {
-        "AL": "ALB",
-        "XK": "XKX",
-    }.get((country_code or "").upper(), settings.RAIACCEPT_DEFAULT_COUNTRY)
+    # RaiAccept's country enum uses XKK for Kosovo, including legacy defaults.
+    codes = {"AL": "ALB", "XK": "XKK", "XKX": "XKK", "XKK": "XKK"}
+    value = (country_code or "").upper()
+    if value in codes:
+        return codes[value]
+    fallback = settings.RAIACCEPT_DEFAULT_COUNTRY.upper()
+    return codes.get(fallback, fallback)
 
 
 def build_lead_unlock_payload(*, payment, job, request, return_url, notification_url):
