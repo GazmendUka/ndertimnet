@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { billingService, isNativeBilling } from "../../services/billingService";
 import { openPaymentUrl } from "../../platform/mobile";
@@ -78,6 +78,17 @@ export function SubscriptionBilling() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const agreementRef = useRef(null);
+  const feedbackRef = useRef(null);
+  useEffect(() => {
+    if (selected && terms) {
+      agreementRef.current?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+      agreementRef.current?.focus({ preventScroll: true });
+    }
+  }, [selected, terms]);
+  useEffect(() => {
+    if (error || busy) feedbackRef.current?.scrollIntoView?.({ behavior: "smooth", block: "center" });
+  }, [error, busy]);
   const refresh = useCallback(async () => {
     try {
       const [a, b, c] = await Promise.all([billingService.catalog(), billingService.subscription(), billingService.history()]);
@@ -91,7 +102,13 @@ export function SubscriptionBilling() {
       const result = await action();
       if (result.data.payment_url) await openPaymentUrl(result.data.payment_url, "/company/payments?payment=return");
       else { setSelected(null); setConfirmCancel(false); await refresh(); }
-    } catch (e) { setError(errorText(e)); } finally { setBusy(false); }
+    } catch (e) {
+      // The agreement/attempt may already have been saved before bank checkout failed.
+      // Refresh server state without clearing the failure message.
+      const message = errorText(e);
+      await refresh();
+      setError(message);
+    } finally { setBusy(false); }
   };
   const select = async plan => {
     setBusy(true); setError(""); setSelected(plan); setTerms(null); setAccepted(false);
@@ -105,7 +122,11 @@ export function SubscriptionBilling() {
   return <section className="premium-section mt-4 space-y-4">
     <h2 className="text-xl font-semibold">Ofertat dhe abonimi</h2>
     {catalog?.bank_payments_available === false && <p role="status">Pagesat bankare nuk janë aktivizuar ende. Mund të përdorni ofertat falas dhe kreditet tuaja.</p>}
-    {error && <p role="alert" className="text-red-700">{error}</p>}
+    <div ref={feedbackRef} aria-live="polite" aria-atomic="true">
+      {busy && <p role="status">Ju lutemi prisni. Po përgatitet hapi tjetër…</p>}
+      {error && <p role="alert" className="text-red-700">{error}</p>}
+    </div>
+    {active && !sub.started_at && <p role="status" className="rounded border p-3">Abonimi nuk është aktivizuar ende. Marrëveshja është ruajtur, por pagesa nuk është konfirmuar. Të dhënat e kartës plotësohen vetëm në faqen e bankës. Kontrolloni pagesën më poshtë; mos krijoni një blerje tjetër.</p>}
     {overview && <div aria-label="Përmbledhja e pagesave" className="space-y-2">
       <p>Kuota e disponueshme: <strong>{overview.monthly_offers_remaining} / {overview.monthly_offers_total}</strong>{overview.period_ends_at && ` · Deri më ${date(overview.period_ends_at)}`}</p>
       <OfferAllowanceSummary overview={overview} />
@@ -126,8 +147,10 @@ export function SubscriptionBilling() {
     {changing && <p>Ndryshimi i planit zbatohet në periudhën tjetër. Kuota dhe çmimi i periudhës aktuale ruhen.</p>}
     {(!active || changing) && <PricingPlans catalog={catalog} onSelect={isNativeBilling() ? null : select} disabled={busy || (!changing && catalog?.bank_payments_available === false)} />}
     {isNativeBilling() && <p>Blerjet në aplikacion nuk janë aktivizuar ende.</p>}
-    {selected && terms && <div className="rounded-xl border p-4 space-y-3">
+    {selected && !terms && busy && <p role="status">Po ngarkohet marrëveshja…</p>}
+    {selected && terms && <div ref={agreementRef} tabIndex={-1} aria-label="Konfirmimi i abonimit" className="rounded-xl border p-4 space-y-3 scroll-mt-24">
       <h3 className="font-semibold">Lexoni dhe nënshkruani marrëveshjen për {selected.name}</h3>
+      <p>Hapi 2: Lexoni marrëveshjen, shkruani emrin dhe jepni pëlqimin. Pastaj vazhdoni te banka për pagesë.</p>
       <pre className="whitespace-pre-wrap font-sans text-sm">{terms.text}</pre>
       <label className="block">Emri i plotë i përfaqësuesit<input value={signer} maxLength={200} onChange={e => setSigner(e.target.value)} className="block border rounded p-2 w-full" /></label>
       <label className="flex gap-2"><input type="checkbox" checked={accepted} onChange={e => setAccepted(e.target.checked)} />Jam i autorizuar dhe pranoj marrëveshjen e abonimit.</label>

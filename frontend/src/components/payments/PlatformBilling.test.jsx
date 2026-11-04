@@ -61,3 +61,27 @@ test("archived agreement remains downloadable", async () => {
  billingService.subscription.mockResolvedValue({ data: { subscription: null, agreements: [{ text: "Archived contract", signed_at: "2026-01-01", signer_name: "Test Person", sha256: "hash" }] } });
  render(<SubscriptionBilling />); await screen.findByText("Archived contract"); expect(screen.getByRole("link", { name: "Shkarko kopjen" })).toHaveAttribute("download");
 });
+
+test("selecting a plan scrolls to and focuses agreement", async () => {
+ const scroll = jest.fn(); Element.prototype.scrollIntoView = scroll;
+ render(<SubscriptionBilling />);
+ fireEvent.click(await screen.findByRole("button", { name: "Zgjidh Pro" }));
+ const agreement = await screen.findByLabelText("Konfirmimi i abonimit");
+ await waitFor(() => expect(agreement).toHaveFocus());
+ expect(scroll).toHaveBeenCalled();
+ delete Element.prototype.scrollIntoView;
+});
+
+test("checkout failure refreshes persisted subscription and keeps visible error", async () => {
+ billingService.subscribe.mockRejectedValue({ response: { data: { detail: "Bank checkout unavailable" } } });
+ render(<SubscriptionBilling />);
+ fireEvent.click(await screen.findByRole("button", { name: "Zgjidh Pro" }));
+ await screen.findByLabelText("Emri i plotë i përfaqësuesit");
+ billingService.subscription.mockResolvedValue({ data: { subscription: { plan_code: "pro", monthly_offers: 30, started_at: null, periods: [] } } });
+ fireEvent.change(screen.getByLabelText("Emri i plotë i përfaqësuesit"), { target: { value: "Test Person" } });
+ fireEvent.click(screen.getByRole("checkbox"));
+ fireEvent.click(screen.getByRole("button", { name: "Nënshkruaj dhe vazhdo te pagesa" }));
+ expect(await screen.findByRole("alert")).toHaveTextContent("Bank checkout unavailable");
+ expect(screen.getByText(/Abonimi nuk është aktivizuar ende/)).toBeInTheDocument();
+ expect(screen.queryByRole("button", { name: "Zgjidh Pro" })).not.toBeInTheDocument();
+});
