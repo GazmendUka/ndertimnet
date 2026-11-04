@@ -16,9 +16,7 @@ if (not expected_host or database_url.hostname != expected_host
 for variable in ("SENDGRID_API_KEY", "CLOUDINARY_URL", "CLOUDINARY_CLOUD_NAME",
                  "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "CLOUD_NAME",
                  "GOOGLE_APPLICATION_CREDENTIALS",
-                 "RAIACCEPT_SANDBOX_USERNAME", "RAIACCEPT_SANDBOX_PASSWORD",
-                 "RAIACCEPT_PRODUCTION_USERNAME", "RAIACCEPT_PRODUCTION_PASSWORD",
-                 "RAIACCEPT_MERCHANT_ACCOUNT_ID"):
+                 "RAIACCEPT_PRODUCTION_USERNAME", "RAIACCEPT_PRODUCTION_PASSWORD"):
     if os.environ.get(variable):
         raise ImproperlyConfigured("External delivery/storage/payment credentials are not permitted in staging yet.")
 
@@ -27,7 +25,20 @@ CONTACT_EMAIL_BACKEND = "core.staging.BlockedEmailBackend"
 PUSH_NOTIFICATIONS_ENABLED = False
 # Keep delivery disabled while validating the explicitly configured project IDs.
 BILLING_JOBS_ENABLED = False
+# Bank tests require deliberate opt-in and complete sandbox configuration.
+# Never silently reinterpret a production-mode deployment as sandbox.
+if os.environ.get("RAIACCEPT_MODE", "sandbox").lower() != "sandbox":
+    raise ImproperlyConfigured("Staging only permits RaiAccept sandbox mode.")
 RAIACCEPT_MODE = "sandbox"
+payment_keys = ("RAIACCEPT_SANDBOX_USERNAME", "RAIACCEPT_SANDBOX_PASSWORD",
+                "RAIACCEPT_MERCHANT_ACCOUNT_ID")
+payment_values = [os.environ.get(key, "").strip() for key in payment_keys]
+if os.environ.get("STAGING_RAIACCEPT_ENABLED", "false") == "true":
+    if not all(payment_values):
+        raise ImproperlyConfigured("Staging RaiAccept requires complete sandbox configuration.")
+    RAIACCEPT_SANDBOX_USERNAME, RAIACCEPT_SANDBOX_PASSWORD, RAIACCEPT_MERCHANT_ACCOUNT_ID = payment_values
+elif any(payment_values):
+    raise ImproperlyConfigured("Staging RaiAccept credentials require explicit opt-in.")
 STORAGES = {**STORAGES, "default": {"BACKEND": "core.staging.BlockedMediaStorage"}}  # noqa: F405
 # Opt in only after the deployment operator verifies this cloud is separate from
 # production. Ordinary provider variables remain forbidden, even when enabled.

@@ -67,3 +67,43 @@ class StagingSafetyTests(SimpleTestCase):
                        {"SENDGRID_API_KEY": "synthetic-blocked-value"}):
             bad = subprocess.run([sys.executable, "-c", code], env={**env, **change}, capture_output=True)
             self.assertNotEqual(bad.returncode, 0)
+
+
+class StagingPaymentConfigurationTests(SimpleTestCase):
+    def test_sandbox_opt_in_and_fail_closed_guards(self):
+        env = {"PATH": os.environ["PATH"], "PYTHONDONTWRITEBYTECODE": "1",
+               "ENVIRONMENT": "production", "DEBUG": "false", "SECRET_KEY": "synthetic-test-key",
+               "ALLOWED_HOSTS": "backend.invalid",
+               "DATABASE_URL": "postgresql://test:test@staging.invalid/ndertimnet_staging",
+               "STAGING_DATABASE_HOST": "staging.invalid",
+               "FRONTEND_BASE_URL": "https://frontend.invalid", "BACKEND_BASE_URL": "https://backend.invalid"}
+        credentials = {"RAIACCEPT_SANDBOX_USERNAME": "synthetic-user",
+                       "RAIACCEPT_SANDBOX_PASSWORD": "synthetic-password",
+                       "RAIACCEPT_MERCHANT_ACCOUNT_ID": "synthetic-merchant"}
+        enabled = {**credentials, "STAGING_RAIACCEPT_ENABLED": "true", "RAIACCEPT_MODE": "sandbox"}
+        code = ("from ndertimnet import staging_settings as s; "
+                "assert s.RAIACCEPT_MODE == 'sandbox'; "
+                "assert not s.PUSH_NOTIFICATIONS_ENABLED; assert not s.BILLING_JOBS_ENABLED; "
+                "assert s.CONTACT_EMAIL_BACKEND == 'core.staging.BlockedEmailBackend'; "
+                "assert s.STORAGES['default']['BACKEND'] == 'core.staging.BlockedMediaStorage'")
+        def run(extra, check=code):
+            return subprocess.run([sys.executable, "-c", check], env={**env, **extra}, capture_output=True)
+        for config in ({}, enabled):
+            result = run(config)
+            self.assertEqual(result.returncode, 0, result.stderr.decode())
+        result = run(enabled, code + "; assert s.RAIACCEPT_SANDBOX_USERNAME == 'synthetic-user'; assert s.RAIACCEPT_SANDBOX_PASSWORD == 'synthetic-password'; assert s.RAIACCEPT_MERCHANT_ACCOUNT_ID == 'synthetic-merchant'")
+        self.assertEqual(result.returncode, 0, result.stderr.decode())
+        invalid = [credentials, {"STAGING_RAIACCEPT_ENABLED": "true"},
+                   {**enabled, "STAGING_RAIACCEPT_ENABLED": "false"},
+                   {"RAIACCEPT_MODE": "production"}]
+        invalid += [{**enabled, key: value} for key in credentials for value in ("", "   ")]
+        invalid += [{**enabled, "RAIACCEPT_MODE": mode} for mode in ("production", "invalid")]
+        invalid += [{**enabled, key: "synthetic-blocked"} for key in
+                    ("RAIACCEPT_PRODUCTION_USERNAME", "RAIACCEPT_PRODUCTION_PASSWORD",
+                     "SENDGRID_API_KEY", "CLOUDINARY_URL", "GOOGLE_APPLICATION_CREDENTIALS")]
+        for config in invalid:
+            with self.subTest(keys=sorted(config)):
+                result = run(config)
+                self.assertNotEqual(result.returncode, 0)
+                self.assertIn(b"ImproperlyConfigured", result.stderr)
+                self.assertNotIn(b"synthetic-password", result.stderr)
