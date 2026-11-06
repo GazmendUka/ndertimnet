@@ -49,7 +49,8 @@ class SubscriptionPricingTests(BillingFixture, APITestCase):
         self.assertEqual(result.status_code, 410)
         self.assertFalse(PlatformCheckout.objects.exists())
 
-    def test_first_payment_consumes_quota_once_revisions_included(self):
+    @patch("payments.billing.timezone.now", return_value=datetime(2026, 10, 15, tzinfo=utc.utc))
+    def test_first_payment_consumes_quota_once_revisions_included(self, clock):
         sub = self.sub(start=datetime(2026, 10, 5, tzinfo=utc.utc))
         self.assertEqual(self.send().status_code, 200)
         self.assertEqual(self.send().status_code, 400)
@@ -60,7 +61,8 @@ class SubscriptionPricingTests(BillingFixture, APITestCase):
         self.assertEqual(period.monthly_offers, 10)
         self.assertEqual(PlatformCharge.objects.get(offer=self.offer).amount, 0)
 
-    def test_full_quota_blocks_send_without_bank_attempt(self):
+    @patch("payments.billing.timezone.now", return_value=datetime(2026, 10, 15, tzinfo=utc.utc))
+    def test_full_quota_blocks_send_without_bank_attempt(self, clock):
         sub = self.sub(start=datetime(2026, 10, 5, tzinfo=utc.utc))
         sub.periods.update(offers_used=10)
         self.assertEqual(self.send().data['code'], 'subscription_quota_required')
