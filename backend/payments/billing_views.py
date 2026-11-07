@@ -8,6 +8,7 @@ from .models import SubscriptionAgreement
 
 from django.conf import settings
 from django.db import transaction
+from django.http import HttpResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import viewsets
@@ -65,6 +66,30 @@ class BillingViewSet(viewsets.ViewSet):
             raise PermissionDenied("Vetëm kompanitë mund ta përdorin këtë funksion.")
         return company
 
+    @action(detail=False, methods=["get"], url_path="android-raiaccept-config")
+    def android_raiaccept_config(self, request):
+        from . import android_raiaccept
+        company = self.company(request)
+        return Response({"enabled": android_raiaccept.enabled(company) and bank_payments_available(),
+                         "environment": "Sandbox", "provider": android_raiaccept.PROVIDER})
+
+    @action(detail=False, methods=["get"], permission_classes=[AllowAny], url_path="android-raiaccept-return")
+    def android_raiaccept_return(self, request):
+        from . import android_raiaccept
+        if not android_raiaccept.environment_enabled():
+            return Response(status=404)
+        # A browser return is never payment evidence. No state or quota writes.
+        response = HttpResponse('''<!doctype html><html lang="sq"><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1"><title>Ndërtimnet · Test</title>
+<body style="font-family:system-ui;padding:32px;max-width:480px;margin:auto">
+<p>Vetëm test · RaiAccept Sandbox</p><h1>Kthehuni në aplikacion</h1>
+<p>Statusi i pagesës verifikohet me bankën. Kjo faqe nuk konfirmon pagesën.</p>
+<p><a href="ndertimnet://company/payments?payment=return">Hap Ndërtimnet</a></p>
+<p>Nëse aplikacioni nuk hapet, mbyllni këtë dritare dhe kthehuni në aplikacion.</p></body></html>''')
+        response["Cache-Control"] = "no-store"
+        response["Content-Security-Policy"] = "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'"
+        return response
+
     @action(detail=False, methods=["get"], permission_classes=[AllowAny])
     def catalog(self, request):
         price = {k: str(v) if isinstance(v, Decimal) else v for k, v in publication_price().items()}
@@ -86,7 +111,7 @@ class BillingViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["post"], url_path="buy-offer-pack")
     def buy_offer_pack(self, request):
         company = self.company(request)
-        self.require_web(request)
+        self.require_hosted_checkout(request)
         if not bank_payments_available():
             return bank_unavailable()
         signer = str(request.data.get("signer_name") or "").strip()
@@ -168,8 +193,12 @@ class BillingViewSet(viewsets.ViewSet):
             return Response({"detail": "Zgjidhni abonimin ose prisni periudhën tjetër. Nuk ka pagesë për ofertë.",
                              "code": "subscription_quota_required", **state}, status=409)
 
-    def require_web(self, request):
+    def require_hosted_checkout(self, request):
         platform = request.data.get("platform")
+        if platform == "android":
+            from . import android_raiaccept
+            android_raiaccept.require_access(self.company(request), request.data)
+            return
         if platform != "web":
             raise ValidationError({"detail": "Blerjet në aplikacion nuk janë aktivizuar ende.", "code": "store_billing_required"})
 
@@ -215,7 +244,7 @@ class BillingViewSet(viewsets.ViewSet):
     @action(detail=False, methods=["post"], url_path="subscribe")
     def subscribe(self, request):
         company = self.company(request)
-        self.require_web(request)
+        self.require_hosted_checkout(request)
         # Do not create signed contracts or unpaid bills while checkout is unavailable.
         if not bank_payments_available():
             return bank_unavailable()
@@ -275,6 +304,9 @@ class BillingViewSet(viewsets.ViewSet):
             plan = get_subscription_plan(request.data.get("plan"))
         except ValueError:
             raise ValidationError({"detail": "Zgjidhni planin."})
+        from . import android_raiaccept
+        if request.data.get("checkout_provider") == android_raiaccept.PROVIDER:
+            android_raiaccept.require_access(company, request.data)
         signer = str(request.data.get("signer_name") or "").strip()
         if request.data.get("accept_notice") is not True or request.data.get("terms_version") != AGREEMENT_VERSION or not 2 <= len(signer) <= 200:
             raise ValidationError({"detail": "Lexoni dhe pranoni marrëveshjen aktuale."})
@@ -300,11 +332,11 @@ class BillingViewSet(viewsets.ViewSet):
     @action(detail=True, methods=["post"], url_path="checkout")
     def charge_checkout(self, request, pk=None):
         charge = get_object_or_404(PlatformCharge, pk=pk, payer=request.user)
-        self.require_web(request)
+        self.require_hosted_checkout(request)
         return self.checkout(request, charge)
 
     def checkout(self, request, charge):
-        self.require_web(request)
+        self.require_hosted_checkout(request)
         if charge.kind in (PlatformCharge.Kind.OFFER, PlatformCharge.Kind.OFFER_ADJUSTMENT):
             return Response({"detail": "Pagesat për ofertë janë mbyllur. Zgjidhni një abonim.", "code": "individual_payments_retired"}, status=410)
         # Validate merchant configuration before creating a potentially uncertain attempt.
@@ -353,8 +385,11 @@ class BillingViewSet(viewsets.ViewSet):
         else:
             path = "/company/payments?payment=return"
         notify = (settings.BACKEND_BASE_URL + "/api/billing/notify/") if settings.BACKEND_BASE_URL else request.build_absolute_uri("/api/billing/notify/")
+        return_url = settings.FRONTEND_BASE_URL + path
+        if request.data.get("platform") == "android":
+            return_url = settings.BACKEND_BASE_URL + "/api/billing/android-raiaccept-return/"
         payload = build_platform_payload(charge=charge, attempt=attempt, request=request,
-                        return_url=settings.FRONTEND_BASE_URL + path, notification_url=notify)
+                        return_url=return_url, notification_url=notify)
         try:
             result = create_checkout(payload, on_order_created=lambda order_id: PlatformCheckout.objects.filter(pk=attempt.pk).update(order_id=order_id))
         except RaiAcceptError:

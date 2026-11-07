@@ -30,6 +30,7 @@ BILLING_JOBS_ENABLED = False
 if os.environ.get("RAIACCEPT_MODE", "sandbox").lower() != "sandbox":
     raise ImproperlyConfigured("Staging only permits RaiAccept sandbox mode.")
 RAIACCEPT_MODE = "sandbox"
+ANDROID_RAIACCEPT_TEST_ENVIRONMENT = True
 payment_keys = ("RAIACCEPT_SANDBOX_USERNAME", "RAIACCEPT_SANDBOX_PASSWORD",
                 "RAIACCEPT_MERCHANT_ACCOUNT_ID")
 payment_values = [os.environ.get(key, "").strip() for key in payment_keys]

@@ -442,3 +442,8 @@ EMAIL_BACKEND = os.environ.get("EMAIL_BACKEND", "django.core.mail.backends.smtp.
 # Contact delivery is explicit: missing SendGrid configuration must fail, not fake success.
 CONTACT_EMAIL_BACKEND = os.environ.get("CONTACT_EMAIL_BACKEND", "core.email_backend.SendGridBackend")
 CONTACT_RECIPIENT_EMAIL = os.environ.get("CONTACT_RECIPIENT_EMAIL", "info@ndertimnet.com")
+
+# Android bank checkout is available only in isolated sandbox settings.
+ANDROID_RAIACCEPT_TEST_ENVIRONMENT = False
+ANDROID_RAIACCEPT_SANDBOX_ENABLED = env_bool("ANDROID_RAIACCEPT_SANDBOX_ENABLED", False)
+ANDROID_RAIACCEPT_SANDBOX_COMPANY_IDS = env_list("ANDROID_RAIACCEPT_SANDBOX_COMPANY_IDS")
