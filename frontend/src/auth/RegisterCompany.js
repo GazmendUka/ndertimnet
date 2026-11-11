@@ -7,7 +7,8 @@ import React, { useState } from "react";
 import { LegalLink } from "../components/LegalLinks";
 import api from "../api/axios";
 import CompanyIntroduction from "../components/payments/CompanyIntroduction";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, Navigate, useNavigate } from "react-router-dom";
+import { isIOSApp } from "../platform/iosAccess";
 import { AlertCircle, ArrowLeft, Building2, Eye, EyeOff, Loader2, Mail, Phone } from "lucide-react";
 
 export default function RegisterCompany() {
@@ -62,6 +63,8 @@ export default function RegisterCompany() {
       setLoading(false);
     }
   };
+
+  if (isIOSApp()) return <Navigate to="/login" replace />;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#f7f4ee] px-4 py-6 sm:px-6">

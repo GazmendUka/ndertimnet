@@ -5,6 +5,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../../auth/AuthContext";
 import api from "../../api/axios";
+import { isIOSApp } from "../../platform/iosAccess";
 
 import { Bell, Home, User, LogOut, Briefcase, FileText, ReceiptText, Megaphone } from "lucide-react";
 
@@ -132,7 +133,7 @@ export default function Sidebar() {
             <SidebarLink to="/company"              icon={<Home size={18} />} text="Dashboard" />
             <SidebarLink to="/company/jobrequests"  icon={<Briefcase size={18} />} text="Kërkesat e punës" badge={newJobsCount} />
             <SidebarLink to="/company/leads/mine"   icon={<FileText size={18} />} text="Ofertat e mia" badge={unreadMessages} />
-            <SidebarLink to="/company/payments"     icon={<ReceiptText size={18} />} text="Pagesat dhe konfirmimet" />
+            <SidebarLink to="/company/payments"     icon={<ReceiptText size={18} />} text={isIOSApp() ? "Kuota dhe historiku" : "Pagesat dhe konfirmimet"} />
             <SidebarLink to="/company/notifications" icon={<Bell size={18} />} text="Njoftimet" />
             <SidebarLink to="/company/marketing" icon={<Megaphone size={18} />} text="Marketingu" />
             <SidebarLink to="/company/profile"      icon={<User size={18} />} text="Profili" />

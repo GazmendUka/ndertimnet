@@ -3,6 +3,7 @@ import { CreditCard, FileText, Loader2, ReceiptText } from "lucide-react";
 import { useAuth } from "../../auth/AuthContext";
 import { SubscriptionBilling, CustomerBillingHistory } from "../../components/payments/PlatformBilling";
 import paymentService from "../../services/paymentService";
+import { isIOSApp } from "../../platform/iosAccess";
 
 const statusLabels = {
   pending: "Në pritje",
@@ -76,8 +77,8 @@ export default function PaymentHistory() {
   return (
     <div className="premium-container">
       <section className="premium-section">
-        <p className="text-label">Financat</p>
-        <h1 className="page-title mt-1">Pagesat dhe konfirmimet</h1>
+        <p className="text-label">{isIOSApp() && user?.role === "company" ? "Llogaria" : "Financat"}</p>
+        <h1 className="page-title mt-1">{isIOSApp() && user?.role === "company" ? "Kuota dhe historiku" : "Pagesat dhe konfirmimet"}</h1>
         <p className="mt-2 text-sm leading-6 text-gray-500">
           Shikoni statusin, shumën dhe konfirmimin për çdo pagesë.
         </p>

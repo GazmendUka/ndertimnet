@@ -5,6 +5,14 @@
       {
         "appID": "9RHA65H8T8.com.ndertimnet.app",
         "paths": [
+          "NOT /register",
+          "NOT /register/",
+          "NOT /register/company",
+          "NOT /register/company/*",
+          "NOT /pricing",
+          "NOT /pricing/*",
+          "NOT /company/payments",
+          "NOT /company/payments/*",
           "*"
         ]
       }

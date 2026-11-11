@@ -1,6 +1,7 @@
 // src/routes/PublicRoutes.jsx
 
 import { Navigate, Route, useParams } from "react-router-dom";
+import { isIOSApp } from "../platform/iosAccess";
 import PricingPage from "../pages/PricingPage";
 import AboutPage from "../pages/about";
 import StartProject from "../pages/jobrequests/StartProject";
@@ -55,7 +56,7 @@ export default function PublicRoutes() {
 
         {/* CORE */}
         <Route path="/" element={<AuthRedirect />} />
-        <Route path="/pricing" element={<PricingPage />} />
+        <Route path="/pricing" element={isIOSApp() ? <Navigate to="/" replace /> : <PricingPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/nis-projektin" element={<StartProject />} />
         <Route path="/contact" element={<ContactPage />} />
@@ -106,8 +107,8 @@ export default function PublicRoutes() {
         }
       />
 
-      <Route path="/register" element={<RegisterChoice />} />
-      <Route path="/register/company" element={<RegisterCompany />} />
+      <Route path="/register" element={isIOSApp() ? <Navigate to="/register/customer" replace /> : <RegisterChoice />} />
+      <Route path="/register/company" element={isIOSApp() ? <Navigate to="/login" replace /> : <RegisterCompany />} />
       <Route path="/register/customer" element={<RegisterCustomer />} />
       <Route path="/register/success" element={<RegisterSuccess />} />
 

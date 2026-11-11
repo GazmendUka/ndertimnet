@@ -1,3 +1,4 @@
+import { isIOSApp } from "../../platform/iosAccess";
 import jobCategory from "../../utils/jobCategory";
 // ===========================================
 // src/pages/jobrequests/CompanyJobDetails.jsx
@@ -165,7 +166,7 @@ export default function CompanyJobDetails() {
   const leadUnlocked = job.lead_unlocked === true;
   const isClosed = !job.is_active;
   const unlockLeadPriceLabel = "Pa pagesë";
-  const unlockLeadHint = "Përgatitja është falas. Standard përfshin 10 oferta/muaj dhe Pro 30. Nuk ka pagesë për lead ose ofertë. Kontaktet dhe biseda hapen pasi dërgoni ofertën.";
+  const unlockLeadHint = isIOSApp() ? "Përgatitja është falas. Përdorni kuotën e disponueshme për të dërguar oferta. Kontaktet dhe biseda hapen pasi dërgoni ofertën." : "Përgatitja është falas. Standard përfshin 10 oferta/muaj dhe Pro 30. Nuk ka pagesë për lead ose ofertë. Kontaktet dhe biseda hapen pasi dërgoni ofertën.";
 
   const formatBudget = (b) => (b ? `${b} €` : "Pa buxhet");
   const formatDate = (d) => new Date(d).toLocaleDateString("sv-SE");
@@ -198,7 +199,7 @@ export default function CompanyJobDetails() {
     } catch (e) {
       const code = e.response?.data?.code;
       if (code === "store_billing_required") {
-        const text = "Blerjet e abonimit në aplikacion nuk janë aktivizuar ende. Përgatitja e ofertës është falas.";
+        const text = isIOSApp() ? "Përgatitja e ofertës është falas. Kontrolloni kuotën e disponueshme përpara dërgimit." : "Blerjet e abonimit në aplikacion nuk janë aktivizuar ende. Përgatitja e ofertës është falas.";
         setPaymentFeedback({ type: "warning", text });
         toast.error(text);
       } else if (code === "payment_initializing") {

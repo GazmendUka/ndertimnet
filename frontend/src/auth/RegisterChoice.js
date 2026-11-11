@@ -2,10 +2,12 @@
 
 import { ArrowLeft, ArrowRight, Building2, UserRound } from "lucide-react";
 import React from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, Navigate } from "react-router-dom";
+import { isIOSApp } from "../platform/iosAccess";
 
 export default function RegisterChoice() {
   const navigate = useNavigate();
+  if (isIOSApp()) return <Navigate to="/register/customer" replace />;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#f7f4ee] px-4 py-6 sm:px-6">

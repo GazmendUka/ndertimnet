@@ -1,3 +1,4 @@
+import { companyEntryPath, companyEntryLabel } from "../platform/iosAccess";
 // ===========================================
 // src/pages/landing_page.jsx
 // Ndertimnet landing page
@@ -262,7 +263,7 @@ function CampaignExampleDialog({ onClose, returnFocusRef }) {
       <HeroAdvertisementCard advertisement={exampleCampaign} example />
       <p className="my-4 text-sm leading-6 text-[#5f6f66]">Fushata juaj shfaqet në këtë hapësirë në Ballina, në faqe dhe në aplikacion, pas miratimit. Butoni lidhet me faqen që zgjidhni ju.</p>
       <div className="flex flex-wrap items-center gap-x-5 gap-y-2">
-        <PrimaryButton to="/register/company">Regjistro kompaninë</PrimaryButton>
+        <PrimaryButton to={companyEntryPath()}>{companyEntryLabel()}</PrimaryButton>
         <Link to="/login" className="inline-flex min-h-[44px] items-center text-sm font-semibold text-[#17643f] underline underline-offset-4">Kam llogari – Kyçu</Link>
       </div>
     </dialog>
@@ -485,8 +486,8 @@ export default function LandingPage() {
                 shërbime profesionale që duan kërkesa të strukturuara.
               </p>
               <div className="mt-7 flex flex-col gap-3 sm:flex-row">
-                <PrimaryButton to="/register/company">
-                  Regjistro kompaninë
+                <PrimaryButton to={companyEntryPath()}>
+                  {companyEntryLabel()}
                 </PrimaryButton>
                 <SecondaryButton to="/contact">Kontakto</SecondaryButton>
               </div>
@@ -660,8 +661,8 @@ export default function LandingPage() {
             </div>
             <div className="flex flex-col gap-3 sm:flex-row lg:flex-col xl:flex-row">
               <PrimaryButton to="/nis-projektin">Fillo projektin</PrimaryButton>
-              <SecondaryButton to="/register/company">
-                Regjistro kompaninë
+              <SecondaryButton to={companyEntryPath()}>
+                {companyEntryLabel()}
               </SecondaryButton>
             </div>
           </div>
