@@ -6,6 +6,7 @@ import { Capacitor } from "@capacitor/core";
 import { Network } from "@capacitor/network";
 import { SplashScreen } from "@capacitor/splash-screen";
 import { StatusBar, Style } from "@capacitor/status-bar";
+import { IS_IOS_STORE_SANDBOX } from "../config/api";
 import { openExternalUrl } from "./mobile";
 
 const APP_HOSTS = new Set([
@@ -102,11 +103,10 @@ export default function MobileRuntime() {
     };
   }, [navigate]);
 
-  if (!offline) return null;
+  if (!offline && !IS_IOS_STORE_SANDBOX) return null;
 
-  return (
-    <div className="mobile-offline-banner" role="status">
-      Nuk ka lidhje me internetin. Po provojmë përsëri…
-    </div>
-  );
+  return <>
+    {IS_IOS_STORE_SANDBOX && <div className="fixed left-2 right-2 top-[env(safe-area-inset-top)] z-[100] rounded bg-amber-200 px-2 py-1 text-center text-xs font-semibold text-amber-950" role="status">Vetëm test · Apple Sandbox</div>}
+    {offline && <div className="mobile-offline-banner" role="status">Nuk ka lidhje me internetin. Po provojmë përsëri…</div>}
+  </>;
 }

@@ -308,6 +308,7 @@ class AppleProductBindingTests(SimpleTestCase):
         decoded = verifier.return_value.verify_and_decode_signed_transaction
         decoded.return_value = payload()
         self.assertEqual(gateway.apple_transaction(checkout, "12345").amount, Decimal("19.95"))
+        self.assertEqual(http.call_args.args[0], "https://api.storekit-sandbox.apple.com/inApps/v1/transactions/12345")
         for change in ({"appAccountToken": str(uuid4())}, {"transactionId": "54321"}, {"quantity": 2},
                        {"productId": "another.app.product"}, {"type": SimpleNamespace(value="Non-Renewing Subscription")}):
             decoded.return_value = payload(**change)

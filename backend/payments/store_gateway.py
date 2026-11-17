@@ -74,7 +74,7 @@ def apple_transaction(checkout, reference):
     token = jwt.encode({"iss": settings.STORE_APPLE_ISSUER_ID, "iat": now - 5,
         "exp": now + 240, "aud": "appstoreconnect-v1", "bid": APP_ID},
         settings.STORE_APPLE_PRIVATE_KEY, algorithm="ES256", headers={"kid": settings.STORE_APPLE_KEY_ID})
-    host = "api.storekit-sandbox.itunes.apple.com" if env == Environment.SANDBOX else "api.storekit.itunes.apple.com"
+    host = "api.storekit-sandbox.apple.com" if env == Environment.SANDBOX else "api.storekit.apple.com"
     response = requests.get(f"https://{host}/inApps/v1/transactions/{reference}",
         headers={"Authorization": "Bearer " + token}, timeout=20)
     if response.status_code != 200:
