@@ -1,13 +1,19 @@
+import { Capacitor } from "@capacitor/core";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { ListingPrice, OfferBilling, SubscriptionBilling, PublicationBilling, PublicSubscriptionPricing } from "./PlatformBilling";
 import { billingService, isNativeBilling } from "../../services/billingService";
+import { storeBillingService } from "../../services/storeBillingService";
+jest.mock("@capacitor/app", () => ({ App: { addListener: jest.fn(async () => ({ remove: jest.fn() })) } }));
 jest.mock("react-router-dom", () => ({ Link: ({ children, to }) => <a href={to}>{children}</a> }));
 jest.mock("../../platform/mobile", () => ({ openPaymentUrl: jest.fn() }));
+jest.mock("../../services/storeBillingService", () => ({ storeBillingService: { config: jest.fn().mockResolvedValue({data:{enabled:false}}) } }));
 jest.mock("../../services/billingService", () => ({ isNativeBilling: jest.fn(), billingService: { catalog: jest.fn(), refreshStatus: jest.fn(), history: jest.fn(), subscription: jest.fn(), offerQuote: jest.fn(), subscribe: jest.fn(), terms: jest.fn(), packTerms: jest.fn(), buyPack: jest.fn(), cancel: jest.fn(), changePlan: jest.fn(), checkout: jest.fn() } }));
+jest.mock("@capacitor/core", () => ({ Capacitor: { isNativePlatform: jest.fn(() => false), getPlatform: jest.fn(() => "web") } }));
 const plans = [{ code: "standard", name: "Standard", monthly_price: "29.00", regular_price: "49.00", offers: 10 }, { code: "pro", name: "Pro", monthly_price: "59.00", regular_price: "79.00", offers: 30 }];
 beforeEach(() => {
+ storeBillingService.config.mockResolvedValue({data:{enabled:false}});
  billingService.refreshStatus.mockResolvedValue({ data: {} });
- jest.clearAllMocks(); isNativeBilling.mockReturnValue(false);
+ jest.clearAllMocks(); isNativeBilling.mockReturnValue(false); Capacitor.isNativePlatform.mockReturnValue(false); Capacitor.getPlatform.mockReturnValue("web");
  billingService.catalog.mockResolvedValue({ data: { bank_payments_available: true, plans, listing: { regular_price: "3.95", discount: "3.95", payable: "0.00", introductory_free: true } } });
  billingService.subscription.mockResolvedValue({ data: { subscription: null } });
  billingService.terms.mockResolvedValue({ data: { text: "Marrëveshja", version: "v1" } });
@@ -35,7 +41,7 @@ test("quota exhaustion never offers an individual purchase", async () => {
  render(<OfferBilling offerId={1} />); await screen.findByText(/Kuota është shteruar/); expect(screen.queryByRole("button", { name: /Paguaj/ })).not.toBeInTheDocument();
 });
 test("native flow exposes no external purchase", async () => {
- isNativeBilling.mockReturnValue(true); render(<SubscriptionBilling />); await screen.findByText("Standard");
+ isNativeBilling.mockReturnValue(true); Capacitor.isNativePlatform.mockReturnValue(true); Capacitor.getPlatform.mockReturnValue("ios"); render(<SubscriptionBilling />); await screen.findByText("Blerjet në aplikacion nuk janë aktivizuar ende.");
  expect(screen.queryByRole("button", { name: /Zgjidh/ })).not.toBeInTheDocument(); expect(screen.queryByRole("link", { name: /Regjistro/ })).not.toBeInTheDocument();
 });
 test("name and consent required for subscription", async () => {
@@ -134,4 +140,19 @@ test("payment refresh verifies bank before loading balances", async () => {
  expect(billingService.refreshStatus.mock.invocationCallOrder[0]).toBeLessThan(billingService.history.mock.invocationCallOrder[0]);
  fireEvent.click(screen.getByRole("button", { name: "Përditëso statusin" }));
  await waitFor(() => expect(billingService.refreshStatus).toHaveBeenCalledTimes(2));
+});
+
+
+test("Android retains its existing disabled native checkout view", async () => {
+  isNativeBilling.mockReturnValue(true); Capacitor.isNativePlatform.mockReturnValue(true); Capacitor.getPlatform.mockReturnValue("android");
+  render(<SubscriptionBilling />); await screen.findByText("Standard");
+  expect(storeBillingService.config).not.toHaveBeenCalled();
+  expect(screen.queryByRole("button", { name: /Zgjidh/ })).not.toBeInTheDocument();
+});
+test("public iOS registration stays free and never quotes website prices as Apple prices", () => {
+  Capacitor.isNativePlatform.mockReturnValue(true); Capacitor.getPlatform.mockReturnValue("ios");
+  render(<PublicSubscriptionPricing />);
+  expect(screen.getByText(/Regjistrimi është falas/)).toBeInTheDocument();
+  expect(screen.getByRole("link", { name: "Regjistro kompaninë" })).toHaveAttribute("href", "/register/company");
+  expect(billingService.catalog).not.toHaveBeenCalled();
 });

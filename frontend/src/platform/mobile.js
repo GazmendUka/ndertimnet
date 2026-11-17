@@ -19,6 +19,7 @@ export async function openExternalUrl(url) {
 
 export async function openPaymentUrl(url, returnPath) {
   if (!url) return;
+  if (Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios") throw new Error("Pagesa kryhet përmes Apple brenda aplikacionit.");
 
   if (!isNativeApp()) {
     window.location.assign(url);

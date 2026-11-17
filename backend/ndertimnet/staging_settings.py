@@ -23,6 +23,8 @@ for variable in ("SENDGRID_API_KEY", "CLOUDINARY_URL", "CLOUDINARY_CLOUD_NAME",
 EMAIL_BACKEND = "django.core.mail.backends.dummy.EmailBackend"
 CONTACT_EMAIL_BACKEND = "core.staging.BlockedEmailBackend"
 PUSH_NOTIFICATIONS_ENABLED = False
+STORE_BILLING_ENABLED = os.environ.get("STAGING_STORE_BILLING_ENABLED", "false") == "true"
+STORE_BILLING_ENVIRONMENT = "Sandbox"
 # Keep delivery disabled while validating the explicitly configured project IDs.
 BILLING_JOBS_ENABLED = False
 # Bank tests require deliberate opt-in and complete sandbox configuration.

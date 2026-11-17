@@ -13,6 +13,7 @@
     "@capacitor/preferences": "^8.0.1",
     "@capacitor/splash-screen": "^8.0.2",
     "@capacitor/status-bar": "^8.0.3",
+    "@capgo/native-purchases": "8.9.6",
     "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.0",

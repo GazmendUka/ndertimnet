@@ -156,6 +156,7 @@ class CompanyAdmin(admin.ModelAdmin):
     }
 
     list_display = (
+        "registration_channel",
         "id",
         "emri_i_kompanise",
         "email_i_perdoruesit",
@@ -176,6 +177,7 @@ class CompanyAdmin(admin.ModelAdmin):
         "city__name",
     )
     list_filter = (
+        "registration_channel",
         EVerifikuarFilter,
         AktiveFilter,
         TVSHFilter,

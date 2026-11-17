@@ -3,6 +3,7 @@ import { ContentRulesConsent } from "../components/ContentRules";
 // ✅ Production-ready – Account-only registration
 // Fields: company_name, phone, email, password
 
+import { Capacitor } from "@capacitor/core";
 import React, { useState } from "react";
 import { LegalLink } from "../components/LegalLinks";
 import api from "../api/axios";
@@ -41,7 +42,7 @@ export default function RegisterCompany() {
     try {
       await api.post(
         "accounts/register/company/",
-        formData,
+        { ...formData, registration_channel: Capacitor.isNativePlatform() ? Capacitor.getPlatform() : "web" },
         { skipAuth: true }
       );
       navigate("/register/success", { state: { type: "company" } });

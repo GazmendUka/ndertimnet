@@ -1,12 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { Link } from "react-router-dom";
 import { billingService, isNativeBilling } from "../../services/billingService";
 import { openPaymentUrl } from "../../platform/mobile";
 import { OfferAllowanceSummary } from "./CompanyOfferAllowance";
+import NativeSubscriptionBilling from "./NativeSubscriptionBilling";
 
+const isAppleBilling = () => Capacitor.isNativePlatform() && Capacitor.getPlatform() === "ios";
 const errorText = (e) => e.response?.data?.detail || "Nuk mund të ngarkohen të dhënat e pagesës. Provoni përsëri.";
 const statusLabel = (s) => ({ paid: "Paguar", pending: "Në pritje", failed: "Dështoi", canceled: "Anuluar", refunded: "Rimbursuar" }[s] || s);
 const date = (v) => v ? new Date(v).toLocaleDateString("sq-AL") : "Pas pagesës së parë";
+const paymentAmount = c => c.store_payment ? `${c.store_payment.amount} ${c.store_payment.currency}` : `${c.amount} €`;
 
 export function ListingPrice() {
   const [price, setPrice] = useState(null);
@@ -37,6 +41,10 @@ export function PricingPlans({ catalog, onSelect, disabled = false }) {
 }
 
 export function PublicSubscriptionPricing() {
+  return isAppleBilling() ? <section className="premium-section space-y-3"><h2 className="text-2xl font-semibold">Paketat për kompanitë</h2><p>Regjistrimi është falas. Paketat dhe çmimet për pajisjen tuaj shfaqen në llogarinë e kompanisë përpara blerjes.</p><Link to="/register/company" className="premium-btn btn-dark">Regjistro kompaninë</Link></section> : <WebPublicSubscriptionPricing />;
+}
+
+function WebPublicSubscriptionPricing() {
   const [catalog, setCatalog] = useState(null);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -66,11 +74,15 @@ export function OfferBilling({ offerId }) {
     {error && <p role="alert" className="text-red-700">{error}</p>}
     <p className="mt-2">Kontaktet dhe biseda hapen pasi nënshkruani dhe dërgoni ofertën.</p>
     <button type="button" onClick={refresh} className="underline mt-2 mr-4">Përditëso statusin</button>
-    {!isNativeBilling() && <Link to="/company/payments" className="underline">Shiko abonimet</Link>}
+    {(!isNativeBilling() || isAppleBilling()) && <Link to="/company/payments" className="underline">{isAppleBilling() ? "Shiko kuotën dhe pagesat" : "Shiko abonimet"}</Link>}
   </section>;
 }
 
 export function SubscriptionBilling() {
+  return isAppleBilling() ? <NativeSubscriptionBilling /> : <WebSubscriptionBilling />;
+}
+
+function WebSubscriptionBilling() {
   const [data, setData] = useState(null);
   const [catalog, setCatalog] = useState(null);
   const [charges, setCharges] = useState([]);
@@ -147,7 +159,7 @@ export function SubscriptionBilling() {
         <button type="button" disabled={busy} className="underline" onClick={() => setConfirmCancel(true)}>Anulo abonimin</button>
         {confirmCancel && <div><p>Abonimi përfundon në fund të periudhës aktuale. Pa afat detyrues.</p><button disabled={busy} onClick={() => run(billingService.cancel)} className="premium-btn btn-dark">Konfirmo anulimin</button><button onClick={() => setConfirmCancel(false)} className="premium-btn btn-light">Kthehu</button></div>}
       </>}
-      {sub.periods.map(p => <p key={p.id}>{date(p.starts_at)} – {date(p.ends_at)} · {p.offers_used}/{p.monthly_offers} oferta · {statusLabel(p.charge.status)} · {p.charge.amount} €</p>)}
+      {sub.periods.map(p => <p key={p.id}>{date(p.starts_at)} – {date(p.ends_at)} · {p.offers_used}/{p.monthly_offers} oferta · {statusLabel(p.charge.status)} · {paymentAmount(p.charge)}</p>)}
     </div>}
     <p>Zgjidhni një paketë me pagesë të vetme ose një abonim mujor.</p>
     {changing && <p>Ndryshimi i planit zbatohet në periudhën tjetër. Kuota dhe çmimi i periudhës aktuale ruhen.</p>}
@@ -172,7 +184,7 @@ export function SubscriptionBilling() {
     {charges.length > 0 && <details aria-label="Historiku i pagesave" className="border-t pt-4">
       <summary className="cursor-pointer font-semibold">Historiku i pagesave ({charges.length})</summary>
       <p className="text-sm mt-2">Këtu shfaqen pagesat dhe përpjekjet e mëparshme, përfshirë ato të anuluara. Nuk janë çmime për një blerje të re.</p>
-      {charges.map(c => <p key={c.id} className="mt-2">{date(c.created_at)} · {c.type_display} · {c.amount} € · {statusLabel(c.status)} {c.status === "canceled" && "· Blerja është anuluar."} {c.receipt_number && `· ${c.receipt_number}`}</p>)}
+      {charges.map(c => <p key={c.id} className="mt-2">{date(c.created_at)} · {c.type_display} · {paymentAmount(c)} · {statusLabel(c.status)} {c.status === "canceled" && "· Blerja është anuluar."} {c.receipt_number && `· ${c.receipt_number}`}</p>)}
     </details>}
   </section>;
 }

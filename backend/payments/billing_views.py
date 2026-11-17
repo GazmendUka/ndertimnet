@@ -16,6 +16,7 @@ from rest_framework.decorators import action
 from rest_framework.exceptions import ValidationError, PermissionDenied
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import UserRateThrottle
 
 from accounts.models import Company
 from main.models import CompanyIntroductionSettings
@@ -43,8 +44,15 @@ def bank_unavailable():
                      "code": "merchant_setup_required"}, status=503)
 
 
+class StorePurchaseThrottle(UserRateThrottle):
+    scope = "store_purchase"
+    rate = "30/min"
+
+
 def charge_data(charge):
+    store = charge.store_checkouts.filter(verified_at__isnull=False).first()
     return {"id": charge.pk, "kind": charge.kind, "type_display": charge.get_kind_display(),
+            "store_payment": {"platform": store.platform, "amount": str(store.paid_amount), "currency": store.currency} if store else None,
             "amount": str(charge.amount), "regular_amount": str(charge.regular_amount),
             "discount_amount": str(charge.discount_amount), "currency": charge.currency,
             "status": charge.status, "created_at": charge.created_at, "paid_at": charge.paid_at,
@@ -66,6 +74,62 @@ class BillingViewSet(viewsets.ViewSet):
             raise PermissionDenied("Vetëm kompanitë mund ta përdorin këtë funksion.")
         return company
 
+    @action(detail=False, methods=["get"], url_path="store-config")
+    def store_config(self, request):
+        from . import store_gateway as gateway
+        company = self.company(request)
+        platform = request.query_params.get("platform")
+        return Response({"enabled": gateway.enabled(platform), "products": gateway.products(platform) if platform in ("ios", "android") else {},
+            "environment": gateway.environment(company.pk), "collection": "manual_store_purchase"})
+
+    @action(detail=False, methods=["get"], url_path="store-terms", throttle_classes=[StorePurchaseThrottle])
+    def store_terms(self, request):
+        from . import store_billing
+        return Response(store_billing.terms(self.company(request), request.query_params))
+
+    @action(detail=False, methods=["post"], url_path="store-prepare", throttle_classes=[StorePurchaseThrottle])
+    def store_prepare(self, request):
+        from . import store_billing
+        checkout = store_billing.prepare(self.company(request), request.user, request.data)
+        return Response({"id": str(checkout.pk), "product_id": checkout.product_id,
+            "platform": checkout.platform, "amount": str(checkout.quoted_amount), "currency": checkout.currency,
+            "status": checkout.status, "charge_id": checkout.charge_id})
+
+    @action(detail=False, methods=["post"], url_path="store-verify", throttle_classes=[StorePurchaseThrottle])
+    def store_verify(self, request):
+        from . import store_billing, store_gateway as gateway
+        from .models import StoreCheckout
+        company = self.company(request)
+        try:
+            checkout = get_object_or_404(StoreCheckout.objects.select_related("charge"),
+                pk=UUID(str(request.data.get("id"))), charge__company=company, charge__payer=request.user)
+        except (ValueError, TypeError):
+            raise ValidationError({"detail": "Referenca e blerjes nuk është e vlefshme."}) from None
+        try:
+            checkout = store_billing.resolve(checkout, request.data.get("reference"))
+        except gateway.StorePending as exc:
+            return Response({"detail": str(exc), "status": "pending"}, status=202)
+        except gateway.StoreRevoked as exc:
+            return Response({"detail": str(exc), "status": "refunded"}, status=409)
+        except gateway.StoreError as exc:
+            return Response({"detail": str(exc), "code": "store_verification_required"}, status=409)
+        return Response({"status": checkout.status, "id": str(checkout.pk), "charge_id": checkout.charge_id})
+
+    @action(detail=False, methods=["post"], url_path="store-cancel")
+    def store_cancel(self, request):
+        from .models import StoreCheckout
+        company = self.company(request)
+        try:
+            key = UUID(str(request.data.get("id")))
+        except (ValueError, TypeError):
+            raise ValidationError({"detail": "Referenca e blerjes nuk është e vlefshme."}) from None
+        with transaction.atomic():
+            Company.objects.select_for_update().get(pk=company.pk)
+            checkout = get_object_or_404(StoreCheckout.objects.select_for_update(), pk=key, charge__company=company)
+            if checkout.status == PaymentStatus.PENDING and not checkout.verification_reference:
+                checkout.status = PaymentStatus.CANCELED
+                checkout.save(update_fields=["status"])
+        return Response({"status": checkout.status})
     @action(detail=False, methods=["get"], url_path="android-raiaccept-config")
     def android_raiaccept_config(self, request):
         from . import android_raiaccept
@@ -221,6 +285,10 @@ class BillingViewSet(viewsets.ViewSet):
             agreements += [{"text": p.terms_text, "version": p.terms_version, "signer_name": p.signer_name,
                             "signed_at": p.signed_at, "sha256": hashlib.sha256(p.terms_text.encode()).hexdigest()}
                            for p in OfferPackPurchase.objects.filter(charge__company=company).order_by("-signed_at")]
+            from .models import StoreCheckout
+            agreements += [{"text": p.terms_text, "version": p.terms_version, "signer_name": p.signer_name,
+                "signed_at": p.created_at, "sha256": hashlib.sha256(p.terms_text.encode()).hexdigest()}
+                for p in StoreCheckout.objects.filter(charge__company=company).order_by("-created_at")]
             if not sub:
                 return Response({"overview": subscription_overview(company), "subscription": None, "agreements": agreements, "plan_changes": plan_changes, "free_offers_remaining": company.free_offers_remaining})
             ensure_periods(sub)
@@ -281,8 +349,10 @@ class BillingViewSet(viewsets.ViewSet):
             sub = current_subscription(company)
             if not sub:
                 raise ValidationError({"detail": "Nuk ka abonim aktiv për anulim."})
+            if self.pending_store_subscription(sub):
+                raise ValidationError({"detail": "Prisni verifikimin e blerjes në aplikacion përpara anulimit."})
             if not sub.started_at:
-                if PlatformCheckout.objects.filter(charge__period__subscription=sub, status=PaymentStatus.PENDING).exists():
+                if PlatformCheckout.objects.filter(charge__period__subscription=sub, status=PaymentStatus.PENDING).exists() or self.pending_store_subscription(sub):
                     raise ValidationError({"detail": "Prisni verifikimin e pagesës së parë përpara anulimit."})
                 sub.canceled_at = sub.ends_at = timezone.now()
                 sub.save(update_fields=["canceled_at", "ends_at"])
@@ -308,7 +378,10 @@ class BillingViewSet(viewsets.ViewSet):
         if request.data.get("checkout_provider") == android_raiaccept.PROVIDER:
             android_raiaccept.require_access(company, request.data)
         signer = str(request.data.get("signer_name") or "").strip()
-        if request.data.get("accept_notice") is not True or request.data.get("terms_version") != AGREEMENT_VERSION or not 2 <= len(signer) <= 200:
+        native = request.data.get("platform") in ("ios", "android")
+        from . import store_billing
+        expected_version = store_billing.TERMS_VERSION if native else AGREEMENT_VERSION
+        if request.data.get("accept_notice") is not True or request.data.get("terms_version") != expected_version or not 2 <= len(signer) <= 200:
             raise ValidationError({"detail": "Lexoni dhe pranoni marrëveshjen aktuale."})
         with transaction.atomic():
             Company.objects.select_for_update().get(pk=company.pk)
@@ -316,18 +389,23 @@ class BillingViewSet(viewsets.ViewSet):
             if not sub or not sub.started_at or sub.canceled_at:
                 raise ValidationError({"detail": "Ndryshimi kërkon një abonim të filluar që nuk është anuluar."})
             period = ensure_periods(sub)
-            if PlatformCheckout.objects.filter(charge__period__subscription=sub, status=PaymentStatus.PENDING).exists():
+            if PlatformCheckout.objects.filter(charge__period__subscription=sub, status=PaymentStatus.PENDING).exists() or self.pending_store_subscription(sub):
                 raise ValidationError({"detail": "Prisni verifikimin e pagesës përpara ndryshimit."})
             if sub.pending_plan_code == plan.code:
                 return Response({"effective_at": sub.pending_plan_at, "plan_code": plan.code})
-            text = agreement_text(company, plan)
+            text = store_billing.terms(company, {**request.data, "code": plan.code})["text"] if native else agreement_text(company, plan)
             sub.pending_plan_code = plan.code if plan.code != sub.plan_code else ""
             sub.pending_plan_at = period.ends_at if sub.pending_plan_code else None
             sub.save(update_fields=["pending_plan_code", "pending_plan_at"])
             SubscriptionPlanChange.objects.create(subscription=sub, plan_code=plan.code,
                 effective_at=period.ends_at, signer_name=signer, signed_by=request.user,
-                text=text, version=AGREEMENT_VERSION, sha256=hashlib.sha256(text.encode()).hexdigest())
+                text=text, version=expected_version, sha256=hashlib.sha256(text.encode()).hexdigest())
             return Response({"effective_at": sub.pending_plan_at, "plan_code": plan.code})
+
+    @staticmethod
+    def pending_store_subscription(sub):
+        from .models import StoreCheckout
+        return StoreCheckout.objects.filter(charge__period__subscription=sub, status=PaymentStatus.PENDING).exists()
 
     @action(detail=True, methods=["post"], url_path="checkout")
     def charge_checkout(self, request, pk=None):
@@ -365,6 +443,8 @@ class BillingViewSet(viewsets.ViewSet):
                 charge.save(update_fields=["amount", "regular_amount", "discount_amount"])
             if charge.status == PaymentStatus.PAID:
                 return Response(charge_data(charge))
+            if charge.store_checkouts.filter(status=PaymentStatus.PENDING).exists():
+                raise ValidationError({"detail": "Përfundoni verifikimin e blerjes në aplikacion përpara pagesës bankare."})
             if charge.offer_id:
                 state = offer_billing_state(offer)
                 if state["paid"] or state["legacy"] or state["introductory"] or state["included"] or state["credit_available"]:
