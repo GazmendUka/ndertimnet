@@ -1,5 +1,4 @@
 import axios from "axios";
-import { isIOSPurchaseRequest } from "../platform/iosAccess";
 import { API_BASE_URL } from "../config/api";
 import { getSession, isCurrentSession, saveRenewedSession, clearSession } from "../auth/session";
 import { CONTENT_RULES_EVENT, hasAcceptedContentRules, isContentWrite } from "../auth/contentRules";
@@ -51,11 +50,6 @@ function refreshSession(session) {
 }
 
 api.interceptors.request.use((config) => {
-  if (isIOSPurchaseRequest(config)) {
-    const error = new axios.CanceledError("Ky veprim nuk është i disponueshëm në këtë aplikacion.");
-    error.code = "ios_commerce_unavailable";
-    throw error;
-  }
   if (config.skipAuth) return config;
   const session = getSession();
   if (config._authSession && !isCurrentSession(config._authSession)) throw sessionChanged();

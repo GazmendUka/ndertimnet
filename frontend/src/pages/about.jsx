@@ -1,4 +1,3 @@
-import { companyEntryPath, companyEntryLabel } from "../platform/iosAccess";
 // ===========================================
 // src/pages/AboutPage.jsx
 // Ndertimnet – About Page (V3 SEO + Premium)
@@ -196,10 +195,10 @@ export default function AboutPage() {
                   </Link>
 
                   <Link
-                    to={companyEntryPath()}
+                    to="/register/company"
                     className="inline-flex items-center justify-center gap-2 rounded-2xl border border-slate-300 bg-white px-6 py-3.5 text-sm font-semibold text-slate-800 transition hover:border-slate-400 hover:bg-slate-50"
                   >
-                    {companyEntryLabel()}
+                    Regjistro kompaninë
                     <ArrowRight className="h-4 w-4" />
                   </Link>
                 </div>
@@ -755,10 +754,10 @@ export default function AboutPage() {
                   </Link>
 
                   <Link
-                    to={companyEntryPath()}
+                    to="/register/company"
                     className="inline-flex items-center justify-center rounded-2xl border border-white/20 bg-white/10 px-6 py-3.5 text-sm font-semibold text-white transition hover:bg-white/15"
                   >
-                    {companyEntryLabel()}
+                    Regjistro kompaninë
                   </Link>
                 </div>
               </div>

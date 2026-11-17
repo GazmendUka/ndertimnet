@@ -1,0 +1,24 @@
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { Capacitor } from "@capacitor/core";
+import api from "../api/axios";
+import RegisterCompany from "./RegisterCompany";
+const mockNavigate = jest.fn();
+jest.mock("react-router-dom", () => ({ Link: ({ children, to }) => <a href={to}>{children}</a>, useNavigate: () => mockNavigate }));
+jest.mock("@capacitor/core", () => ({ Capacitor: { isNativePlatform: jest.fn(), getPlatform: jest.fn() } }));
+jest.mock("../api/axios", () => ({ post: jest.fn() }));
+jest.mock("../components/payments/CompanyIntroduction", () => () => null);
+jest.mock("../components/ContentRules", () => ({ ContentRulesConsent: ({ checked, onChange }) => <label><input type="checkbox" checked={checked} onChange={e => onChange(e.target.checked)} />Content rules</label> }));
+jest.mock("../components/LegalLinks", () => ({ LegalLink: () => <a href="/privacy.html">Privacy</a> }));
+beforeEach(() => { jest.clearAllMocks(); api.post.mockResolvedValue({ data: {} }); });
+test.each(["ios", "android", "web"])("%s business registration is free and reports acquisition channel", async platform => {
+  Capacitor.isNativePlatform.mockReturnValue(platform !== "web"); Capacitor.getPlatform.mockReturnValue(platform);
+  render(<RegisterCompany />);
+  fireEvent.change(screen.getByLabelText("Emri i kompanisë"), { target: { value: "Synthetic" } });
+  fireEvent.change(screen.getByLabelText("Email"), { target: { value: "synthetic@example.test" } });
+  fireEvent.change(screen.getByLabelText("Fjalëkalimi"), { target: { value: "synthetic-password" } });
+  const register = screen.getByRole("button", { name: "Regjistro kompaninë" });
+  expect(register).toBeDisabled(); fireEvent.click(screen.getByRole("checkbox")); fireEvent.click(register);
+  await waitFor(() => expect(api.post).toHaveBeenCalledWith("accounts/register/company/", expect.objectContaining({ registration_channel: platform, company_name: "Synthetic" }), { skipAuth: true }));
+  expect(api.post).toHaveBeenCalledTimes(1);
+  expect(mockNavigate).toHaveBeenCalledWith("/register/success", { state: { type: "company" } });
+});

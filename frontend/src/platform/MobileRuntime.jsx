@@ -7,7 +7,6 @@ import { Network } from "@capacitor/network";
 import { SplashScreen } from "@capacitor/splash-screen";
 import { StatusBar, Style } from "@capacitor/status-bar";
 import { openExternalUrl } from "./mobile";
-import { appDestination, isIOSApp, isIOSPurchaseLink } from "./iosAccess";
 
 const APP_HOSTS = new Set([
   "ndertimnet.com",
@@ -68,15 +67,9 @@ export default function MobileRuntime() {
           if (!path) return;
 
           await Browser.close().catch(() => undefined);
-          navigate(appDestination(path));
+          navigate(path);
         })
       );
-
-      if (isIOSApp()) {
-        listeners.push(await CapacitorApp.addListener("appStateChange", ({ isActive }) => {
-          if (isActive) window.dispatchEvent(new Event("ndertimnet:account-refresh"));
-        }));
-      }
 
       if (Capacitor.getPlatform() === "android") {
         listeners.push(
@@ -99,19 +92,11 @@ export default function MobileRuntime() {
       openExternalUrl(link.href).catch(() => undefined);
     };
 
-    const blockPurchaseLink = (event) => {
-      const link = event.target.closest?.("a[href]");
-      if (!link || !isIOSPurchaseLink(link.href)) return;
-      event.preventDefault();
-      event.stopPropagation();
-    };
-    document.addEventListener("click", blockPurchaseLink, true);
     document.addEventListener("click", handleExternalLink);
     register().catch(() => SplashScreen.hide().catch(() => undefined));
 
     return () => {
       disposed = true;
-      document.removeEventListener("click", blockPurchaseLink, true);
       document.removeEventListener("click", handleExternalLink);
       listeners.forEach((listener) => listener.remove());
     };

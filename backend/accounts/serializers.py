@@ -333,6 +333,7 @@ class PublicCompanySerializer(serializers.ModelSerializer):
 
 # 🏢 RegisterCompanySerializer (KONTO-REGISTRERING)
 class RegisterCompanySerializer(serializers.ModelSerializer):
+    registration_channel = serializers.ChoiceField(choices=Company.RegistrationChannel.choices, default="unknown", write_only=True)
     company_name = serializers.CharField(write_only=True)
     phone = serializers.CharField(write_only=True, required=False, allow_blank=True)
     password = serializers.CharField(write_only=True, min_length=6)
@@ -342,6 +343,7 @@ class RegisterCompanySerializer(serializers.ModelSerializer):
         fields = [
             "email",
             "password",
+            "registration_channel",
             "company_name",
             "phone",
         ]
@@ -369,6 +371,7 @@ class RegisterCompanySerializer(serializers.ModelSerializer):
 
 
     def create(self, validated_data):
+        registration_channel = validated_data.pop("registration_channel", "unknown")
         company_name = validated_data.pop("company_name")
         phone = validated_data.pop("phone", "")
         password = validated_data.pop("password")
@@ -391,7 +394,7 @@ class RegisterCompanySerializer(serializers.ModelSerializer):
         with transaction.atomic():
             user = User.objects.create_user(email=email, password=password, role="company")
             Company.objects.create(
-                user=user, company_name=company_name, phone=phone,
+                user=user, company_name=company_name, phone=phone, registration_channel=registration_channel,
                 free_offers_remaining=allowance, introductory_offers_granted=allowance,
             )
 

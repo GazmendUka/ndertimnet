@@ -20,7 +20,6 @@ import LegalLinks from "../LegalLinks";
 import SiteFooter from "./SiteFooter";
 import { useAuth } from "../../auth/AuthContext";
 import MobileNav from "./MobileNav";
-import { isIOSApp } from "../../platform/iosAccess";
 
 const logoSrc = "/ndertimnet-logo-full-width/ndertimnet-logo-search-transparent.png";
 const servicePaths = [
@@ -238,7 +237,7 @@ export default function PublicLayout() {
             <MoreLink to="/about" icon={Info} onClick={() => setMoreOpen(false)}>Rreth nesh</MoreLink>
             <MoreLink to="/contact" icon={Mail} onClick={() => setMoreOpen(false)}>Kontakt</MoreLink>
             <LegalLinks onClick={() => setMoreOpen(false)} />
-            {!isIOSApp() && <MoreLink to="/register/company" icon={Building2} onClick={() => setMoreOpen(false)}>Regjistro kompaninë</MoreLink>}
+            <MoreLink to="/register/company" icon={Building2} onClick={() => setMoreOpen(false)}>Regjistro kompaninë</MoreLink>
             <MoreLink to="/login" icon={LogIn} onClick={() => setMoreOpen(false)}>Kyçu</MoreLink>
           </MobileMoreSheet>
         </>

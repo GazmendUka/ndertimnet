@@ -18,7 +18,6 @@ import {
 import { useAuth } from "../../auth/AuthContext";
 import api from "../../api/axios";
 import MobileMoreSheet from "./MobileMoreSheet";
-import { isIOSApp } from "../../platform/iosAccess";
 
 export default function MobileNav({ alwaysVisible = false }) {
   const { isCustomer, isCompany, logout, access } = useAuth();
@@ -153,7 +152,7 @@ export default function MobileNav({ alwaysVisible = false }) {
       <MobileMoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} title="Më shumë">
         <SheetLink to={isCompany ? "/company/profile" : "/customer/profile"} icon={User}>Profili</SheetLink>
         <SheetLink to={isCompany ? "/company/notifications" : "/customer/notifications"} icon={Bell}>Njoftimet</SheetLink>
-        {isCompany && <SheetLink to="/company/payments" icon={ReceiptText}>{isIOSApp() ? "Kuota dhe historiku" : "Pagesat dhe konfirmimet"}</SheetLink>}
+        {isCompany && <SheetLink to="/company/payments" icon={ReceiptText}>Pagesat dhe konfirmimet</SheetLink>}
         {isCustomer && <SheetLink to="/customer/payments" icon={ReceiptText}>Pagesat dhe konfirmimet</SheetLink>}
         <SheetLink to="/perditesime" icon={Newspaper}>Përditësime</SheetLink>
         <SheetLink to="/about" icon={Info}>Rreth nesh</SheetLink>

@@ -190,6 +190,15 @@ class Customer(models.Model):
 # ======================================================
 
 class Company(models.Model):
+    class RegistrationChannel(models.TextChoices):
+        UNKNOWN = "unknown", "E panjohur"
+        WEB = "web", "Faqja e internetit"
+        IOS = "ios", "Aplikacioni iPhone"
+        ANDROID = "android", "Aplikacioni Android"
+
+    # Acquisition metadata only; never used for billing, authorization or eligibility.
+    registration_channel = models.CharField(max_length=10, choices=RegistrationChannel.choices,
+                                            default=RegistrationChannel.UNKNOWN, editable=False)
     user = models.OneToOneField(
         User,
         on_delete=models.PROTECT,

@@ -10,9 +10,9 @@ jest.mock("react-router-dom", () => {
 });
 jest.mock("../api/axios", () => ({ get: jest.fn() }));
 jest.mock("../components/payments/PlatformBilling", () => ({ PublicSubscriptionPricing: () => null }));
-jest.mock("@capacitor/core", () => ({ Capacitor: { isNativePlatform: jest.fn(), getPlatform: jest.fn(() => "android") } }));
+jest.mock("@capacitor/core", () => ({ Capacitor: { isNativePlatform: jest.fn() } }));
 
-beforeEach(() => { Capacitor.isNativePlatform.mockReturnValue(true); Capacitor.getPlatform.mockReturnValue("android"); });
+beforeEach(() => Capacitor.isNativePlatform.mockReturnValue(true));
 
 test("approved campaign keeps its own image area and the welcome heading and project access", async () => {
   api.get.mockResolvedValue({ data: { id: 8, title: "Hero test campaign", subtitle: "Campaign details", link_type: "external", target_url: "https://example.com/campaign", background_image_url: "/test-image.png", cta_text: "Zbulo ofertën", company_name: "Test Company" } });
@@ -87,15 +87,4 @@ test("website campaigns retain their original Hero layout without the native wel
   render(<MemoryRouter><LandingPage /></MemoryRouter>);
   expect(await screen.findByRole("heading", { level: 1, name: "Website campaign" })).toBeInTheDocument();
   expect(screen.queryByRole("heading", { name: "Gjeni profesionistin e duhur." })).not.toBeInTheDocument();
-});
-
-
-test("iOS company calls to action open login without registration or pricing links", async () => {
-  Capacitor.getPlatform.mockReturnValue("ios"); api.get.mockResolvedValue({ data: null });
-  render(<MemoryRouter><LandingPage /></MemoryRouter>);
-  await screen.findByRole("heading", { level: 1, name: "Gjeni profesionistin e duhur." });
-  const links = screen.getAllByRole("link", { name: "Kyçu si kompani" });
-  links.forEach(link => expect(link).toHaveAttribute("href", "/login"));
-  expect(document.querySelector('a[href="/register/company"]')).not.toBeInTheDocument();
-  expect(document.querySelector('a[href="/pricing"]')).not.toBeInTheDocument();
 });

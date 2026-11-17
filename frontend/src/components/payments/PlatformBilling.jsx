@@ -3,18 +3,12 @@ import { Link } from "react-router-dom";
 import { billingService, isNativeBilling } from "../../services/billingService";
 import { openPaymentUrl } from "../../platform/mobile";
 import { OfferAllowanceSummary } from "./CompanyOfferAllowance";
-import { isIOSApp } from "../../platform/iosAccess";
-import CompanyOfferBalance from "./CompanyOfferBalance";
 
 const errorText = (e) => e.response?.data?.detail || "Nuk mund të ngarkohen të dhënat e pagesës. Provoni përsëri.";
 const statusLabel = (s) => ({ paid: "Paguar", pending: "Në pritje", failed: "Dështoi", canceled: "Anuluar", refunded: "Rimbursuar" }[s] || s);
 const date = (v) => v ? new Date(v).toLocaleDateString("sq-AL") : "Pas pagesës së parë";
 
 export function ListingPrice() {
-  return isIOSApp() ? null : <ListingPriceDetails />;
-}
-
-function ListingPriceDetails() {
   const [price, setPrice] = useState(null);
   useEffect(() => { let live = true; billingService.catalog().then(r => { if (live) setPrice(r.data.listing); }).catch(() => {}); return () => { live = false; }; }, []);
   return <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm">
@@ -28,7 +22,6 @@ function ListingPriceDetails() {
 }
 
 export function PricingPlans({ catalog, onSelect, disabled = false }) {
-  if (isIOSApp()) return null;
   const options = [...(catalog?.offer_pack ? [{ ...catalog.offer_pack, name: "Bazë", one_time: true, monthly_price: catalog.offer_pack.price, regular_price: catalog.offer_pack.price }] : []), ...(catalog?.plans || [])];
   return <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{options.map(plan => <article key={plan.code} className="rounded-xl border p-5 flex flex-col">
     <h3 className="text-xl font-semibold">{plan.name}</h3>
@@ -44,10 +37,6 @@ export function PricingPlans({ catalog, onSelect, disabled = false }) {
 }
 
 export function PublicSubscriptionPricing() {
-  return isIOSApp() ? null : <PublicSubscriptionPricingDetails />;
-}
-
-function PublicSubscriptionPricingDetails() {
   const [catalog, setCatalog] = useState(null);
   const [error, setError] = useState("");
   useEffect(() => {
@@ -73,7 +62,7 @@ export function OfferBilling({ offerId }) {
   return <section className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-sm" aria-label="Kuota e ofertës">
     <h3 className="font-semibold">Dërgimi i ofertës</h3>
     <p>Nuk ka pagesë për ofertë, lead ose bisedë. Rishikimet e një oferte të dërguar nuk konsumojnë kuotë tjetër.</p>
-    {quote && <p className="my-2 font-semibold">{quote.pending ? "Pagesa e mëparshme po verifikohet. Kontaktoni mbështetjen nëse vonesa vazhdon." : quote.paid || quote.legacy ? "Kjo ofertë është e përfshirë. Mund të nënshkruani dhe dërgoni." : quote.credit_available ? `Përdoret një kredit (${quote.credits_remaining} të mbetura).` : quote.introductory ? `Ju kanë mbetur ${quote.free_offers_remaining} oferta hyrëse falas.` : quote.included ? `Përfshihet në abonim: ${quote.remaining} oferta të mbetura këtë periudhë.` : quote.purchased_offers_remaining > 0 ? `Paketa e blerë: ${quote.purchased_offers_remaining} oferta të mbetura, pa afat skadimi.` : isIOSApp() ? "Nuk keni kuotë të disponueshme për një ofertë të re. Ofertat ekzistuese mbeten të disponueshme." : "Kuota është shteruar. Nuk dërgohet ofertë tjetër pa kuotë të re. Nuk aktivizohet abonim automatik."}</p>}
+    {quote && <p className="my-2 font-semibold">{quote.pending ? "Pagesa e mëparshme po verifikohet. Kontaktoni mbështetjen nëse vonesa vazhdon." : quote.paid || quote.legacy ? "Kjo ofertë është e përfshirë. Mund të nënshkruani dhe dërgoni." : quote.credit_available ? `Përdoret një kredit (${quote.credits_remaining} të mbetura).` : quote.introductory ? `Ju kanë mbetur ${quote.free_offers_remaining} oferta hyrëse falas.` : quote.included ? `Përfshihet në abonim: ${quote.remaining} oferta të mbetura këtë periudhë.` : quote.purchased_offers_remaining > 0 ? `Paketa e blerë: ${quote.purchased_offers_remaining} oferta të mbetura, pa afat skadimi.` : "Kuota është shteruar. Nuk dërgohet ofertë tjetër pa kuotë të re. Nuk aktivizohet abonim automatik."}</p>}
     {error && <p role="alert" className="text-red-700">{error}</p>}
     <p className="mt-2">Kontaktet dhe biseda hapen pasi nënshkruani dhe dërgoni ofertën.</p>
     <button type="button" onClick={refresh} className="underline mt-2 mr-4">Përditëso statusin</button>
@@ -82,10 +71,6 @@ export function OfferBilling({ offerId }) {
 }
 
 export function SubscriptionBilling() {
-  return isIOSApp() ? <CompanyOfferBalance /> : <SubscriptionBillingDetails />;
-}
-
-function SubscriptionBillingDetails() {
   const [data, setData] = useState(null);
   const [catalog, setCatalog] = useState(null);
   const [charges, setCharges] = useState([]);
@@ -208,7 +193,7 @@ export function PublicationBilling({ jobId }) {
     <h2 className="font-semibold">Publikimi i kërkesës</h2>
     {charge && <><p>Çmimi: {charge.regular_amount} € · Zbritja: {charge.discount_amount} € · Shuma: {charge.amount} €</p>
       <p>{charge.status === "paid" ? "Tarifa e publikimit është përfunduar." : "Publikimi pret pagesën dhe shqyrtimin."}</p>
-      {charge.status !== "paid" && (isNativeBilling() ? <p>{isIOSApp() ? "Publikimi është në pritje të konfirmimit." : "Blerjet në aplikacion nuk janë aktivizuar ende."}</p> : <button className="premium-btn btn-dark" disabled={busy} onClick={pay}>Paguaj {charge.amount} €</button>)}</>}
+      {charge.status !== "paid" && (isNativeBilling() ? <p>Blerjet në aplikacion nuk janë aktivizuar ende.</p> : <button className="premium-btn btn-dark" disabled={busy} onClick={pay}>Paguaj {charge.amount} €</button>)}</>}
     {error && <p role="alert">{error}</p>}<button className="underline mt-2" onClick={refresh}>Përditëso statusin</button>
   </section>;
 }
