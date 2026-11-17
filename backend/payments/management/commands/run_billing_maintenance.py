@@ -31,6 +31,8 @@ class Command(BaseCommand):
         try:
             if options['task'] == 'reconcile':
                 call_command('reconcile_payments', apply=True, stdout=self.stdout, stderr=self.stderr)
+                if getattr(settings, 'STORE_BILLING_ENABLED', False):
+                    call_command('reconcile_store_purchases', apply=True, stdout=self.stdout, stderr=self.stderr)
             else:
                 call_command('prepare_billing_periods', stdout=self.stdout, stderr=self.stderr)
                 call_command('follow_up_inactive_requests', apply=True, stdout=self.stdout, stderr=self.stderr)

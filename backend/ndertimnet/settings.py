@@ -2,6 +2,7 @@
 
 from pathlib import Path
 import os
+import json
 from datetime import timedelta
 
 
@@ -24,6 +25,17 @@ def env_list(key: str, default=None, sep=","):
     if not val:
         return default
     return [x.strip() for x in val.split(sep) if x.strip()]
+
+
+# Explicitly enabled only after both store configuration and sandbox acceptance.
+STORE_BILLING_ENABLED = env_bool("STORE_BILLING_ENABLED", False)
+STORE_BILLING_ENVIRONMENT = os.environ.get("STORE_BILLING_ENVIRONMENT", "Production")
+STORE_SANDBOX_COMPANY_IDS = env_list("STORE_SANDBOX_COMPANY_IDS")
+STORE_APPLE_KEY_ID = os.environ.get("STORE_APPLE_KEY_ID", "")
+STORE_APPLE_ISSUER_ID = os.environ.get("STORE_APPLE_ISSUER_ID", "")
+STORE_APPLE_PRIVATE_KEY = os.environ.get("STORE_APPLE_PRIVATE_KEY", "").replace("\\n", "\n")
+STORE_GOOGLE_CREDENTIALS_JSON = os.environ.get("STORE_GOOGLE_CREDENTIALS_JSON", "")
+STORE_PRODUCT_IDS = json.loads(os.environ.get("STORE_PRODUCT_IDS", "{}"))
 
 
 def env_url(key: str, default: str = "") -> str:

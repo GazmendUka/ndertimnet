@@ -356,3 +356,29 @@ class OfferPackPurchase(models.Model):
 
     class Meta:
         constraints = [models.CheckConstraint(condition=models.Q(offers_used__lte=models.F("offers")), name="offer_pack_usage_within_quota")]
+
+
+class StoreCheckout(models.Model):
+    """A company-bound store purchase. Never expose receipt tokens in API/admin logs."""
+    id = models.UUIDField(primary_key=True, default=uuid4, editable=False)
+    charge = models.ForeignKey(PlatformCharge, on_delete=models.PROTECT, related_name="store_checkouts")
+    platform = models.CharField(max_length=7, choices=[("ios", "Apple"), ("android", "Google Play")])
+    product_id = models.CharField(max_length=200)
+    quoted_amount = models.DecimalField(max_digits=12, decimal_places=3)
+    paid_amount = models.DecimalField(max_digits=12, decimal_places=3, null=True, blank=True)
+    currency = models.CharField(max_length=3)
+    signer_name = models.CharField(max_length=200)
+    terms_text = models.TextField()
+    terms_version = models.CharField(max_length=40)
+    status = models.CharField(max_length=20, choices=PaymentStatus.choices, default=PaymentStatus.PENDING)
+    # A hash provides global replay protection without indexing a confidential token.
+    transaction_hash = models.CharField(max_length=64, unique=True, null=True, blank=True)
+    verification_reference = models.TextField(blank=True)
+    environment = models.CharField(max_length=12, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    verified_at = models.DateTimeField(null=True, blank=True)
+    finished_at = models.DateTimeField(null=True, blank=True)
+    last_checked_at = models.DateTimeField(null=True, blank=True)
+
+    class Meta:
+        constraints = [models.UniqueConstraint(fields=["charge"], condition=models.Q(status="paid"), name="one_paid_store_checkout_per_charge")]

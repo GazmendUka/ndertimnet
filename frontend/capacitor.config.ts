@@ -7,6 +7,9 @@ const config: CapacitorConfig = {
   backgroundColor: "#ffffff",
   loggingBehavior: "production",
   plugins: {
+    NativePurchases: {
+      autoFinishTransactions: false,
+    },
     CapacitorHttp: {
       enabled: true,
     },

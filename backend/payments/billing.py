@@ -112,7 +112,7 @@ def available_period(company):
     period = ensure_periods(sub, now)
     if not period or not (period.starts_at <= now < period.ends_at):
         return None
-    if sub.periods.filter(starts_at__lte=now).exclude(charge__status=PaymentStatus.PAID).exists():
+    if sub.periods.filter(starts_at__lte=now).exclude(charge__status__in=[PaymentStatus.PAID, PaymentStatus.REFUNDED]).exists():
         return None
     if period.charge.status == PaymentStatus.PAID and period.offers_used < period.monthly_offers:
         return period
