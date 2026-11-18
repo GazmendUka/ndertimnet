@@ -18,13 +18,13 @@ body cannot choose another user. Disabled/deleting accounts stay blocked.
 Confirmation sets only the signed-in user's email confirmation fields; it never
 approves a company, creates a payment, grants offers or reactivates an account.
 
-New iPhone Sandbox build 1.12 (12) explains test accounts on login, stops promising
+New iPhone Sandbox build 1.13 (13) explains test accounts on login, stops promising
 undeliverable reset emails and routes unverified test users to confirmation.
 Both new registrations and accounts left by the previous failure can sign in
 and complete the same confirmation. The ordinary client retains email
 verification. No database migration or production deployment is required.
 
-Validation: 366 backend tests, nine focused registration/security tests, 227
+Validation: 366 backend tests, nine focused registration/security tests, 229
 frontend tests, Django checks and migration consistency, ordinary production
 frontend build and the separate iPhone Sandbox build. Physical Apple purchases
 still require testing on an iPhone; test confirmation is not purchase evidence.
@@ -34,3 +34,9 @@ existing internal staging TestFlight group. Do not submit to App Review or enabl
 production sales as part of this fix. Keep Apple/RaiAccept Sandbox settings and
 the Android test flows unchanged. Rollback code to previous staging commit
 49fdc5708bf75ad83e0f79343d9622d0b8c0766b if necessary; no schema rollback applies.
+
+The browser integration check found competing login/public-route redirects. Both
+public route guards now agree on staging confirmation for an unverified test
+user. An integration regression test covers login, both guards, confirmation
+and return to the company dashboard; ordinary login is also covered. Build12
+was uploaded but held back after this check; build13 contains the routing fix.

@@ -2,6 +2,7 @@
 
 import { Navigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
+import { IS_IOS_STORE_SANDBOX } from "../config/api";
 
 const PublicOnlyRoute = ({ children }) => {
   const { user, loading } = useAuth();
@@ -15,7 +16,7 @@ const PublicOnlyRoute = ({ children }) => {
     }
 
     if (user) {
-    return <Navigate to="/" replace />;
+    return <Navigate to={IS_IOS_STORE_SANDBOX && !user.email_verified ? "/verify-email" : "/"} replace />;
     }
 
     return children;
