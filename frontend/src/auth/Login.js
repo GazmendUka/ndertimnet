@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { useAuth } from "./AuthContext";
 import { readGuestProject } from "../utils/guestProject";
+import { IS_IOS_STORE_SANDBOX } from "../config/api";
 import { useNavigate, Link } from "react-router-dom";
 import {
   AlertCircle,
@@ -52,7 +53,7 @@ const Login = () => {
         return;
       }
 
-      navigate(user.role === "customer" && readGuestProject() ? "/nis-projektin" : "/");
+      navigate(IS_IOS_STORE_SANDBOX && !user.email_verified ? "/verify-email" : user.role === "customer" && readGuestProject() ? "/nis-projektin" : "/");
     } catch (err) {
       setError(
         err?.response?.data?.message ||
@@ -137,6 +138,7 @@ const Login = () => {
               </p>
             </div>
 
+            {IS_IOS_STORE_SANDBOX && <p className="mb-5 rounded-lg bg-amber-50 p-4 text-sm text-amber-900">Version testuese. Përdorni llogarinë që regjistruat në këtë test. Emaili dhe fjalëkalimi nga ndertimnet.com nuk përdoren këtu.</p>}
             {error && (
               <div
                 className="mb-5 flex gap-3 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800"

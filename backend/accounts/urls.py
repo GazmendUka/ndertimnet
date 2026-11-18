@@ -2,6 +2,7 @@
 
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
+from .staging_verification import ConfirmStagingAccountView
 
 from .views import (
     UserViewSet,
@@ -49,6 +50,7 @@ urlpatterns = [
     # ✉️ Email verification
     path("verify-email/", VerifyEmailView.as_view(), name="verify-email"),
     path("resend-verification/", ResendVerificationEmailView.as_view(), name="resend-verification"),
+    path("test/confirm-account/", ConfirmStagingAccountView.as_view(), name="confirm-test-account"),
     
     path("account/delete/", DeleteAccountView.as_view(), name="delete-account"),
     

@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { CheckCircle2 } from "lucide-react";
+import { IS_IOS_STORE_SANDBOX } from "../config/api";
 
 export default function RegisterSuccess() {
   const navigate = useNavigate();
@@ -57,7 +58,7 @@ export default function RegisterSuccess() {
         </p>
 
         <p className="mt-4 rounded-xl bg-[#f4f9f6] p-4 text-sm leading-6 text-[#315c46]">
-          Kontrolloni emailin dhe hapni linkun e verifikimit. Pastaj mund të kyçeni në llogarinë tuaj.
+          {IS_IOS_STORE_SANDBOX ? "Llogaria testuese u krijua. Asnjë email nuk dërgohet. Kyçuni me fjalëkalimin që zgjodhët dhe konfirmoni llogarinë testuese në hapin tjetër." : "Kontrolloni emailin dhe hapni linkun e verifikimit. Pastaj mund të kyçeni në llogarinë tuaj."}
         </p>
 
         <p className="mt-4 text-sm text-gray-500">

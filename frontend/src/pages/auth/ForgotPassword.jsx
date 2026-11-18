@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import api from "../../api/axios";
 import { Link } from "react-router-dom";
 import { ArrowLeft, Loader2, Mail } from "lucide-react";
+import { IS_IOS_STORE_SANDBOX } from "../../config/api";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -38,6 +39,15 @@ export default function ForgotPassword() {
       setLoading(false);
     }
   };
+
+  if (IS_IOS_STORE_SANDBOX) return <main className="min-h-screen bg-slate-50 px-4 py-16">
+    <section className="mx-auto max-w-md space-y-5 rounded-xl border bg-white p-6">
+      <p className="rounded-lg bg-amber-100 p-3 font-semibold">Vetëm test · Apple Sandbox</p>
+      <h1 className="text-2xl font-semibold">Fjalëkalimi i llogarisë testuese</h1>
+      <p>Kjo llogari është e veçantë nga ndertimnet.com. Në këtë test nuk dërgohen email-e për rivendosje. Përdorni fjalëkalimin që zgjodhët këtu; nëse e keni harruar, kërkoni ndihmë nga administratori i testit.</p>
+      <Link to="/login" className="inline-flex min-h-[48px] items-center font-semibold text-emerald-800">Kthehu te hyrja</Link>
+    </section>
+  </main>;
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[#f7f4ee] px-4 py-6">

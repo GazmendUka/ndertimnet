@@ -7,6 +7,9 @@ from django.conf import settings
 
 
 def send_verification_email(user, token):
+    from .staging_verification import enabled
+    if enabled():
+        return None  # The signed-in test user confirms in the app; no email sent.
     verify_url = settings.FRONTEND_VERIFY_EMAIL_URL.format(token=token)
 
     html_content = f"""
@@ -158,6 +161,9 @@ def send_password_reset_email(user, reset_url):
 
 
 def send_welcome_email(user):
+    from .staging_verification import enabled
+    if enabled():
+        return None
     login_url = settings.FRONTEND_LOGIN_URL
     profile_url = (
         f"{settings.FRONTEND_URL}/company/profile"

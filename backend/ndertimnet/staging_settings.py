@@ -21,6 +21,7 @@ for variable in ("SENDGRID_API_KEY", "CLOUDINARY_URL", "CLOUDINARY_CLOUD_NAME",
         raise ImproperlyConfigured("External delivery/storage/payment credentials are not permitted in staging yet.")
 
 EMAIL_BACKEND = "django.core.mail.backends.dummy.EmailBackend"
+STAGING_ACCOUNT_CONFIRMATION_ENABLED = True
 CONTACT_EMAIL_BACKEND = "core.staging.BlockedEmailBackend"
 PUSH_NOTIFICATIONS_ENABLED = False
 STORE_BILLING_ENABLED = os.environ.get("STAGING_STORE_BILLING_ENABLED", "false") == "true"

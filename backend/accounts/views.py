@@ -41,6 +41,7 @@ from .emails import (
     send_password_reset_email,
     send_welcome_email,
 )
+from .staging_verification import enabled as staging_verification_enabled
 
 User = get_user_model()
 logger = logging.getLogger(__name__)
@@ -311,6 +312,10 @@ class ResendVerificationEmailView(APIView):
                 status=status.HTTP_200_OK,
             )
 
+        if staging_verification_enabled():
+            return Response({"detail": "Konfirmoni llogarinë testuese në aplikacion. Asnjë email nuk dërgohet.",
+                             "verification_mode": "staging_authenticated"})
+
         token = generate_email_verification_token(user)
         send_verification_email(user, token)
 
@@ -399,7 +404,8 @@ class RegisterCompanyView(generics.CreateAPIView):
         send_verification_email(user, token)
 
         return success(
-            message="Kompania u regjistrua me sukses. Ju lutem verifikoni email-in tuaj.",
+            message=("Llogaria testuese u krijua. Kyçuni dhe konfirmoni llogarinë në aplikacion; asnjë email nuk dërgohet."
+                     if staging_verification_enabled() else "Kompania u regjistrua me sukses. Ju lutem verifikoni email-in tuaj."),
             data={
                 "user": {
                     "id": user.id,

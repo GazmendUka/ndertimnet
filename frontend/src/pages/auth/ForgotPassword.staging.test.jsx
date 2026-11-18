@@ -1,0 +1,10 @@
+import {render,screen,fireEvent,waitFor} from "@testing-library/react";
+import ForgotPassword from "./ForgotPassword";
+import api from "../../api/axios";
+let mockSandbox=true;
+jest.mock("../../config/api",()=>({get IS_IOS_STORE_SANDBOX(){return mockSandbox;}}));
+jest.mock("react-router-dom",()=>({Link:({children,to})=><a href={to}>{children}</a>}));
+jest.mock("../../api/axios",()=>({post:jest.fn()}));
+beforeEach(()=>jest.clearAllMocks());
+test("test build does not promise a reset email that cannot be delivered",()=>{mockSandbox=true;render(<ForgotPassword/>);expect(screen.getByText(/nuk dërgohen email-e/)).toBeInTheDocument();expect(screen.queryByRole("textbox")).not.toBeInTheDocument();expect(api.post).not.toHaveBeenCalled();});
+test("ordinary website still requests the normal reset email",async()=>{mockSandbox=false;api.post.mockResolvedValue({data:{message:"Request accepted"}});render(<ForgotPassword/>);fireEvent.change(screen.getByLabelText("Email"),{target:{value:"synthetic@example.test"}});fireEvent.click(screen.getByRole("button",{name:"Dërgo linkun"}));await waitFor(()=>expect(api.post).toHaveBeenCalledWith("/accounts/password/forgot/",{email:"synthetic@example.test"}));});

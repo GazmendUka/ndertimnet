@@ -6,6 +6,8 @@ import { CheckCircle2, Loader2, Mail, RefreshCw, XCircle } from "lucide-react";
 import { toast } from "react-hot-toast";
 import api from "../api/axios";
 import { useAuth } from "./AuthContext";
+import { IS_IOS_STORE_SANDBOX } from "../config/api";
+import StagingAccountConfirmation from "./StagingAccountConfirmation";
 
 export default function VerifyEmail() {
   const [params] = useSearchParams();
@@ -65,6 +67,8 @@ export default function VerifyEmail() {
   // ============================================================
   // ✅ Already verified
   // ============================================================
+  if (!token && IS_IOS_STORE_SANDBOX) return <StagingAccountConfirmation />;
+
   if (isEmailVerified) {
     return (
       <main className="flex min-h-screen items-center justify-center bg-[#f7f4ee] px-4 py-6">

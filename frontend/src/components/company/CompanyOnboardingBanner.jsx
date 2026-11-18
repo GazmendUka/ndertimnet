@@ -5,6 +5,7 @@ import { Mail, UserRoundCheck, ArrowRight, RefreshCw } from "lucide-react";
 import api from "../../api/axios";
 import { useAuth } from "../../auth/AuthContext";
 import { companyProfileProgress } from "../../utils/companyProfileProgress";
+import { IS_IOS_STORE_SANDBOX } from "../../config/api";
 
 /**
  * Email verification takes priority. Saved profile sections determine whether
@@ -69,7 +70,7 @@ export default function CompanyOnboardingBanner({
         title: "Email-i juaj nuk është i verifikuar",
         description:
           "Ju lutem verifikoni email-in për të aktivizuar llogarinë dhe për të vazhduar me hapin tjetër.",
-        ctaLabel: resendLoading ? "Duke dërguar..." : "Verifiko Email-in",
+        ctaLabel: IS_IOS_STORE_SANDBOX ? "Konfirmo llogarinë testuese" : resendLoading ? "Duke dërguar..." : "Verifiko Email-in",
         ctaIcon: resendLoading ? RefreshCw : ArrowRight,
         ctaAction: "resend",
       };
@@ -92,6 +93,7 @@ export default function CompanyOnboardingBanner({
   }, [stepToRender, profile, resendLoading]);
 
   const handleResendVerification = async () => {
+    if (IS_IOS_STORE_SANDBOX) { navigate("/verify-email"); return; }
     if (!resendVerificationEndpoint) {
       setResendMessage({
         type: "error",

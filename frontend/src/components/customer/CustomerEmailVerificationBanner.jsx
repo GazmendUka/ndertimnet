@@ -2,12 +2,15 @@ import { useState } from "react";
 import api from "../../api/axios";
 import { Mail, RefreshCw } from "lucide-react";
 import { toast } from "react-hot-toast";
+import { useNavigate } from "react-router-dom";
+import { IS_IOS_STORE_SANDBOX } from "../../config/api";
 
 export default function CustomerEmailVerificationBanner({
   user,
   resendVerificationEndpoint,
 }) {
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
   const [cooldown, setCooldown] = useState(0);
 
   // Om email redan verifierad → visa inget
@@ -16,6 +19,7 @@ export default function CustomerEmailVerificationBanner({
   }
 
   const resendEmail = async () => {
+    if (IS_IOS_STORE_SANDBOX) { navigate("/verify-email"); return; }
     if (loading || cooldown > 0) return;
 
     setLoading(true);
@@ -105,7 +109,7 @@ export default function CustomerEmailVerificationBanner({
           <RefreshCw className="w-4 h-4" />
         )}
 
-        {cooldown > 0 ? `Prisni ${cooldown}s` : "Dërgo përsëri"}
+        {IS_IOS_STORE_SANDBOX ? "Konfirmo llogarinë testuese" : cooldown > 0 ? `Prisni ${cooldown}s` : "Dërgo përsëri"}
       </button>
     </div>
   );
